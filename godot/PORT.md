@@ -1366,3 +1366,23 @@ for N frames, then saves the viewport; needs a window, not --headless).
   temporary model copies never in the tree).
 - tools/test_craft_press.gd (the panel open, Craft pressed on four recipes a frame apart): no errors; with the old
   line put back it logs the same error four times, so it catches this. The exe rebuilt; a headless run logs nothing.
+
+### A smoke test of standard play, and what it found (2026-11-22)
+- tools/smoke_actions.gd (headless, on a throwaway save via CGC_SAVE_PATH): a Logger catches every engine and script
+  error while it plays: walking, sprinting, jumping; every key on the controls card; panels stacked and shut;
+  crafting presses; eating; build mode (each shelf, rotate, place, remove); every tool swung and fired; E on a 3 m grid
+  round the farm by day and by night and at the dog, cat, mailbox and rocker; E at every town door with money;
+  the title card's buttons and options; a save; Biscuit whistled, mounted, ridden, got down; fishing at a pond; days,
+  nights, rain, snow and a storm in fast time; the whole town mended, the railroad laid, a train ride; a fight with
+  guardians with each weapon; struck down and coming to; a raid met with the rifle; into a camp's land and out; and
+  the well-played save loaded back and played on. (Its own self-check, SMOKE_SELFTEST=1, proves it sees an error.)
+- Found and fixed:
+  - Saving failed once you owned Biscuit: save_all read horse.group (the web's name); the Godot Horse is the node
+    itself, so every save after buying her stopped at a script error. Now horse.pos.
+  - Panning failed (a script error every frame, no "[E] Pan the shallows") whenever you waded with corn in your pack
+    and no duck family was on the pond: ducks.fam was read without a null check.
+- Left: "Parameter material is null" (an engine error, material_get_instance_shader_parameters) logs once at the
+  first dusk of a session and once at the first downpour; nothing visible, no crash. Bisecting by pausing main's
+  children was flaky (it depends on frame timing); probe_material4.gd is kept for another look.
+- Not covered headless: K (the postcard needs a rendered frame; tested windowed in 22b).
+- The exe rebuilt; a headless run of it logs nothing.

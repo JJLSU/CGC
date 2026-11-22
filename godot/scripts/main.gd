@@ -1201,7 +1201,7 @@ func _town_doors() -> bool:
 		return true
 	# panning the shallows
 	# (not while the ducks are paddling near and you've corn for them: that E is theirs, as the web's toss comes first)
-	if player.wading and pan_t <= 0.0 and not (inventory.get("corn", 0) >= 1 and ducks.fam.come == null and ducks.toss_spot(player.pos.x, player.pos.z) != null):
+	if player.wading and pan_t <= 0.0 and not (inventory.get("corn", 0) >= 1 and ducks.fam != null and ducks.fam.come == null and ducks.toss_spot(player.pos.x, player.pos.z) != null): # (no family on the pond: fam is null, and panning must still work)
 		beast_prompt = "[E] Pan the shallows for colour"
 		if input.hit("KeyE"): pan_t = 2.6; sound.step("water")
 		return true
@@ -2109,7 +2109,7 @@ func save_all() -> void:
 	var d := {
 		"pieces": build.save_pieces(), "inventory": inventory,
 		"settlers": settlers.save(), "world": {"seed": world_seed, "ring": [world_ring.x, world_ring.y]}, "opening": opening_done, "fortune": fortune,
-		"horse": {"owned": true, "x": horse.group.position.x, "z": horse.group.position.z} if horse != null else horse_saved,
+		"horse": {"owned": true, "x": horse.pos.x, "z": horse.pos.z} if horse != null else horse_saved, # (Horse.pos: the web's horse.group is the node itself here; reading .group failed every save once you owned her)
 		"town": town.save(), "cellar": {"built": extras.cellar_built, "day": extras.cellar_day}, "bunkhouse": {"built": extras.bunk_built},
 		"tools": tools.keys(), "held": held, "fullness": roundi(player.fullness), "lands": lands_found.keys(), "landmarks": landmarks.save(), "wear": wear.duplicate(),
 		"journal": journal.save(), "dayLog": journal.day_log,
