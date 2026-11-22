@@ -91,6 +91,7 @@ func prewarm() -> void:
 		names.append(t)
 		for c in range(1, CUTS.get(t, 1)): names.append("%s~%d" % [t, c])
 	for n in names:
+		if not is_inside_tree(): return # (the scene gave way: a new game)
 		if not pools.has(n): pool_for(n); await get_tree().process_frame
 
 ## Build a chunk a slice at a time, ~4 ms of work a frame (the heights, then the region map row by row, then the
@@ -103,10 +104,14 @@ func _create_chunk_sliced(cx: int, cz: int) -> void:
 	var t0 := Time.get_ticks_usec()
 	var job := Terrain.chunk_job(cx, cz)
 	while not Terrain.chunk_step(job, 2):
-		if Time.get_ticks_usec() - t0 > SLICE_US: await get_tree().process_frame; t0 = Time.get_ticks_usec()
+		if Time.get_ticks_usec() - t0 > SLICE_US:
+			if not is_inside_tree(): return
+			await get_tree().process_frame; t0 = Time.get_ticks_usec()
 	for j in Terrain.CHUNK:
 		_paint_row(cx, cz, j)
-		if Time.get_ticks_usec() - t0 > SLICE_US: await get_tree().process_frame; t0 = Time.get_ticks_usec()
+		if Time.get_ticks_usec() - t0 > SLICE_US:
+			if not is_inside_tree(): return
+			await get_tree().process_frame; t0 = Time.get_ticks_usec()
 	_map_dirty = true
 	var tc := Time.get_ticks_usec()
 	if not chunks.has(key(cx, cz)): create_chunk(cx, cz, job.mesh, true)

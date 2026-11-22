@@ -1330,3 +1330,39 @@ for N frames, then saves the viewport; needs a window, not --headless).
   within 2.5 deg, steepest 6.3; SPEED 3.5): PASS. Not yet looked at on screen (the player is playing): look at the
   track and a train on a hill next time a window is free.
 - Step 28 (the chunk-finish spikes) is still half done: Props.place_sliced is in and tested, not yet used by World.
+
+### Windows build (2026-11-22)
+- godot/export_presets.cfg ("Windows Desktop", x86_64, release, the pack beside the exe, tools/* left out, *.json
+  included for the data the game reads itself). Built with
+  `Godot --headless --path godot --export-release "Windows Desktop" ../build/ColdGlitterCreek.exe` into
+  SpaceThing/build/ (ColdGlitterCreek.exe 109 MB + ColdGlitterCreek.pck 1.4 GB; build/ is git-ignored). A shortcut
+  "Cold Glitter Creek" on the Desktop runs it. The export templates were already installed (4.7.2.stable).
+- The build's first run logged "Target and up vectors are colinear" every frame: step 29's tilted cars, where the
+  line ends and a car's front and back points close up. Now a car keeps its last heading there, and one that has
+  never moved stands level along the track. Rebuilt; a headless run of the exe logs nothing.
+- Rebuild after changes with the same command (a few minutes).
+
+### New game, fixed (2026-11-22; the player found it closed the game)
+- Was: delete the save, OS.set_restart_on_exit and quit. Run from the editor, Godot can't relaunch, so the game just
+  closed; from the exe it relaunched but showed nothing for the ~9 s a new county takes, which looked like a crash.
+- Now in place: the save is deleted, a paper card "Laying out a new county…" goes up over everything (a CanvasLayer
+  on the root, group newgame_card, outliving the scene), the old county is forgotten (main.reset_world: Terrain's
+  flat, extra flats (which only ever grew), range centre and caches; Props' site cache, garden and unique
+  encounters), and the scene reloads. The new main finds no save, rolls a random seed (ring 60-115) and lays the
+  farm and town out ~85 m apart as before; on its first frame it takes the card away (~6 s on this machine).
+- The old scene's unfinished work (the world's sliced chunk builder and pool prewarm, the model preloader, the map's
+  faint-iron fill, a settler's delayed note) now stops when its node leaves the tree instead of asking a freed tree
+  for the next frame (that raised a script error, which the tear logger would have shown as "a little tear").
+- Tests can now name a throwaway save with the CGC_SAVE_PATH environment variable (main.gd), never the player's.
+  tools/test_newgame.gd (the game started as it really starts, a county played and saved, New game: the save gone, a
+  new seed, the card while it builds and gone after, farm and town 85 m apart, running at ~145 fps headless, no
+  script errors): PASS for each run. The exe rebuilt; a headless run of it logs nothing.
+
+### The crafting crash (2026-11-22; the player crafting their first things)
+- The game's log (user://logs/godot.log) showed "Object ... was freed or unreferenced while a signal is being emitted
+  from it" once per Craft press, then the crash. CraftingPanel.render(), called from inside the pressed Craft
+  button's own signal, cleared the list with free(), freeing that very button mid-signal. Now remove_child +
+  queue_free (Hud's build bar had the same pattern: changed too; the other free() calls in the scripts are on
+  temporary model copies never in the tree).
+- tools/test_craft_press.gd (the panel open, Craft pressed on four recipes a frame apart): no errors; with the old
+  line put back it logs the same error four times, so it catches this. The exe rebuilt; a headless run logs nothing.

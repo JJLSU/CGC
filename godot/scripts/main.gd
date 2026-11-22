@@ -200,8 +200,8 @@ var world_ring := Vector2(130, 210)
 ## The save (main.js saveAll / BuildSystem.save): one JSON in the same shape as the web's localStorage
 ## "paperfjord.builds.v1", in user://. A game run from a test script (--script) uses the original world and leaves
 ## the player's save alone unless the test sets save_path and saving itself.
-var save_path := "user://paperfjord.builds.v1.json"
-var saving := not OS.get_cmdline_args().has("--script")
+var save_path := OS.get_environment("CGC_SAVE_PATH") if OS.get_environment("CGC_SAVE_PATH") != "" else "user://paperfjord.builds.v1.json"
+var saving := not OS.get_cmdline_args().has("--script") or OS.get_environment("CGC_SAVE_PATH") != "" ## (CGC_SAVE_PATH: a test's own throwaway save)
 var saved = null
 var autosave_t := 0.0
 var saved_fullness = null
@@ -370,6 +370,7 @@ func _ready() -> void:
 	settlers.on_newcomer = func(st: Dictionary) -> void: if newcomer_news: newcomers.append(st)
 	settlers.on_join = func(st: Dictionary) -> void:
 		await get_tree().create_timer(1.8).timeout # (a beat after their own line, say plainly where they'll go)
+		if not is_inside_tree(): return
 		var first: String = String(st.S.name).split(" ")[0]; var work: String = Settlers.WORK_NAME[st.S.work]
 		var built := build.pieces.any(func(q): return q.type == st.S.work); var store := build.pieces.any(func(q): return q.type == "storehouse")
 		if not built: hud.toast("%s will wait by the camp fire till you build a %s (B, then the Works shelf). The moment it stands, %s walks over and gets to work." % [first, work, first])
@@ -505,6 +506,8 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	if prof != null: _pm_t = Time.get_ticks_usec()
 	if quality == null: quality = Quality.new(self, keep_prefs); quality.apply(quality.level) # (once the sky, the post pass and the environment are made)
+	if not first_frame:
+		for n in get_tree().get_nodes_in_group("newgame_card"): n.queue_free() # (a new game's card: the county is laid out)
 	first_frame = true
 	var qt := quality.tick()
 	if qt != "": hud.toast(qt)
@@ -842,11 +845,28 @@ func _exit_tree() -> void:
 	if tear_logger: OS.remove_logger(tear_logger)
 
 ## New game (the title card's button, confirmed): the save is wiped and the game starts over on a fresh page.
+## (Started over in place, not by quitting and relaunching: a relaunch can't happen at all when the game was run from
+## the editor, and from the exe it left a blank screen for the ~9 s a new county takes to lay out.)
 func _new_game() -> void:
 	saving = false # (so the running game can't write the old state back)
 	if FileAccess.file_exists(save_path): DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
-	OS.set_restart_on_exit(true, OS.get_cmdline_args())
-	get_tree().quit()
+	# a paper card over everything while the new county is laid out (it outlives this scene; the next one takes it away)
+	var layer := CanvasLayer.new(); layer.layer = 100; layer.add_to_group("newgame_card")
+	var bg := ColorRect.new(); bg.color = Color("efe3c4"); bg.set_anchors_preset(Control.PRESET_FULL_RECT); layer.add_child(bg)
+	var l := Label.new(); l.text = "Laying out a new county…"; l.add_theme_font_override("font", hud.font); l.add_theme_font_size_override("font_size", 34)
+	l.add_theme_color_override("font_color", Hud.INK); l.set_anchors_preset(Control.PRESET_CENTER); l.grow_horizontal = Control.GROW_DIRECTION_BOTH; l.grow_vertical = Control.GROW_DIRECTION_BOTH
+	bg.add_child(l)
+	get_tree().root.add_child(layer)
+	input.unlock()
+	for i in 3: await get_tree().process_frame # (the card drawn before the long lay-out)
+	reset_world()
+	get_tree().reload_current_scene()
+
+## Forget the old county: what the terrain, the props and the farm's garden keep between scenes (statics).
+static func reset_world() -> void:
+	Terrain.flat = null; Terrain.extra_flats.clear(); Terrain.RC = Vector2.ZERO
+	Terrain.e_memo.clear(); Terrain.lat_cache.clear(); Terrain.full_cache.clear(); Terrain.h_cache.clear(); Terrain.r_cache.clear()
+	Props.site_cache.clear(); Props.garden = null; Props._uniques = null; Props._uniques_seed = -1
 
 ## post.js: the full-screen lens and grade pass, riding on the camera.
 func _make_post() -> void:
@@ -1994,6 +2014,7 @@ func _preload_models() -> void:
 			var st := ResourceLoader.load_threaded_get_status(q)
 			if st == ResourceLoader.THREAD_LOAD_LOADED: _models.append(ResourceLoader.load_threaded_get(q)); live.erase(q)
 			elif st != ResourceLoader.THREAD_LOAD_IN_PROGRESS: live.erase(q)
+		if not is_inside_tree(): return # (a new game took over)
 		await get_tree().process_frame
 
 # ------------------------------------------------------------------ the save (main.js saveAll and the load)
@@ -2179,6 +2200,7 @@ func _fill_map(pcx: int, pcz: int) -> void:
 			var c: Vector2i = todo.pop_front()
 			if not Props.site_cache.has("%d,%d" % [c.x, c.y]): Props.sites_for(c.x, c.y, world.exclusions); dirty = true
 		if dirty and (Time.get_ticks_msec() - last_paint > 500 or todo.is_empty()): _open_map(false); last_paint = Time.get_ticks_msec(); dirty = false
+		if not is_inside_tree(): return
 		await get_tree().process_frame
 	_map_filling = false
 

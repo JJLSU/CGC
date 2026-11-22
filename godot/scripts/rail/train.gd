@@ -136,8 +136,10 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 			# tilted with the grade: the line from the car's back wheels to its front (the web keeps every car level)
 			var pf: Vector3 = at(s - dir * (off - half * 0.8)).pos; var pb: Vector3 = at(s - dir * (off + half * 0.8)).pos
 			var fwd := pf - pb
-			if fwd.length_squared() < 1e-6: fwd = p - at(s - dir * (off + 0.5)).pos
-			cars[i].position = p; cars[i].basis = Basis.looking_at(-fwd.normalized(), Vector3.UP)
+			cars[i].position = p
+			# (at the line's ends the two points close up and the heading is lost: then the car keeps the one it had)
+			if Vector2(fwd.x, fwd.z).length() > 0.05: cars[i].basis = Basis.looking_at(-fwd.normalized(), Vector3.UP); cars[i].set_meta("faced", true)
+			elif not cars[i].get_meta("faced", false): cars[i].rotation = Vector3(0, float(at(s - dir * off).yaw) + (0.0 if dir > 0 else PI), 0) # (standing at the very end before she's ever moved: level, along the track)
 			off += half + CAR_GAP
 		if moving and not passenger: # she won't run a man down: anyone on the track is nudged off it
 			for c in cars:

@@ -374,7 +374,7 @@ func set_buildbar(on: bool, selected: int, order: Array, groups: Array, pieces: 
 	var sig := "%d|%s" % [selected, str(inv)]
 	if sig == bar_sig: return
 	bar_sig = sig
-	for c in buildbar.get_children(): c.free()
+	for c in buildbar.get_children(): buildbar.remove_child(c); c.queue_free()
 	var gi := 0
 	for i in groups.size(): if cur in groups[i][1]: gi = i
 	var shelves := HBoxContainer.new(); shelves.alignment = BoxContainer.ALIGNMENT_CENTER; shelves.add_theme_constant_override("separation", 10)

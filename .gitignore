@@ -13,3 +13,6 @@ __pycache__/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# exported game builds (godot/export_presets.cfg writes here)
+build/

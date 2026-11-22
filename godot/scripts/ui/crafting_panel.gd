@@ -119,7 +119,7 @@ func _tier(title: String, station) -> void:
 		list.add_child(pad)
 
 func render() -> void:
-	for c in list.get_children(): c.free()
+	for c in list.get_children(): list.remove_child(c); c.queue_free() # (not free(): a Craft press re-renders from inside its own button's signal, and freeing that button mid-signal crashed the game)
 	var have := PackedStringArray()
 	for k in crafting.inventory:
 		if crafting.inventory[k] > 0: have.append("%d %s" % [crafting.inventory[k], k])
