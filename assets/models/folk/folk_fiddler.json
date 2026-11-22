@@ -1,0 +1,15 @@
+{
+  "name": "folk_fiddler",
+  "height": 1.75,
+  "tris": 19515,
+  "tris_before": 19515,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "trades_4",
+  "height": 1.3,
+  "tris": 19322,
+  "tris_before": 19322,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

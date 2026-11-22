@@ -1,0 +1,15 @@
+# Godot's import cache: rebuilt by each copy of Godot on first open (1.3 GB)
+godot/.godot/
+# godot/assets/models is a Windows link (junction) to ../../assets/models; each clone makes its own (see README)
+godot/assets/models
+# working material kept in the team's shared drive, not the game: raw Meshy downloads and reference images
+assets/models/meshy/
+assets/refs/
+# local-only
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+__pycache__/
+*.pyc
+*.tmp
+.DS_Store
+Thumbs.db

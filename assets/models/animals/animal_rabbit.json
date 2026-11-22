@@ -1,0 +1,10 @@
+{
+  "name": "animal_rabbit",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 14781,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

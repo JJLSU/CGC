@@ -1,0 +1,10 @@
+{
+  "name": "animal_ox",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15582,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

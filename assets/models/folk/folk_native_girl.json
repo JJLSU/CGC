@@ -1,0 +1,15 @@
+{
+  "name": "folk_native_girl",
+  "height": 1.25,
+  "tris": 20053,
+  "tris_before": 20053,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

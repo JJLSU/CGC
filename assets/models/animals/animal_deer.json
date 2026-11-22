@@ -1,0 +1,10 @@
+{
+  "name": "animal_deer",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15174,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

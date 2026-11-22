@@ -1,0 +1,1 @@
+Installed from https://github.com/xikhar/papercraft (MIT) at commit 57c4c93a1f3b2743066b6ed41094d1bcbb69c3b5 on 2026-11-20.

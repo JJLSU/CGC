@@ -1,0 +1,15 @@
+{
+  "name": "saloon_2",
+  "height": 1.75,
+  "tris": 19558,
+  "tris_before": 19558,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

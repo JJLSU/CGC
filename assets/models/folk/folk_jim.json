@@ -1,0 +1,15 @@
+{
+  "name": "folk_jim",
+  "height": 1.95,
+  "tris": 19524,
+  "tris_before": 19524,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

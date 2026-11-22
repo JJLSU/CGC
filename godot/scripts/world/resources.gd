@@ -1,0 +1,46 @@
+class_name Res
+## world.js RESOURCE_TYPES, REGROW and WALK_THROUGH: what each prop is when you work it (hp, item, loot range,
+## collision radius, whether it falls, what tool it needs, the paper chips it throws).
+
+const WOOD_CHIPS := [0x7b5236, 0xefe5cc, 0xc98a4a]
+const TYPES := {
+	"pine": {"name": "Pine", "hp": 4, "item": "wood", "loot": [3, 5], "radius": 0.35, "falls": true, "chips": [0x5d7a4c, 0x7b5236, 0xefe5cc]},
+	"maple": {"name": "Maple", "hp": 3, "item": "wood", "loot": [2, 4], "radius": 0.35, "falls": true, "chips": [0xd9773a, 0xb8452e, 0x7b5236, 0xefe5cc, 0xc98a4a]},
+	"snag": {"name": "Dead snag", "hp": 2, "item": "wood", "loot": [2, 3], "radius": 0.25, "falls": true, "chips": [0xaaa397, 0x6a6258, 0xd8cdb0]},
+	"birch": {"name": "White birch", "hp": 3, "item": "wood", "loot": [2, 3], "radius": 0.25, "falls": true, "chips": [0xefe9dc, 0x2b2622, 0xe8c84a]},
+	"goldtree": {"name": "Aspen", "hp": 3, "item": "wood", "loot": [2, 4], "radius": 0.35, "falls": true, "chips": [0xd9a441, 0xe8be5a, 0x7b5236, 0xefe5cc, 0xc98a4a]},
+	"sagetree": {"name": "Oak", "hp": 4, "item": "wood", "loot": [3, 4], "radius": 0.35, "falls": true, "chips": [0x93a35c, 0xc9a24c, 0x7b5236, 0xefe5cc, 0xc98a4a]},
+	"rock": {"name": "Rock outcrop", "hp": 5, "item": "stone", "loot": [2, 4], "radius": 0.9, "falls": false, "chips": [0xb0a594, 0x7f7466, 0xefe5cc]},
+	"bush": {"name": "Berry bush", "hp": 1, "item": "berries", "loot": [2, 3], "radius": 0.6, "falls": false, "chips": [0x3f7d74, 0xc4363a, 0xefe5cc]},
+	"flowers": {"name": "Wildflowers", "decor": true, "radius": 0.0},
+	"grass": {"name": "Tall grass", "hp": 1, "item": "fiber", "loot": [1, 2], "radius": 0.25, "falls": false, "minor": true, "chips": [0x9aa564, 0xc3b46a, 0xefe5cc]},
+	"clay": {"name": "Clay bank", "hp": 2, "item": "clay", "loot": [2, 3], "radius": 0.6, "falls": false, "chips": [0xb8693f, 0xcc8254, 0xefe5cc]},
+	"mushroom": {"name": "Toadstools", "hp": 1, "item": "mushrooms", "loot": [2, 3], "radius": 0.35, "falls": false, "chips": [0xc4362f, 0xefe3cc, 0xf6efe0]},
+	"ore": {"name": "Iron vein", "hp": 6, "item": "ore", "loot": [2, 4], "radius": 0.9, "falls": false, "needs": "pickaxe", "chips": [0x8f8a86, 0xc46a32, 0xe0a050]},
+	"quartz": {"name": "Gold quartz", "hp": 8, "item": "gold", "loot": [1, 2], "radius": 0.9, "falls": false, "needs": "pickaxe", "chips": [0xe6dccb, 0xf0c840, 0xc8901e]},
+	"hive": {"name": "Wild hive", "hp": 2, "item": "honey", "loot": [2, 3], "radius": 0.45, "falls": false, "chips": [0xd9a948, 0x7b5236, 0xefe5cc]},
+	"appletree": {"name": "Apple tree", "hp": 3, "item": "wood", "loot": [2, 3], "radius": 0.35, "falls": true, "chips": [0x7d9a4e, 0xc4362f, 0x7b5236, 0xefe5cc, 0xc98a4a]},
+	"apples": {"name": "Windfall apples", "hp": 1, "item": "apples", "loot": [2, 4], "radius": 0.4, "falls": false, "chips": [0xc4362f, 0xe0a03a, 0xefe5cc]},
+	"satchel": {"name": "Lost satchel", "hp": 1, "item": "satchel", "loot": [1, 1], "radius": 0.4, "falls": false, "chips": [0x8a5a34, 0xc4362f, 0xd9a441]},
+	"cattail": {"name": "Cattails", "decor": true, "radius": 0.0},
+	"lodge": {"name": "Beaver lodge", "decor": true, "radius": 0.0},
+	"log": {"name": "Fallen log", "decor": true, "radius": 0.0},
+	"bale": {"name": "Hay bale", "decor": true, "radius": 0.0},
+	"stook": {"name": "Wheat stook", "hp": 1, "item": "wheat", "loot": [2, 3], "radius": 0.45, "falls": false, "chips": [0xb07f3a, 0xecd08a, 0xefe5cc]},
+	"lilypad": {"name": "Lily pad", "decor": true, "radius": 0.0, "flat": true},
+	"lilybloom": {"name": "Water lily", "decor": true, "radius": 0.0, "flat": true},
+	"corn": {"name": "Sweet corn", "hp": 1, "item": "corn", "loot": [1, 2], "radius": 0.3, "falls": false, "chips": [0x8a9a4e, 0xe8c04a, 0xefe5cc]},
+	"pumpkin": {"name": "Pumpkin", "hp": 2, "item": "pumpkin", "loot": [1, 1], "radius": 0.45, "falls": false, "chips": [0xde7a32, 0x7d9150, 0xefe5cc]},
+	"signvein": {"name": "Sign", "decor": true, "radius": 0.0},
+	"signgrove": {"name": "Sign", "decor": true, "radius": 0.0},
+	"signthicket": {"name": "Sign", "decor": true, "radius": 0.0},
+	"hill": {"name": "Hill", "decor": true, "radius": 0.0},
+	"sang": {"name": "Wild ginseng", "hp": 1, "item": "sang", "loot": [1, 2], "radius": 0.35, "falls": false, "chips": [0x5e7e40, 0xc4362f, 0xefe5cc]},
+	"silver": {"name": "Silver vein", "hp": 8, "item": "silver", "loot": [1, 2], "radius": 0.9, "falls": false, "needs": "pickaxe", "chips": [0xb85a3a, 0xd8dde2, 0xf4f6f8]},
+	"pearl": {"name": "Mussel bed", "hp": 2, "item": "pearl", "loot": [1, 1], "radius": 0.5, "falls": false, "chips": [0x3a4a5a, 0xefe9e0, 0x9ab0c0]},
+	"geode": {"name": "Thunder egg", "hp": 4, "item": "geode", "loot": [1, 1], "radius": 0.6, "falls": false, "chips": [0xa89880, 0x8a6ab8, 0xe8e0f0]},
+	"amber": {"name": "Weeping pine stump", "hp": 3, "item": "amber", "loot": [1, 2], "radius": 0.5, "falls": false, "chips": [0x7b5236, 0xe0a030, 0xf6d070]},
+	"peak": {"name": "Peak", "decor": true, "radius": 0.0},
+}
+const REGROW := {"sang": 900, "silver": 1200, "pearl": 900, "geode": 1500, "amber": 1000, "snag": 420, "birch": 300, "stook": 240, "apples": 150, "appletree": 320, "corn": 100, "pumpkin": 150, "grass": 45, "bush": 90, "mushroom": 120, "clay": 150, "maple": 300, "goldtree": 300, "sagetree": 320, "pine": 340, "rock": 360, "ore": 480, "quartz": 1400, "hive": 480}
+const WALK_THROUGH := ["grass", "bush", "flowers", "mushroom", "sang", "pearl", "apples", "stook", "corn", "clay", "cattail", "lilypad", "lilybloom"]

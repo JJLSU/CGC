@@ -1,0 +1,10 @@
+{
+  "name": "animal_cat",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15333,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

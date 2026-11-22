@@ -1,0 +1,15 @@
+{
+  "name": "townsfolk_4",
+  "height": 1.25,
+  "tris": 19346,
+  "tris_before": 19346,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

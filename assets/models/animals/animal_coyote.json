@@ -1,0 +1,10 @@
+{
+  "name": "animal_coyote",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15200,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

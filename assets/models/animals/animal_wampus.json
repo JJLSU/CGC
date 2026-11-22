@@ -1,0 +1,10 @@
+{
+  "name": "animal_wampus",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15420,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

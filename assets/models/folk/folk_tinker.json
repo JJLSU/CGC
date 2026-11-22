@@ -1,0 +1,15 @@
+{
+  "name": "folk_tinker",
+  "height": 1.75,
+  "tris": 19681,
+  "tris_before": 19681,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

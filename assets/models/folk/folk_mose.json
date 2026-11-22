@@ -1,0 +1,15 @@
+{
+  "name": "folk_mose",
+  "height": 1.75,
+  "tris": 19388,
+  "tris_before": 19388,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

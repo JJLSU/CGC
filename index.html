@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paydirt Hollow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js",
+      "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.tsl.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+    }
+  }
+  </script>
+  <!-- fetch the CDN modules in parallel instead of as a serial import chain -->
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.tsl.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.core.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/tsl/display/BloomNode.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/tsl/display/GaussianBlurNode.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/tsl/display/GodraysNode.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/tsl/display/GTAONode.js" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/utils/BufferGeometryUtils.js" />
+  <style>
+    :root {
+      --paper: #f4ecd8; --ink: #3a2f25; --ink-soft: #6b5b49; --edge: #d8c9a8;
+      --wood: #a0703f; --stone: #8f8b80; --berry: #c8323c; --stam: #e2b33c;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe0e8; font-family: 'Patrick Hand', 'Segoe Print', system-ui, sans-serif; color: var(--ink); }
+    #app canvas { display: block; }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--edge);
+      box-shadow: 2px 3px 0 rgba(58, 47, 37, .18), 0 0 0 4px rgba(244, 236, 216, .35);
+      border-radius: 3px;
+    }
+    #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(40, 30, 20, .28) 100%); }
+
+    #topbar { position: fixed; top: 14px; left: 16px; display: flex; gap: 10px; align-items: center; pointer-events: none; }
+    #topbar .card { padding: 4px 12px; font-size: 20px; transform: rotate(-1.2deg); }
+    #topbar .card:nth-child(2) { transform: rotate(.8deg); }
+    #notes { position: fixed; top: 58px; left: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+    /* the way home, once you're well away from the farm: a little house, an arrow and the paces */
+    #homeward { display: none; align-items: center; gap: 6px; font-size: 16px !important; transform: rotate(-.6deg) !important; }
+    #homeward.show { display: flex; }
+    #homeward svg { width: 22px; height: 22px; flex: none; }
+    #homeward .arrow { transition: transform .25s; }
+    #rumour { width: 230px; margin-left: 10px; padding: 4px 10px 6px; transform: rotate(0.9deg); font-size: 15px; line-height: 1.15; display: none; }
+    #rumour.show { display: flex; gap: 8px; align-items: center; }
+    #rumour .arrow { flex: none; width: 28px; height: 28px; transition: transform .25s; }
+    #rumour small { display: block; font-size: 13px; color: var(--ink-soft); }
+    @media (max-width: 640px) { #rumour { width: 170px; font-size: 13px; } }
+    #journal { width: 250px; padding: 6px 12px 8px; transform: rotate(-0.8deg); pointer-events: none; font-size: 16px; }
+    #journal h4 { margin: 0 0 2px; font-size: 18px; border-bottom: 1px dashed var(--edge); }
+    #journal .goal { display: flex; gap: 6px; line-height: 1.15; margin-top: 4px; }
+    #journal .goal small { display: block; font-size: 13px; color: var(--ink-soft); }
+    #journal .goal em { font-style: normal; color: var(--ink-soft); }
+    #journal .box { font-size: 15px; }
+    #journal .all { margin: 4px 0 0; color: var(--ink-soft); }
+    @media (max-width: 640px) { #journal { width: 190px; font-size: 13px; } #journal .goal small { display: none; } }
+    #backend { position: fixed; top: 16px; right: 16px; font-size: 15px; padding: 2px 10px; color: var(--ink-soft); pointer-events: none; }
+
+    /* the ledger: a torn paper tally of the major stuff you're carrying, always on screen, top right */
+    #ledger { position: fixed; top: 92px; right: 16px; display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 6px 8px; pointer-events: none; transform: rotate(.8deg); z-index: 1; }
+    #ledger .row { display: flex; align-items: center; gap: 6px; font-size: 18px; line-height: 1; min-width: 64px; }
+    #ledger .row svg { width: 22px; height: 22px; flex: none; }
+    #ledger .row .n { margin-left: auto; font-variant-numeric: tabular-nums; }
+    #ledger .row.bump .n { animation: bump .35s ease-out; }
+    #ledger .row.zero { opacity: .45; }
+    body.panel-open #ledger { display: none; }
+    @media (max-width: 640px) { #ledger { top: 112px; right: 8px; padding: 4px 6px; } #ledger .row { font-size: 15px; min-width: 50px; } #ledger .row svg { width: 17px; height: 17px; } }
+    /* the next step: one bold line, a few words, always the most useful thing to do now */
+    #next { display: flex; align-items: center; gap: 8px; padding: 5px 12px; font-size: 19px; border-left: 6px solid #b5473a; transform: rotate(-.5deg); }
+    #next b { color: #b5473a; font-size: 15px; letter-spacing: .08em; }
+    #next.urgent { border-left-color: #c4302c; background: #fbe6d6; animation: nudge 1.6s ease-in-out infinite; }
+    @keyframes nudge { 50% { transform: rotate(-.5deg) translateX(3px); } }
+    #next:empty, #next.off { display: none; }
+    #times { position: fixed; top: 52px; right: 16px; display: flex; gap: 6px; z-index: 2; }
+    #times button { font: inherit; font-size: 15px; color: var(--ink); padding: 2px 9px; cursor: pointer; }
+    #times button:nth-child(odd) { transform: rotate(-1deg); } #times button:nth-child(even) { transform: rotate(1deg); }
+    #times button.on { background: #e9c98a; }
+    @media (max-width: 640px) { #times { top: auto; bottom: 150px; right: 50%; transform: translateX(50%); } #times button { font-size: 13px; padding: 2px 6px; } }
+    /* developer bits (the time-of-day chips, the renderer and fps badge) stay out of sight unless F3 is pressed */
+    body:not(.dev) #times, body:not(.dev) #backend { display: none; }
+    /* the status bars fade away when you're fit, fed and warm, and come back the moment one of them matters */
+    #health, #stamina, #fullness { transition: opacity .8s ease, width .4s; }
+    body.calm #health, body.calm #stamina, body.calm #fullness { opacity: 0; }
+    #bottom { position: fixed; bottom: 18px; left: 16px; right: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; }
+    #toolbar { display: flex; gap: 8px; pointer-events: auto; }
+    .tslot { width: 74px; height: 66px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: transform .15s, background .15s; }
+    .tslot:nth-child(odd) { transform: rotate(-1.5deg); } .tslot:nth-child(even) { transform: rotate(1.2deg); }
+    .tslot svg { width: 32px; height: 32px; }
+    .tslot .nm { font-size: 13px; line-height: 1.1; white-space: nowrap; }
+    .tslot .k { position: absolute; top: 2px; left: 6px; font-size: 13px; color: var(--ink-soft); }
+    .tslot.on { background: #e9c98a; transform: translateY(-6px) rotate(-1deg); box-shadow: 0 6px 0 -2px rgba(90,58,32,.35); }
+    .tslot.locked { opacity: .45; } .tslot.locked svg { filter: grayscale(1); }
+    .tslot .wear { position: absolute; left: 8px; right: 8px; bottom: 3px; height: 3px; background: rgba(90,58,32,.18); border-radius: 2px; }
+    .tslot .wear i { display: block; height: 100%; background: #7a8a6a; border-radius: 2px; }
+    .tslot .wear.dull i { background: #b5473a; }
+    #pack { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%) rotate(-.6deg); padding: 8px 14px 12px; display: none; pointer-events: none; max-width: calc(100vw - 32px); }
+    #pack.show { display: block; }
+    #pack h4 { margin: 0 0 6px; font-weight: normal; font-size: 18px; } #pack h4 small { font-size: 13px; color: var(--ink-soft); }
+    #slots { display: flex; gap: 10px; }
+    .slot { width: 76px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: transform .15s; }
+    .slot:nth-child(odd) { transform: rotate(-1.5deg); } .slot:nth-child(even) { transform: rotate(1.2deg); }
+    .slot.bump { animation: bump .35s ease-out; }
+    @keyframes bump { 40% { transform: translateY(-7px) rotate(-3deg) scale(1.08); } }
+    .slot svg { width: 30px; height: 30px; }
+    .slot .n { font-size: 20px; line-height: 1; }
+    #slots.many { gap: 6px; }
+    #slots.many .slot { width: 60px; height: 54px; }
+    #slots.many .slot svg { width: 25px; height: 25px; }
+    #slots.many .slot .n { font-size: 17px; }
+    .slot.pantry { background: #f3e2c0; }
+    .slot .k { position: absolute; top: 2px; left: 6px; font-size: 12px; color: var(--ink-soft); }
+    #health { height: 12px; width: 240px; padding: 2px; }
+    #health-fill { height: 100%; width: 100%; background: #c4463a; border-radius: 2px; transition: width .2s; }
+    #health.low #health-fill { animation: blink .5s infinite alternate; }
+    #sleep { position: fixed; inset: 0; pointer-events: none; opacity: 0; display: grid; place-items: center; background: #2b2a3a; color: #efe3c4; font-size: 26px; transition: opacity .6s; z-index: 5; }
+    #sleep.show { opacity: 1; }
+    #cold { position: fixed; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(196,216,232,0.5) 84%, rgba(232,242,248,0.9) 100%); }
+    #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(170, 40, 30, .55) 100%); }
+    #hurt.show { animation: hurtflash .7s ease-out; }
+    @keyframes hurtflash { 0% { opacity: 1; } 100% { opacity: 0; } }
+    #slots { flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+    #craft h3 small.near { color: #4f7d43; }
+    #stamina { height: 12px; width: 220px; padding: 2px; transition: width .4s; }
+    #stamina-fill { height: 100%; width: 100%; background: var(--stam); border-radius: 2px; transition: width .1s linear; }
+    #stamina.boosted #stamina-fill { background: #e07a3c; }
+    #fullness { height: 8px; width: 180px; padding: 2px; }
+    #fullness-fill { height: 100%; width: 70%; background: #b8904a; border-radius: 2px; transition: width .5s; }
+    #fullness.hungry #fullness-fill { background: #9a4a2a; }
+    #fullness.starving #fullness-fill { background: #b5473a; animation: blink .6s infinite alternate; }
+    #stamina.low #stamina-fill { animation: blink .5s infinite alternate; }
+    @keyframes blink { to { opacity: .35; } }
+
+    #hint { position: fixed; bottom: 128px; left: 50%; transform: translate(-50%, 0) rotate(-1deg); padding: 3px 12px; font-size: 19px; line-height: 1.3; text-align: center; opacity: 0; transition: opacity .15s; pointer-events: none; white-space: pre; }
+    #hint.show { opacity: 1; }
+    /* narrative notes sit low and centred, under the action, so you can keep playing while you read */
+    #toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: 168px; width: min(560px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+    .toast { background: var(--paper); border: 1px solid var(--edge); padding: 4px 12px 5px; font-size: 17px; line-height: 1.25; text-align: center; max-width: 100%; box-shadow: 2px 3px 0 rgba(58, 47, 37, .18); animation: toastIn .25s ease-out; transition: opacity .5s, transform .5s; transform: rotate(var(--tilt, 0deg)); }
+    .toast.out { opacity: 0; transform: translateY(-14px) rotate(var(--tilt, 0deg)); }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px) rotate(3deg); } }
+
+    #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(40, 52, 60, .28); cursor: pointer; transition: opacity .3s; }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    #settlers { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) rotate(-0.6deg); width: min(520px, calc(100vw - 32px)); padding: 10px 18px 12px; display: none; pointer-events: none; z-index: 4; }
+    #settlers.show { display: block; }
+    #settlers { max-height: calc(100vh - 150px); overflow: hidden; } #settlers .sum { background: rgba(185,150,90,0.12); padding: 4px 8px; border-left: 3px solid #b8904a; } #settlers ul { font-size: 14.5px; }
+    #settlers h2 { margin: 0 0 6px; font-weight: normal; font-size: 24px; border-bottom: 1px dashed var(--edge); }
+    #settlers ul { margin: 4px 0 8px; padding-left: 18px; font-size: 16px; line-height: 1.3; } #settlers li { margin-bottom: 6px; }
+    #settlers p { margin: 0 0 4px; font-size: 16px; } #settlers small { color: var(--ink-soft); }
+    #peek { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) rotate(-1deg); padding: 3px 14px; font-size: 17px; display: none; pointer-events: none; z-index: 3; }
+    #peek.show { display: block; }
+    #overlay .card { padding: 18px 30px 18px; max-width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 24px); overflow: auto; text-align: center; transform: rotate(-1deg); }
+    #overlay .vignette { display: block; width: 100%; height: auto; margin: 0 0 6px; }
+    #overlay h1 { margin: 0; font-size: 52px; letter-spacing: 1px; line-height: 1; }
+    #overlay .sub { color: var(--ink-soft); font-size: 19px; margin: 4px 0 12px; }
+    #overlay dl { column-count: 2; column-gap: 26px; text-align: left; font-size: 15.5px; margin: 0 0 14px; line-height: 1.22; }
+    #overlay dl > div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; break-inside: avoid; margin-bottom: 4px; }
+    @media (max-width: 620px) { #overlay dl { column-count: 1; } }
+    #overlay dt { font-weight: bold; text-align: right; }
+    #overlay dd { margin: 0; color: var(--ink-soft); }
+    #overlay .newgame { margin-top: 14px; }
+    #newgame { font: inherit; font-size: 17px; padding: 3px 14px; background: none; color: var(--ink-soft); border: 1px solid var(--edge); border-radius: 3px; cursor: pointer; }
+    #newgame:hover { background: #efe3c4; color: var(--ink); }
+    #overlay .cta { display: inline-block; font-size: 24px; padding: 4px 18px; border: 2px dashed var(--ink-soft); border-radius: 4px; animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 50% { transform: scale(1.05); } }
+    #crosshair { position: fixed; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; border: 2px solid rgba(58,47,37,.8); background: rgba(244,236,216,.8); display: none; pointer-events: none; }
+    body.building #crosshair { display: block; }
+    #buildbar { position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%); display: none; gap: 6px; pointer-events: none; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+    body.building #buildbar { display: flex; }
+    #buildbar .piece { padding: 3px 9px 2px; font-size: 15px; line-height: 1.1; text-align: center; background: var(--paper); border: 1px solid var(--edge); box-shadow: 2px 3px 0 rgba(58,47,37,.18); }
+    #buildbar .piece small { display: block; font-size: 12px; color: var(--ink-soft); }
+    #buildbar .piece.sel { background: #e9c98a; transform: translateY(-5px) rotate(-1.5deg); }
+    #buildbar .piece.poor { opacity: .55; }
+    #buildbar .shelves { flex-basis: 100%; display: flex; justify-content: center; gap: 10px; font-size: 14px; color: var(--ink-soft); }
+    #buildbar .shelf { padding: 0 6px; }
+    #buildbar .shelf.on { color: var(--ink); border-bottom: 2px solid #b5473a; }
+    #buildhint { position: fixed; top: 58px; left: 50%; transform: translateX(-50%) rotate(-.6deg); padding: 3px 12px; font-size: 17px; display: none; pointer-events: none; white-space: nowrap; }
+    body.building #buildhint { display: block; }
+    body.building #hint { display: none; }
+    #craft { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-.5deg); width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow: auto; padding: 14px 22px 12px; display: none; z-index: 5; }
+    #craft.show { display: block; }
+    #map { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(.6deg); padding: 10px 14px 6px; display: none; z-index: 5; pointer-events: none; text-align: center;
+      clip-path: polygon(0 1%, 8% 0, 22% 1.2%, 37% .2%, 51% 1%, 66% 0, 81% .9%, 94% .1%, 100% 1.5%, 99.2% 14%, 100% 29%, 99.4% 45%, 100% 61%, 99.3% 77%, 100% 92%, 98.8% 100%, 84% 99.1%, 69% 100%, 52% 99.3%, 36% 100%, 21% 99.2%, 7% 100%, 0 98.5%, .7% 84%, 0 68%, .8% 52%, 0 36%, .6% 20%); }
+    #map.show { display: block; }
+    #almanac ul { margin: 0 0 10px; padding-left: 20px; font-size: 18px; line-height: 1.35; }
+    #story, #almanac, #letter { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%) rotate(-.7deg); width: min(470px, calc(100vw - 40px)); padding: 16px 24px 12px; display: none; z-index: 5; pointer-events: none; }
+    #story.show, #almanac.show, #letter.show { display: block; }
+    #story h2, #almanac h2, #letter h2 { margin: 0 0 8px; font-size: 27px; border-bottom: 1px dashed var(--edge); }
+    #story p, #almanac p, #letter p { margin: 0 0 10px; font-size: 19px; line-height: 1.35; }
+    #story small, #almanac small, #letter small { color: var(--ink-soft); font-size: 14px; }
+    #map h2 { margin: 0 0 4px; font-size: 26px; }
+    #calendar { position: fixed; left: 50%; top: 46%; transform: translate(-50%, -50%) rotate(-.5deg); width: min(560px, calc(100vw - 40px)); padding: 14px 22px 10px; display: none; z-index: 5; pointer-events: none; }
+    #calendar.show { display: block; }
+    #calendar h2 { margin: 0 0 8px; font-size: 27px; border-bottom: 1px dashed var(--edge); }
+    #calendar .week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 6px 0 10px; }
+    #calendar .day { border: 1px solid rgba(60,40,25,.3); padding: 4px 3px 5px; text-align: center; font-size: 14px; min-height: 64px; background: rgba(255,250,236,.4); }
+    #calendar .day b { display: block; font-size: 16px; }
+    #calendar .day.today { background: rgba(217,164,65,.28); border-color: rgba(120,80,30,.6); transform: rotate(-1.5deg); }
+    #calendar .day span { display: block; line-height: 1.2; }
+    #calendar .fair { color: #b5473a; font-weight: bold; } #calendar .tink { color: #4f6f96; } #calendar .dance { color: #8a5a1e; } #calendar .town { color: #5a6a3a; } #calendar .fw { color: #a0306a; font-weight: bold; }
+    #calendar ul { margin: 0 0 6px; padding-left: 20px; font-size: 17px; line-height: 1.4; }
+    #calendar small { color: var(--ink-soft); font-size: 14px; }
+    #map canvas { width: min(560px, calc(100vw - 60px), calc(100vh - 130px)); aspect-ratio: 1; display: block; margin: 0 auto; border: 1px solid rgba(60,40,25,.35); }
+    #map p { margin: 4px 0 0; color: var(--ink-soft); font-size: 15px; }
+    #craft .head { display: flex; justify-content: space-between; align-items: center; }
+    #craft h2 { margin: 0; font-size: 34px; }
+    #craft h3 { margin: 12px 0 6px; font-size: 21px; border-bottom: 1px dashed var(--edge); }
+    #craft h3 small { font-size: 15px; color: var(--ink-soft); font-weight: normal; }
+    #craft .have { margin: 0; color: var(--ink-soft); font-size: 17px; }
+    #craft .close { font: inherit; font-size: 28px; line-height: 1; background: none; border: 0; cursor: pointer; color: var(--ink); }
+    .recipe { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dotted var(--edge); }
+    .recipe b { font-size: 19px; } .recipe span { display: block; font-size: 15px; color: var(--ink-soft); }
+    .recipe .cost { font-size: 15px; white-space: nowrap; }
+    .recipe button { font: inherit; font-size: 17px; padding: 2px 12px; background: #e9c98a; border: 1px solid #b89a5a; border-radius: 3px; cursor: pointer; box-shadow: 1px 2px 0 rgba(58,47,37,.2); }
+    .recipe button:disabled { background: #e8e0cc; color: #9a8c78; cursor: default; box-shadow: none; }
+    .recipe.owned b::after { content: ' ✓'; color: #4f7d43; }
+    #craft .pieces { margin: 0; padding-left: 18px; columns: 2; font-size: 15px; }
+    #craft .pieces span { color: var(--ink-soft); }
+    #craft .foot { margin: 8px 0 0; font-size: 14px; color: var(--ink-soft); text-align: right; }
+    @media (max-width: 560px) { #craft .pieces { columns: 1; } .recipe { grid-template-columns: 1fr auto; } .recipe .cost { grid-column: 1; } }
+    #error { display: none; position: fixed; inset: auto 16px 16px 16px; padding: 10px 14px; background: #fde2df; border: 1px solid #c8323c; font-family: system-ui; }
+
+    /* ---- the screen's layout: every kind of thing has its own place, and they queue instead of piling up ----
+       top-left:      title, clock and the way home; under them the journal and the word round the county
+       top-centre:    one status line (paused, or the build hints; paused wins)
+       centre:        one panel at a time (crafting, map, pack, settlers, almanac, calendar, letters, tales):
+                      open another and the first waits, hidden, until the new one is put away
+       bottom-centre: stacked upward with no overlaps: notes (two at a time, the rest wait their turn), what E
+                      and the mouse do here, the build shelf, the bars, the toolbar */
+    #bottom > #toasts, #bottom > #hint, #bottom > #buildbar { position: static; left: auto; bottom: auto; }
+    #bottom > #toasts { transform: none; width: min(560px, 100%); }
+    #bottom > #hint { transform: rotate(-1deg); }
+    #bottom > #hint:not(.show) { display: none; }
+    #bottom > #buildbar { transform: none; }
+    #craft, #map, #story, #almanac, #letter, #calendar, #settlers, #pack {
+      position: fixed; left: 50%; top: calc(50vh - 84px); bottom: auto; transform: translate(-50%, -50%) rotate(-.5deg);
+      max-height: calc(100vh - 320px); overflow: auto; z-index: 5; box-sizing: border-box; }
+    #pack.show { display: block; }
+    #map canvas { width: min(540px, calc(100vw - 60px), calc(100vh - 400px)); }
+    [data-waiting] { visibility: hidden !important; }
+    body.panel-open #toasts .toast:not(:last-child) { display: none; } /* with a panel up, just the newest note */
+    body:has(#peek.show) #buildhint { display: none !important; }
+    .short, #craft .short, #buildbar .short { color: #b5302a !important; font-weight: bold; } .short i { font-style: normal; font-weight: normal; opacity: .8; } /* ingredients you're short of */
+    #buildbar .piece.poor { opacity: .85; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="vignette"></div>
+
+  <div id="topbar"><div class="card">Paydirt Hollow</div><div class="card" id="clock">Day 1</div><div class="card" id="homeward"></div><div class="card" id="fortune" style="display:none"></div></div>
+  <div id="backend" class="card">…</div>
+  <div id="notes">
+    <div id="next" class="card"><b>NEXT</b><span></span></div>
+    <div id="journal" class="card"></div>
+    <div id="rumour" class="card"></div>
+  </div>
+  <div id="ledger" class="card"></div>
+  <div id="times">
+    <button class="card">Afternoon</button><button class="card">Golden</button><button class="card">Blue hour</button><button class="card">Night</button>
+  </div>
+
+  <div id="settlers" class="card"></div>
+  <div id="peek" class="card">Paused · click to carry on · Esc for the controls</div>
+  <div id="hurt"></div>
+  <div id="sleep"><p>Zzz… the night passes under the quilt</p></div>
+
+  <div id="bottom">
+    <div id="toasts"></div>
+    <div id="hint" class="card"></div>
+    <div id="buildbar"></div>
+    <div id="health" class="card"><div id="health-fill"></div></div>
+    <div id="stamina" class="card"><div id="stamina-fill"></div></div>
+    <div id="fullness" class="card" title="Fullness: eat (F) to keep it up"><div id="fullness-fill"></div></div>
+    <div id="toolbar"></div>
+  </div>
+  <div id="pack" class="card"><h4>Your pack <small>(I to close)</small></h4><div id="slots"></div></div>
+
+  <div id="overlay">
+    <div class="card">
+      <svg class="vignette" viewBox="0 0 600 130" aria-hidden="true">
+        <defs><filter id="tornf"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter></defs>
+        <g stroke="#5a3e2a" stroke-width="1.6" stroke-linejoin="round" filter="url(#tornf)">
+          <rect x="0" y="0" width="600" height="130" fill="#efe3c4" stroke="none"/>
+          <circle cx="470" cy="38" r="20" fill="#e8b85a"/>
+          <path d="M0 84 C70 58 140 66 210 76 C290 88 340 58 420 62 C500 66 550 80 600 72 L600 130 L0 130 Z" fill="#a8b07a"/>
+          <path d="M0 100 C90 84 160 92 250 98 C330 104 410 86 500 92 C540 94 570 98 600 96 L600 130 L0 130 Z" fill="#c9a24e"/>
+          <path d="M0 116 C100 108 200 114 300 112 C400 110 500 116 600 112 L600 130 L0 130 Z" fill="#8a6a40"/>
+          <g transform="translate(110 58)"><path d="M0 34 L0 14 L10 2 L34 2 L44 14 L44 34 Z" fill="#b5473a"/><path d="M14 34 L14 18 L30 18 L30 34 M14 18 L30 34 M30 18 L14 34" fill="#efe3c4" stroke-width="1.4"/></g>
+          <g transform="translate(70 56)"><path d="M10 40 L10 32 M10 0 L20 14 L15 14 L22 24 L16 24 L24 34 L-4 34 L4 24 L-2 24 L5 14 L0 14 Z" fill="#3f6a4a"/></g>
+          <g transform="translate(205 70)"><circle cx="12" cy="10" r="13" fill="#d97a3a"/><path d="M12 22 L12 34" fill="none"/><circle cx="6" cy="8" r="2" fill="#c4362f" stroke="none"/><circle cx="16" cy="13" r="2" fill="#c4362f" stroke="none"/></g>
+          <g transform="translate(300 46)"><path d="M10 50 L14 8 L18 50 Z" fill="#8a6a48"/><g transform="translate(14 8)"><path d="M0 0 L-14 -6 L-12 -1 Z M0 0 L14 6 L12 1 Z M0 0 L-5 13 L-1 11 Z M0 0 L5 -13 L1 -11 Z" fill="#efe3c4"/></g></g>
+          <path d="M360 102 L560 102 M372 96 L372 108 M396 96 L396 108 M420 96 L420 108 M444 96 L444 108 M468 96 L468 108 M492 96 L492 108 M516 96 L516 108 M540 96 L540 108" fill="none" stroke="#efe3c4" stroke-width="2.2"/>
+          <g transform="translate(530 76)"><path d="M0 24 L12 0 L24 24 Z" fill="#4f6a46"/></g>
+          <g transform="translate(14 72)"><path d="M0 22 L10 0 L20 22 Z" fill="#4f6a46"/></g>
+        </g>
+      </svg>
+      <h1>Paydirt Hollow</h1>
+      <div class="sub">a hard-scrabble gold-rush tale, cut from paper and stood up on its hinges</div>
+      <dl>
+        <div><dt>WASD</dt><dd>walk</dd></div>
+        <div><dt>Shift</dt><dd>sprint</dd></div>
+        <div><dt>Space</dt><dd>jump</dd></div>
+        <div><dt>Mouse</dt><dd>look · wheel to zoom</dd></div>
+        <div><dt>Left click</dt><dd>chop, mine, pick, break builds (hold to repeat)</dd></div>
+        <div><dt>E</dt><dd>sleep · rock on the porch · tall tales at a campfire · gather eggs · milk &amp; shear · read the mail · pat Old Blue &amp; Marmalade · catch lightning bugs · trade with the tinker · enter the County Fair</dd></div>
+        <div><dt>M / Tab</dt><dd>the county map</dd></div>
+        <div><dt>G</dt><dd>fly your paper kite (once you've made one)</dd></div>
+        <div><dt>H</dt><dd>the almanac: this week's calendar and today's chores</dd></div>
+        <div><dt>K</dt><dd>snap a postcard (saved as a picture)</dd></div>
+        <div><dt>F</dt><dd>eat (best food first: honey cake, pie, apple crisp, flapjacks, stew, bread, cornbread, berries)</dd></div>
+        <div><dt>C</dt><dd>crafting</dd></div>
+        <div><dt>B</dt><dd>build mode · 1–4 shelf · Q/E piece · R rotate · LMB place · RMB remove</dd></div>
+        <div><dt>1 – 5</dt><dd>tool in hand: hands · axe · pickaxe · spear · fishing pole (in build mode: a shelf)</dd></div><div><dt>I</dt><dd>open your pack (wood, stone, food…)</dd></div><div><dt>J</dt><dd>settlers &amp; works: who's working where, what's in the storehouse</dd></div>
+        <div><dt>P</dt><dd>depth of field on/off</dd></div>
+        <div><dt>N</dt><dd>sound on/off</dd></div>
+        <div><dt>F3</dt><dd>show the frame rate and time-of-day buttons</dd></div><div><dt>O</dt><dd>graphics: auto · high · medium · low</dd></div>
+        <div><dt>Esc</dt><dd>pause</dd></div>
+      </dl>
+      <div class="cta">Click to begin</div>
+      <div class="newgame"><button id="newgame" type="button">New game</button></div>
+    </div>
+  </div>
+  <div id="crosshair"></div>
+  <div id="buildhint" class="card"></div>
+
+  <div id="craft" class="card" role="dialog" aria-label="Crafting">
+    <div class="head"><h2>Crafting</h2><button data-close class="close" aria-label="Close">×</button></div>
+    <p class="have"></p>
+    <div class="recipes"></div>
+    <h3>Build pieces <small>— craft a hammer, then press B</small></h3>
+    <ul class="pieces"></ul>
+    <p class="foot">C or Esc to close</p>
+  </div>
+  <div id="map" class="card"><h2>The County, as you know it</h2><canvas></canvas><p>M to fold it away</p></div>
+  <div id="story" class="card"></div>
+  <div id="almanac" class="card"></div>
+  <div id="letter" class="card"></div>
+  <div id="calendar" class="card"></div>
+  <div id="error"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

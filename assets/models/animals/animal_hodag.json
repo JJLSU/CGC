@@ -1,0 +1,10 @@
+{
+  "name": "animal_hodag",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15586,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

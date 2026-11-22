@@ -1,0 +1,18 @@
+{
+  "name": "folk_native_hunter",
+  "height": 1.75,
+  "tris": 19914,
+  "tris_before": 19914,
+  "clips": [
+    "Archery_Shot",
+    "Attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

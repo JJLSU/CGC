@@ -1,0 +1,15 @@
+{
+  "name": "folk_player",
+  "height": 1.75,
+  "tris": 20370,
+  "tris_before": 20370,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

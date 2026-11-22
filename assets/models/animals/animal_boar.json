@@ -1,0 +1,10 @@
+{
+  "name": "animal_boar",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15385,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

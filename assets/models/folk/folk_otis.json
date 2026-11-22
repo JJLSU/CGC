@@ -1,0 +1,15 @@
+{
+  "name": "folk_otis",
+  "height": 1.75,
+  "tris": 19288,
+  "tris_before": 19288,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

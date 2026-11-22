@@ -1,0 +1,15 @@
+{
+  "name": "folk_amos",
+  "height": 1.75,
+  "tris": 18738,
+  "tris_before": 18738,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "animal_cow",
+  "length": 2.0,
+  "height": 2.0,
+  "tris": 15275,
+  "clips": [
+    "run",
+    "walk"
+  ]
+}

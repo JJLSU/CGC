@@ -1,0 +1,15 @@
+{
+  "name": "prospectors_3",
+  "height": 1.75,
+  "tris": 18280,
+  "tris_before": 18280,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

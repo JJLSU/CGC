@@ -1,0 +1,15 @@
+{
+  "name": "folk_ezra",
+  "height": 1.75,
+  "tris": 19987,
+  "tris_before": 19987,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

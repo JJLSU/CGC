@@ -1,0 +1,15 @@
+{
+  "name": "folk_abel",
+  "height": 1.75,
+  "tris": 20113,
+  "tris_before": 20113,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

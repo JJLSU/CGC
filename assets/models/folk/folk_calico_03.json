@@ -1,0 +1,15 @@
+{
+  "name": "folk_calico_03",
+  "height": 1.75,
+  "tris": 19004,
+  "tris_before": 19004,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

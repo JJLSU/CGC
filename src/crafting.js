@@ -1,0 +1,316 @@
+// Crafting: a small tech tree. Handcraft anywhere; better things need a station nearby —
+// a workbench (tools and gear), a campfire (cooking) or a forge (smelting and iron tools).
+// Tools are made once and change what you can do; items stack in your pack (rope, iron, food).
+import { PIECES, PIECE_ORDER, costText, costHTML } from './building.js';
+
+export const RECIPES = [
+  // by hand
+  { id: 'hammer', name: 'Hammer', kind: 'tool', station: null, cost: { wood: 4, stone: 1 }, desc: 'Unlocks building (B).' },
+  { id: 'rope', name: 'Rope', kind: 'item', station: null, cost: { fiber: 4 }, desc: 'Twisted from tall grass.' },
+  { id: 'stoneaxe', name: 'Stone axe', kind: 'tool', station: null, cost: { wood: 6, stone: 4 }, desc: 'Chop trees twice as fast.' },
+  { id: 'basket', name: 'Berry basket', kind: 'tool', station: null, cost: { wood: 3, fiber: 2 }, desc: 'An extra berry from every bush.' },
+  // at a workbench
+  { id: 'pickaxe', name: 'Pickaxe', kind: 'tool', station: 'workbench', cost: { wood: 5, stone: 6, rope: 1 }, desc: 'Break rock and dig iron veins.' },
+  { id: 'spear', name: 'Ash spear', kind: 'tool', station: 'workbench', cost: { wood: 4, stone: 2, rope: 1 }, desc: 'Longer reach, hits guardians hard.' },
+  { id: 'jar', name: 'Lightning-bug jar', kind: 'tool', station: 'workbench', cost: { honey: 1, rope: 1 }, desc: 'Eat the honey, scrape the jar, punch the lid. After dark, E by a firefly to catch it: the jar lights your way.' },
+  { id: 'kite', name: 'Paper kite', kind: 'tool', station: 'workbench', cost: { fiber: 4, wood: 1, rope: 1 }, desc: 'Press G to fly it on the west wind. Crows keep away from the garden while it is up.' },
+  { id: 'rod', name: 'Willow fishing pole', kind: 'tool', station: 'workbench', cost: { wood: 3, rope: 1 }, desc: 'Face the water from the bank and click to cast.' },
+  { id: 'bow', name: 'Hunting bow', kind: 'tool', station: 'workbench', cost: { wood: 4, rope: 2, fiber: 2 }, desc: 'A hickory bow and a quiver of paper-fletched arrows. Hold the mouse button to draw, pan the camera to put the reticle on a deer (it turns gold), and let go. Walk up to it for venison and a hide.' },
+  { id: 'boots', name: 'Leather boots', kind: 'tool', station: 'workbench', cost: { leather: 3, rope: 1 }, desc: 'Stout tanned-leather boots: sprinting tires you a third less.' },
+  { id: 'coat', name: 'Sheepskin coat', kind: 'tool', station: 'workbench', cost: { pelt: 3, fiber: 4, rope: 1 }, desc: 'Take a third less harm.' },
+  // at a campfire
+  { id: 'stew', name: 'Toadstool stew', kind: 'item', station: 'campfire', cost: { mushrooms: 3, berries: 1 }, desc: 'Eat (F): heals 40.' },
+  { id: 'cornbread', name: 'Skillet cornbread', kind: 'item', station: 'campfire', cost: { corn: 3 }, desc: 'Eat (F): heals 30.' },
+  { id: 'bread', name: 'Farmhouse loaf', kind: 'item', station: 'campfire', cost: { wheat: 3, egg: 1 }, desc: 'Eat (F): heals 35. Wheat from the stooks, an egg to glaze it.' },
+  { id: 'biscuits', name: 'Buttermilk biscuits', kind: 'item', station: 'campfire', cost: { milk: 1, corn: 2 }, desc: 'Eat (F): heals 35.' },
+  { id: 'flapjacks', name: 'Flapjacks', kind: 'item', station: 'campfire', cost: { egg: 2, corn: 1 }, desc: 'Eat (F): heals 40, well fed.' },
+  { id: 'applecrisp', name: 'Apple crisp', kind: 'item', station: 'campfire', cost: { apples: 3, honey: 1 }, desc: 'Eat (F): heals 45, well fed.' },
+  { id: 'pie', name: 'Pumpkin pie', kind: 'item', station: 'campfire', cost: { pumpkin: 1, berries: 2 }, desc: 'Eat (F): heals 50, well fed.' },
+  { id: 'roast', name: 'Venison roast', kind: 'item', station: 'campfire', cost: { venison: 2 }, desc: 'Eat (F): heals 50, well fed. Venison from the deer you hunt.' },
+  { id: 'fishfry', name: 'Pan-fried fish', kind: 'item', station: 'campfire', cost: { fish: 2 }, desc: 'Eat (F): heals 35.' },
+  { id: 'johnnycake', name: 'Maple johnnycakes', kind: 'item', station: 'campfire', cost: { syrup: 1, flour: 1 }, desc: 'Eat (F): heals 40, and a sugar rush fills your stamina. Syrup from your sugar shack.' },
+  { id: 'applepie', name: 'Apple pie', kind: 'item', station: 'campfire', cost: { flour: 2, apples: 3 }, desc: 'Eat (F): heals 55, well fed. Flour from your mill.' },
+  { id: 'honeycake', name: 'Honey cake', kind: 'item', station: 'campfire', cost: { honey: 2, berries: 2 }, desc: 'Eat (F): heals 60, well fed.' },
+  // at a forge
+  { id: 'iron', name: 'Smelt iron', kind: 'item', station: 'forge', cost: { ore: 2, wood: 1 }, desc: 'Iron for better tools.' },
+  { id: 'ironaxe', name: 'Iron axe', kind: 'tool', station: 'forge', cost: { iron: 2, wood: 2, rope: 1 }, desc: 'Fells trees in a stroke or two.' },
+  { id: 'steel', name: 'Smelt steel', kind: 'item', station: 'forge', cost: { iron: 2, charcoal: 2 }, desc: 'Iron folded with charcoal: hard, bright and true.' },
+  { id: 'steelaxe', name: 'Steel axe', kind: 'tool', station: 'forge', cost: { steel: 2, wood: 2, leather: 1 }, desc: 'The best axe in the county: fells any tree in a stroke.' },
+  { id: 'steelpick', name: 'Steel pickaxe', kind: 'tool', station: 'forge', cost: { steel: 3, wood: 2, leather: 1 }, desc: 'Bites through rock and ore like cheese.' },
+  { id: 'ironpick', name: 'Iron pickaxe', kind: 'tool', station: 'forge', cost: { iron: 3, wood: 2, rope: 1 }, desc: 'Splits rock and veins fast.' },
+  // at the County Fair (every seventh day): one entry per class, a prize and a ribbon for each
+  { id: 'f-pie', name: 'Pie table', kind: 'trade', station: 'fair', fair: true, cost: { pie: 1 }, gives: { ribbon: 1, honey: 2 }, desc: `"Mrs. Abernathy has entered again. Let's see about that."` },
+  { id: 'f-bread', name: 'Best loaf', kind: 'trade', station: 'fair', fair: true, cost: { bread: 1 }, gives: { ribbon: 1, egg: 4 }, desc: '"A good crust, a good crumb. Your grandmother would approve."' },
+  { id: 'f-honey', name: 'Honey & preserves', kind: 'trade', station: 'fair', fair: true, cost: { honey: 2 }, gives: { ribbon: 1, iron: 1 }, desc: '"Clear as a church window. Clover, is it?"' },
+  { id: 'f-wool', name: 'Finest fleece', kind: 'trade', station: 'fair', fair: true, cost: { wool: 3 }, gives: { ribbon: 1, rope: 2 }, desc: '"Soft as a cloud and not a burr in it."' },
+  { id: 'f-pumpkin', name: 'Biggest pumpkins', kind: 'trade', station: 'fair', fair: true, cost: { pumpkin: 2 }, gives: { ribbon: 1, honeycake: 1 }, desc: `"We'll need the scales from the feed store for these."` },
+  { id: 'f-giant', name: 'Giant pumpkin', kind: 'trade', station: 'fair', fair: true, cost: { giantpumpkin: 1 }, gives: { ribbon: 2, honey: 2, iron: 2 }, desc: `"Fetch the scales from the feed store! And a wagon. And another wagon." Two ribbons.` },
+  { id: 'f-whiskers', name: 'Fish story', kind: 'trade', station: 'fair', fair: true, cost: { whiskers: 1 }, gives: { ribbon: 2, iron: 3 }, desc: `"Bring OLD WHISKERS himself and I'll believe it. Two ribbons, then."` },
+  // with the travelling tinker (every other day): surplus for sundries
+  // the tinker's special request for this visit (filled in when he arrives; see newRequest)
+  { id: 't-request', name: "The tinker's request", kind: 'trade', station: 'tinker', cost: { wood: 999 }, gives: {}, desc: '', request: true },
+  { id: 't-rope', name: 'Coil of rope', kind: 'trade', station: 'tinker', cost: { wood: 10 }, gives: { rope: 2 }, desc: '"Good dry timber! Two coils for it."' },
+  { id: 't-honey', name: 'Jar of honey', kind: 'trade', station: 'tinker', cost: { fish: 4 }, gives: { honey: 1 }, desc: '"Fresh fish for the road? A jar of honey, then."' },
+  { id: 't-ore', name: 'Sack of ore', kind: 'trade', station: 'tinker', cost: { corn: 4, pumpkin: 2 }, gives: { ore: 2 }, desc: '"Garden truck for the city folk; ore for you."' },
+  { id: 't-bricks', name: 'Load of bricks', kind: 'trade', station: 'tinker', cost: { bricks: 8 }, gives: { iron: 2 }, desc: '"Kiln-fired? The bank in town is putting up a new front."' },
+  { id: 't-leather', name: 'Roll of leather', kind: 'trade', station: 'tinker', cost: { leather: 3 }, gives: { iron: 1, honey: 1 }, desc: '"Oak-tanned! The harness-maker will want every scrap."' },
+  { id: 't-syrup', name: 'Jug of maple syrup', kind: 'trade', station: 'tinker', cost: { syrup: 4 }, gives: { iron: 1, rope: 2 }, desc: '"Real maple, not that cane-sugar slop! Folks in the city go wild for it."' },
+  { id: 't-flour', name: 'Sack of flour', kind: 'trade', station: 'tinker', cost: { flour: 5 }, gives: { iron: 1, honey: 1 }, desc: '"Stone-ground! The baker in town will pay through the nose."' },
+  { id: 't-wheat', name: 'Flour for the mill', kind: 'trade', station: 'tinker', cost: { wheat: 6 }, gives: { iron: 1, rope: 1 }, desc: '"Good hard wheat! The miller owes me one."' },
+  { id: 't-pelt', name: 'Old sheepskin', kind: 'trade', station: 'tinker', cost: { clay: 6, stone: 6 }, gives: { pelt: 1 }, desc: '"Clay and stone for my mending. Take this fleece."' },
+  { id: 't-wool', name: 'Honey and rope', kind: 'trade', station: 'tinker', cost: { wool: 3 }, gives: { honey: 1, rope: 1 }, desc: '"Prime fleece! The ladies in town will knit it up."' },
+  // the blacksmith's in Paydirt Hollow, once you've mended it: finished tools for gold dollars (no forge or iron
+  // of your own needed), and every edge you carry ground sharp
+  { id: 'm-sharpen', name: 'Grind every edge', kind: 'trade', station: 'smithy', cost: { dollars: 1 }, gives: {}, sharpen: true, desc: 'The smith puts your axe, pick and spear to his wheel. Sharp as new.' },
+  { id: 'm-pickaxe', name: 'Pickaxe', kind: 'tool', tool: 'pickaxe', station: 'smithy', cost: { dollars: 6 }, desc: 'A plain miner\'s pick, ready-made.' },
+  { id: 'm-ironaxe', name: 'Iron axe', kind: 'tool', tool: 'ironaxe', station: 'smithy', cost: { dollars: 14 }, desc: 'Forged while you wait. Fells trees in a stroke or two.' },
+  { id: 'm-ironpick', name: 'Iron pickaxe', kind: 'tool', tool: 'ironpick', station: 'smithy', cost: { dollars: 16 }, desc: 'Splits rock and veins fast, and bites the silver.' },
+  { id: 'm-steelaxe', name: 'Steel axe', kind: 'tool', tool: 'steelaxe', station: 'smithy', cost: { dollars: 34 }, desc: 'His best work. Fells any tree in a stroke.' },
+  { id: 'm-steelpick', name: 'Steel pickaxe', kind: 'tool', tool: 'steelpick', station: 'smithy', cost: { dollars: 40 }, desc: 'Bites through rock and ore like cheese.' },
+  // the general store in Paydirt Hollow, once you've mended it: supplies for gold dollars
+  { id: 's-rope', name: 'Coil of rope', kind: 'trade', station: 'store', cost: { dollars: 2 }, gives: { rope: 2 }, desc: 'Good hemp, two coils.' },
+  { id: 's-apples', name: 'Sack of apples', kind: 'trade', station: 'store', cost: { dollars: 2 }, gives: { apples: 4 }, desc: 'Winesaps from back East, a little bruised.' },
+  { id: 's-bread', name: 'Loaf of bread', kind: 'trade', station: 'store', cost: { dollars: 2 }, gives: { bread: 1 }, desc: 'Baked this morning, still warm.' },
+  { id: 's-flour', name: 'Sack of flour', kind: 'trade', station: 'store', cost: { dollars: 3 }, gives: { flour: 2 }, desc: 'Two sacks of good white flour.' },
+  { id: 'revolver', name: 'Six-shooter', kind: 'tool', station: 'store', cost: { dollars: 30 }, gives: { cartridges: 12 }, desc: 'A single-action revolver and two boxes of cartridges. Hold the mouse button to raise it, put the bead on your mark, let go to fire. Six in the cylinder; then it takes a moment to reload.' },
+  { id: 'rifle', name: 'Buffalo rifle', kind: 'tool', station: 'store', cost: { dollars: 55 }, gives: { cartridges: 6 }, desc: 'A heavy single-shot rifle that carries across a valley. Hold to raise it and let it settle, let go to fire; one shot, then reload. It drops a man or a buck at a blow.' },
+  { id: 's-cartridges', name: 'Box of cartridges', kind: 'trade', station: 'store', cost: { dollars: 2 }, gives: { cartridges: 12 }, desc: 'A dozen brass cartridges, for the six-shooter and the rifle both.' },
+  // trading at a camp's fire, while a gift has bought you peace there: they value iron and honey, and make fine
+  // moccasins and rawhide
+  { id: 'n-moccasins', name: 'Beaded moccasins', kind: 'tool', tool: 'boots', station: 'camp', cost: { pelt: 2 }, desc: 'Soft, quilled and beaded: sprinting tires you a third less (as good as boots).' },
+  { id: 'n-rope', name: 'Braided rawhide', kind: 'trade', station: 'camp', cost: { venison: 1 }, gives: { rope: 3 }, desc: 'A cut of venison for three coils of strong rawhide.' },
+  { id: 'n-pelts', name: 'Tanned hides', kind: 'trade', station: 'camp', cost: { iron: 1 }, gives: { pelt: 2 }, desc: 'A bar of iron for arrowheads and awls: two good hides in return.' },
+  { id: 'n-sang', name: 'Medicine root', kind: 'trade', station: 'camp', cost: { honey: 1 }, gives: { sang: 1 }, desc: 'The elder trades a dried root of wild sang for a jar of honey.' },
+  // freight on the Overland & Western, shipped from the depot: a steady price back East for what the county grows and
+  // makes (the crates wait on the platform for the next train)
+  { id: 'rr-lumber', name: 'Ship lumber', kind: 'trade', station: 'depot', cost: { wood: 10 }, gives: { dollars: 6 }, desc: '"A carload of good timber for the Denver yards: six dollars on the bill of lading."' },
+  { id: 'rr-stone', name: 'Ship dressed stone', kind: 'trade', station: 'depot', cost: { stone: 10 }, gives: { dollars: 4 }, desc: '"Foundation stone for the new courthouse at Cheyenne. Four dollars."' },
+  { id: 'rr-bricks', name: 'Ship bricks', kind: 'trade', station: 'depot', cost: { bricks: 6 }, gives: { dollars: 7 }, desc: '"Kiln-fired brick, packed in straw. Seven dollars the lot."' },
+  { id: 'rr-corn', name: 'Ship corn', kind: 'trade', station: 'depot', cost: { corn: 6 }, gives: { dollars: 5 }, desc: '"Sacked corn for the Kansas City mills: five dollars."' },
+  { id: 'rr-pumpkin', name: 'Ship pumpkins', kind: 'trade', station: 'depot', cost: { pumpkin: 3 }, gives: { dollars: 5 }, desc: '"Crated pumpkins for the Chicago markets, five dollars."' },
+  { id: 'rr-apples', name: 'Ship apples', kind: 'trade', station: 'depot', cost: { apples: 8 }, gives: { dollars: 4 }, desc: '"A barrel of apples, packed in sawdust: four dollars."' },
+  { id: 'rr-wool', name: 'Ship wool', kind: 'trade', station: 'depot', cost: { wool: 3 }, gives: { dollars: 6 }, desc: '"Baled fleece for the Lowell mills. Six dollars."' },
+  { id: 'rr-pelt', name: 'Ship hides', kind: 'trade', station: 'depot', cost: { pelt: 2 }, gives: { dollars: 7 }, desc: '"Two good hides for a St. Louis furrier: seven dollars."' },
+  { id: 'rr-honey', name: 'Ship honey', kind: 'trade', station: 'depot', cost: { honey: 2 }, gives: { dollars: 7 }, desc: '"Crocks of clover honey for a confectioner back East, seven dollars."' },
+  { id: 'rr-flour', name: 'Ship flour', kind: 'trade', station: 'depot', cost: { flour: 3 }, gives: { dollars: 6 }, desc: '"Your own milling, in sacks: six dollars."' },
+  { id: 'rr-syrup', name: 'Ship maple syrup', kind: 'trade', station: 'depot', cost: { syrup: 2 }, gives: { dollars: 8 }, desc: '"A San Francisco hotel will take all the syrup you can send. Eight dollars for two jugs."' },
+  { id: 'rr-leather', name: 'Ship leather', kind: 'trade', station: 'depot', cost: { leather: 2 }, gives: { dollars: 9 }, desc: '"Tanned leather for a Kansas City saddler: nine dollars."' },
+  // the trading posts at the whistle-stops (station 'post-<land>'): each deals in what its land has plenty of, and pays
+  // well for what it's short of; ride the train out to trade
+  // a rush order wired to the depot (see newOrder): delivered at the trading post it names, by the day it's due
+  { id: 'tg-order', name: 'Telegraph order', kind: 'trade', station: 'post-breaks', cost: { wood: 999 }, gives: {}, desc: '', wire: true },
+  { id: 'p-h-syrup', name: 'Jugs of maple syrup', kind: 'trade', station: 'post-hollows', cost: { dollars: 3 }, gives: { syrup: 2 }, desc: '"Boiled down in the sugar bush up the hollow. Two jugs, three dollars."' },
+  { id: 'p-h-wood', name: 'A cord of birch', kind: 'trade', station: 'post-hollows', cost: { dollars: 2 }, gives: { wood: 12 }, desc: '"Split and seasoned. The woodcutters bring in more than we can burn."' },
+  { id: 'p-h-bread', name: 'Bread for the woodcutters', kind: 'trade', station: 'post-hollows', cost: { bread: 2 }, gives: { dollars: 7 }, desc: '"Beans and bacon, beans and bacon. Two real loaves and they’d pay anything."' },
+  { id: 'claim', name: 'File a mining claim', kind: 'tool', station: 'post-breaks', cost: { dollars: 25 }, desc: 'The keeper is the district recorder too. Twenty-five dollars files the ground back along the line: an old adit with a gold vein in it, a windlass and a cart. Work it once a day (E at the adit, with a pickaxe).' },
+  { id: 'claimhand', name: 'Hire a hand for your claim', kind: 'tool', station: 'post-breaks', needs: 'claim', cost: { dollars: 40 }, desc: 'A steady old Cornish miner, out of work since the Comstock. He pitches his tent on your claim and works the vein every day; his takings wait for you in the ore cart.' },
+  { id: 'stampmill', name: 'A stamp mill for your claim', kind: 'tool', station: 'post-breaks', needs: 'claimhand', cost: { dollars: 80 }, desc: 'A little five-stamp mill, freighted up from Denver and put up beside your adit. It crushes the quartz fine, so far more of the gold comes out: your hand brings in two more pinches a day, you one more.' },
+  { id: 'p-b-ore', name: 'Sacks of ore', kind: 'trade', station: 'post-breaks', cost: { dollars: 3 }, gives: { ore: 3 }, desc: '"Tailings from the silver diggings, rich in iron. Three sacks."' },
+  { id: 'p-b-steel', name: 'A bar of steel', kind: 'trade', station: 'post-breaks', cost: { dollars: 8 }, gives: { steel: 1 }, desc: '"Drill steel from the mine’s smithy. Hard as the hills."' },
+  { id: 'p-b-pie', name: 'A pie for the diggings', kind: 'trade', station: 'post-breaks', cost: { pie: 1 }, gives: { dollars: 6 }, desc: '"A whole pie! The boys at the diggings haven’t seen one since Easter."' },
+  { id: 'p-f-fish', name: 'A string of fish', kind: 'trade', station: 'post-fen', cost: { dollars: 2 }, gives: { fish: 3 }, desc: '"Catfish and pickerel, caught this morning off the skiffs."' },
+  { id: 'p-f-sang', name: 'Medicine root', kind: 'trade', station: 'post-fen', cost: { dollars: 4 }, gives: { sang: 1 }, desc: '"Wild sang, dug on the hummocks where the mist lies thickest."' },
+  { id: 'p-f-rope', name: 'Rope for the skiffs', kind: 'trade', station: 'post-fen', cost: { rope: 3 }, gives: { dollars: 5 }, desc: '"Everything out here is poled or tied. Three coils, five dollars."' },
+  { id: 'p-p-wheat', name: 'Sheaves of wheat', kind: 'trade', station: 'post-prairie', cost: { dollars: 2 }, gives: { wheat: 5 }, desc: '"Hard red wheat, as far as you can see. Five sheaves, two dollars."' },
+  { id: 'p-p-leather', name: 'Tanned buffalo leather', kind: 'trade', station: 'post-prairie', cost: { dollars: 6 }, gives: { leather: 2 }, desc: '"Tanned on the prairie, thick and soft. Two hides."' },
+  { id: 'p-p-iron', name: 'Iron for plow points', kind: 'trade', station: 'post-prairie', cost: { iron: 1 }, gives: { dollars: 6 }, desc: '"The sod breaks a plow point a week. A bar of iron, six dollars."' },
+  { id: 'p-n-pelt', name: 'Winter pelts', kind: 'trade', station: 'post-pines', cost: { dollars: 5 }, gives: { pelt: 2 }, desc: '"Prime winter fur from the trappers’ lines. Two pelts."' },
+  { id: 'p-n-charcoal', name: 'Pine charcoal', kind: 'trade', station: 'post-pines', cost: { dollars: 3 }, gives: { charcoal: 3 }, desc: '"Burned in the high kilns. Three sacks, for your steel."' },
+  { id: 'p-n-flour', name: 'Flour for the lumber camp', kind: 'trade', station: 'post-pines', cost: { flour: 2 }, gives: { dollars: 7 }, desc: '"The camp cook is down to the sweepings. Two sacks, seven dollars."' },
+  // the cooperage on Third Street, once it's mended: casks and barrels for the storehouse (it holds half as much again of
+  // everything your works turn out), a water butt for the kitchen garden, and the cooper buys your wood for staves
+  { id: 'c-casks', name: 'Storehouse casks', kind: 'tool', tool: 'casks', station: 'cooper', cost: { dollars: 20 }, desc: 'A wagonload of oak casks and barrels for your storehouse: it holds 45 of each thing from the works instead of 30.' },
+  { id: 'c-pail', name: 'Rain barrel and pail', kind: 'tool', tool: 'rainbarrel', station: 'cooper', cost: { dollars: 6 }, desc: 'A water butt under the eaves and a cedar pail: your crops and garden grow a quarter faster.' },
+  { id: 'c-sellwood', name: 'Sell him wood', kind: 'trade', station: 'cooper', cost: { wood: 6 }, gives: { dollars: 3 }, desc: '"Straight-grained oak or ash makes good staves. Three dollars for six."' },
+  // the dry goods on Third Street, once it's mended: ready-made clothing and notions, for cash instead of hides and hours
+  { id: 'd-coat', name: 'Sheepskin coat', kind: 'tool', tool: 'coat', station: 'drygoods', cost: { dollars: 18 }, desc: 'Ready-made, fleece-lined, off the rack. Take a third less harm, and keep warm of a cold night.' },
+  { id: 'd-boots', name: 'Leather boots', kind: 'tool', tool: 'boots', station: 'drygoods', cost: { dollars: 14 }, desc: 'Stout boots from a Boston cobbler: sprinting tires you a third less.' },
+  { id: 'd-basket', name: 'Berry basket', kind: 'tool', tool: 'basket', station: 'drygoods', cost: { dollars: 3 }, desc: 'A split-oak basket: an extra berry from every bush.' },
+  { id: 'd-jar', name: 'Lightning-bug jar', kind: 'tool', tool: 'jar', station: 'drygoods', cost: { dollars: 2 }, desc: 'A Mason jar with a punched tin lid, for catching fireflies after dark.' },
+  { id: 'd-fiber', name: 'Bolt of calico', kind: 'trade', station: 'drygoods', cost: { dollars: 2 }, gives: { fiber: 4 }, desc: 'Calico and twine by the yard: four fibre for your crafting.' },
+  { id: 'd-sellpelt', name: 'Sell her a hide', kind: 'trade', station: 'drygoods', cost: { pelt: 1 }, gives: { dollars: 3 }, desc: '"A good hide makes a good coat. Three dollars."' },
+  // the feed & grain on Second Street, once it's mended: laying mash for the hens, and he buys your corn and wool
+  { id: 'g-mash', name: 'Sack of laying mash', kind: 'trade', station: 'feed', cost: { dollars: 3 }, gives: { mash: 5 }, desc: 'Five mornings\' worth. Scatter a scoop in the coop each morning and the hens lay two more eggs.' },
+  { id: 'g-oats', name: 'Sack of oats', kind: 'trade', station: 'feed', cost: { dollars: 2 }, gives: { oats: 3 }, desc: 'Rolled oats for your horse: three feeds. A morning feed (automatic, when you first ride that day) and she runs a quarter faster all day.' },
+  { id: 'g-sellcorn', name: 'Sell him corn', kind: 'trade', station: 'feed', cost: { corn: 4 }, gives: { dollars: 3 }, desc: '"Four good ears. Three dollars, and I\'ll shell it myself."' },
+  { id: 'g-sellwool', name: 'Sell him wool', kind: 'trade', station: 'feed', cost: { wool: 3 }, gives: { dollars: 5 }, desc: '"Three fleeces, clean? Five dollars. The mill down the valley pays me back."' },
+  // the Miners' bank on Second Street, once it's mended: put your dollars in the safe and they earn a little every
+  // morning (3 cents on the dollar), safe from anything that befalls you out in the wilds
+  { id: 'k-dep10', name: 'Deposit $10', kind: 'trade', station: 'bank', cost: { dollars: 10 }, gives: { savings: 10 }, desc: 'Into the iron safe, written in the ledger in a copperplate hand.' },
+  { id: 'k-dep50', name: 'Deposit $50', kind: 'trade', station: 'bank', cost: { dollars: 50 }, gives: { savings: 50 }, desc: '"A tidy sum. It will grow, sir, slow and sure as an oak."' },
+  { id: 'k-wd10', name: 'Withdraw $10', kind: 'trade', station: 'bank', cost: { savings: 10 }, gives: { dollars: 10 }, desc: 'Counted out onto the counter in clean bills.' },
+  { id: 'k-wd50', name: 'Withdraw $50', kind: 'trade', station: 'bank', cost: { savings: 50 }, gives: { dollars: 50 }, desc: '"Spend it wisely, sir. Or at least spend it in town."' },
+  // the bakery on Second Street, once it's mended: the baker sells her baking and buys what she bakes with
+  { id: 'b-pie', name: 'Pumpkin pie', kind: 'trade', station: 'bakery', cost: { dollars: 6 }, gives: { pie: 1 }, desc: 'Still warm from the oven, with a lattice top. (For the fair table too, if you\'re not proud.)' },
+  { id: 'b-applepie', name: 'Apple pie', kind: 'trade', station: 'bakery', cost: { dollars: 7 }, gives: { applepie: 1 }, desc: 'Winesaps and cinnamon under a crimped crust.' },
+  { id: 'b-honeycake', name: 'Honey cake', kind: 'trade', station: 'bakery', cost: { dollars: 5 }, gives: { honeycake: 1 }, desc: 'A dense little cake glazed with clover honey.' },
+  { id: 'b-biscuits', name: 'Pan of biscuits', kind: 'trade', station: 'bakery', cost: { dollars: 3 }, gives: { biscuits: 1 }, desc: 'Buttermilk biscuits, a dozen to the pan.' },
+  { id: 'b-sellflour', name: 'Sell her flour', kind: 'trade', station: 'bakery', cost: { flour: 2 }, gives: { dollars: 5 }, desc: '"Two sacks from your own mill? I\'ll give you five dollars and be glad of it."' },
+  { id: 'b-sellegg', name: 'Sell her eggs', kind: 'trade', station: 'bakery', cost: { egg: 6 }, gives: { dollars: 4 }, desc: '"Half a dozen good brown eggs: four dollars."' },
+  { id: 'b-sellpumpkin', name: 'Sell her a pumpkin', kind: 'trade', station: 'bakery', cost: { pumpkin: 1 }, gives: { dollars: 3 }, desc: '"For the pies. Three dollars, and a slice when it\'s baked."' },
+  { id: 's-honey', name: 'Jar of honey', kind: 'trade', station: 'store', cost: { dollars: 3 }, gives: { honey: 1 }, desc: 'Clover honey, sealed with wax.' },
+  { id: 's-leather', name: 'Side of leather', kind: 'trade', station: 'store', cost: { dollars: 5 }, gives: { leather: 1 }, desc: 'Oak-tanned, from the tannery downriver.' },
+  { id: 's-iron', name: 'Bar of iron', kind: 'trade', station: 'store', cost: { dollars: 6 }, gives: { iron: 1 }, desc: 'Pig iron, freighted up from the railhead.' },
+  { id: 's-steel', name: 'Bar of steel', kind: 'trade', station: 'store', cost: { dollars: 14 }, gives: { steel: 1 }, desc: 'Pittsburgh steel. Dear, but it holds an edge.' },
+  { id: 't-silver', name: 'Silver ore', kind: 'trade', station: 'tinker', cost: { silver: 2 }, gives: { steel: 1, iron: 2 }, desc: '"Silver, by thunder! Out of the Redrock Breaks? Steel and iron for it, and no questions."' },
+  { id: 't-pearl', name: 'Fen pearls', kind: 'trade', station: 'tinker', cost: { pearl: 2 }, gives: { honey: 2, rope: 3, iron: 1 }, desc: '"River pearls! The jeweller in town will weep. Mind you, so did the Hodag."' },
+  { id: 't-sang', name: 'Wild sang root', kind: 'trade', station: 'tinker', cost: { sang: 3 }, gives: { iron: 2, honey: 1 }, desc: '"Ginseng! Dug from the Hollows? The druggist pays its weight in coin."' },
+  { id: 't-amber', name: 'Amber', kind: 'trade', station: 'tinker', cost: { amber: 3 }, gives: { leather: 2, rope: 2 }, desc: '"Pine amber, with a gnat in it! The lamp-maker will take all you bring."' },
+  { id: 't-geode', name: 'Thunder egg', kind: 'trade', station: 'tinker', cost: { geode: 1 }, gives: { iron: 1, pelt: 1 }, desc: '"Crack one open on the prairie, did you? Purple as a bishop. I\'ll have it."' },
+  { id: 't-iron', name: 'Pig iron', kind: 'trade', station: 'tinker', cost: { pelt: 3 }, gives: { iron: 2 }, desc: '"Fine pelts! Two bars of pig iron for them."' },
+];
+
+const STATION_NAME = { depot: 'the depot (freight office)', 'post-hollows': 'the trading post at Silver Birch Hollows', 'post-breaks': 'the trading post at Redrock Breaks', 'post-fen': 'the trading post at Misty Fen', 'post-prairie': 'the trading post at Golden Prairie', 'post-pines': 'the trading post at Bluepine Highlands', camp: 'a camp fire where you are welcome', cooper: 'the cooperage on Third Street', drygoods: 'the dry goods on Third Street', feed: 'the feed & grain on Second Street', bank: "the Miners' bank on Second Street", bakery: 'the bakery on Second Street', smithy: "the blacksmith's in Paydirt Hollow", store: 'the general store in Paydirt Hollow', workbench: 'a workbench', campfire: 'a campfire', forge: 'a forge', tinker: "the tinker's wagon (every other day)", fair: 'the judging table (County Fair, every seventh day)' };
+
+export function canAfford(inv, cost) {
+  return Object.entries(cost).every(([k, v]) => (inv[k] || 0) >= v);
+}
+
+/**
+ * Damage dealt to a target with the tool in hand (`held`: hands, axe, pick, spear, rod) and the tools you own.
+ * 0 means "wrong tool for that": wood wants the axe, stone and ore the pickaxe. Soft things (berries, grass,
+ * toadstools, corn) come away with anything, bare hands included.
+ */
+export function damageFor(type, tools, held = 'axe') {
+  const axe = tools.has('steelaxe') ? 4 : tools.has('ironaxe') ? 3 : tools.has('stoneaxe') ? 2 : 1, pick = tools.has('steelpick') ? 4 : tools.has('ironpick') ? 3 : tools.has('pickaxe') ? 2 : 0;
+  if (type === 'enemy') return held === 'spear' ? 4 : held === 'axe' ? axe : held === 'pick' ? Math.max(1, pick) : 1;
+  if (type === 'ore' || type === 'geode') return held === 'pick' ? pick : 0;
+  if (type === 'silver' || type === 'quartz') return held === 'pick' && pick >= 3 ? pick - 1 : 0; // (gold quartz too) // the silver lies in hard country rock: an iron pick or better
+  if (type === 'rock' || type === 'stonepiece') return held === 'pick' && pick ? pick + 1 : 1; // you can knock chips off with anything; a pick splits it
+  if (type === 'clay') return held === 'pick' ? 2 : 1;
+  if (SOFT.has(type)) return 1;
+  return held === 'axe' ? axe : 0; // trees, stumps, woodpiles of the wild
+}
+export const SOFT = new Set(['bush', 'grass', 'mushroom', 'hive', 'corn', 'pumpkin', 'apples', 'stook', 'satchel', 'sang', 'pearl']);
+/** Which tool a target wants, for the hint when you're holding the wrong one. */
+export function toolFor(type) { return type === 'ore' || type === 'silver' || type === 'quartz' || type === 'geode' ? 'pick' : ['rock', 'stonepiece'].includes(type) || SOFT.has(type) || type === 'clay' ? null : 'axe'; }
+
+export class CraftingPanel {
+  constructor(el, { inventory, tools, stationNear, onCraft }) {
+    this.el = el;
+    this.inventory = inventory;
+    this.tools = tools;
+    this.stationNear = stationNear; // (station) => boolean
+    this.onCraft = onCraft;
+    this.open = false;
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-craft]');
+      if (b) this.craft(b.dataset.craft);
+      if (e.target.closest('[data-close]')) this.onClose?.();
+    });
+  }
+
+  blocked(r) {
+    if (r.request && (r.done || !r.ready)) return r.done ? 'Done' : 'Away';
+    if (r.wire && (r.done || !r.ready)) return r.done ? 'Done' : 'Away';
+    if (r.fair && this.fairEntered?.(r.id)) return 'Done';
+    if (r.kind === 'tool' && this.tools.has(r.tool || r.id)) return r.tool ? 'Owned' : 'Made';
+    if (r.needs && !this.tools.has(r.needs)) return r.needs === 'claim' ? 'File a claim first' : 'Hire a hand first';
+    if (r.station && !this.stationNear(r.station)) return `Needs ${STATION_NAME[r.station]}`;
+    if (!canAfford(this.inventory, r.cost)) return 'Need more';
+    return null;
+  }
+
+  craft(id) {
+    const r = RECIPES.find((x) => x.id === id);
+    if (!r || this.blocked(r)) return;
+    for (const k in r.cost) this.inventory[k] -= r.cost[k];
+    if (r.request || r.wire) r.done = true;
+    if (r.fair) this.onFairEntry?.(r.id);
+    if (r.kind === 'tool') { this.tools.add(r.tool || id); if (r.gives) for (const k in r.gives) this.inventory[k] = (this.inventory[k] || 0) + r.gives[k]; }
+    else if (r.gives) for (const k in r.gives) this.inventory[k] = (this.inventory[k] || 0) + r.gives[k];
+    else this.inventory[id] = (this.inventory[id] || 0) + 1;
+    this.onCraft?.(r);
+    this.render();
+  }
+
+  render() {
+    const inv = this.inventory;
+    const tier = (title, station) => {
+      const rows = RECIPES.filter((r) => r.station === station).map((r) => {
+        const why = this.blocked(r);
+        const owned = why === 'Made' || why === 'Done' || why === 'Owned';
+        return `<div class="recipe ${owned ? 'owned' : ''}">
+          <div><b>${r.name}</b><span>${r.desc}</span></div>
+          <div class="cost">${costHTML(r.cost, this.inventory)}${r.gives ? ` → ${costText(r.gives)}` : ''}</div>
+          <button data-craft="${r.id}" ${why ? 'disabled' : ''} title="${why || ''}">${why === 'Done' ? (r.fair ? 'Entered' : 'Delivered') : why === 'Owned' ? 'Owned' : owned ? 'Made' : why && why !== 'Need more' ? 'Away' : r.fair ? 'Enter' : r.gives ? 'Trade' : r.tool ? 'Buy' : 'Craft'}</button>
+        </div>`;
+      }).join('');
+      const here = station ? (this.stationNear(station) ? ' <small class="near">· nearby</small>' : ` <small>· needs ${STATION_NAME[station]}</small>`) : '';
+      return `<h3>${title}${here}</h3>${rows}`;
+    };
+    this.el.querySelector('.recipes').innerHTML =
+      tier('By hand', null) + tier('Workbench', 'workbench') + tier('Campfire', 'campfire') + tier('Forge', 'forge') + tier("Tinker's wagon", 'tinker') + (this.storeOpen?.() ? tier('General store · Paydirt Hollow', 'store') : '') + (this.smithyOpen?.() ? tier("Blacksmith's · Paydirt Hollow", 'smithy') : '') + (this.bakeryOpen?.() ? tier('Bakery · Second Street', 'bakery') : '') + (this.bankOpen?.() ? tier("Miners' bank · Second Street", 'bank') : '') + (this.feedOpen?.() ? tier('Feed & grain · Second Street', 'feed') : '') + (this.drygoodsOpen?.() ? tier('Dry goods · Third Street', 'drygoods') : '') + (this.cooperOpen?.() ? tier('Cooperage · Third Street', 'cooper') : '') + (this.depotOpen?.() ? tier('Freight office · Overland & Western', 'depot') : '') + (this.postOpen?.() ? tier(`Trading post · ${this.postOpen().name}`, 'post-' + this.postOpen().land) : '') + (this.campOpen?.() ? tier('Trading at the camp fire', 'camp') : '') + (this.fairToday?.() ? tier('County Fair · judging today', 'fair') : '');
+    const pieces = PIECE_ORDER.map((t) => {
+      const p = PIECES[t];
+      return `<li><b>${p.name}</b> <span>${costHTML(p.cost, this.inventory)}${p.free ? '' : ' · near a workbench'}</span></li>`;
+    }).join('');
+    this.el.querySelector('.pieces').innerHTML = pieces;
+    const have = Object.entries(inv).filter(([, v]) => v > 0).map(([k, v]) => `${v} ${k}`).join(' · ');
+    this.el.querySelector('.have').textContent = `You have ${have || 'nothing yet'}`;
+  }
+
+  setOpen(v) {
+    this.open = v;
+    this.el.classList.toggle('show', v);
+    if (v) this.render();
+  }
+}
+
+// Each visit the tinker asks for one thing he's short of, and pays handsomely for it.
+const REQUESTS = [
+  { cost: { pie: 2 }, gives: { iron: 3, honey: 1 }, name: 'Two pumpkin pies', desc: `"The widow Hale says she'll marry me if I bring her two of your pies."` },
+  { cost: { egg: 6 }, gives: { pelt: 2, rope: 2 }, name: 'Half a dozen eggs', desc: `"Six good brown eggs for the cook at the mill, and I'll make it worth your while."` },
+  { cost: { wool: 5 }, gives: { iron: 2, honeycake: 1 }, name: 'Five fleeces of wool', desc: `"The ladies of the quilting circle are fresh out of wool. Five, if you can spare them?"` },
+  { cost: { fishfry: 2 }, gives: { ore: 4, rope: 1 }, name: 'Two plates of fried fish', desc: `"I haven't had a hot supper since Tuesday. Two plates of your fried fish?"` },
+  { cost: { apples: 10 }, gives: { honey: 3 }, name: 'A bushel of apples', desc: `"Ten good apples for the cider press in town. I'll pay in honey."` },
+  { cost: { corn: 8, pumpkin: 2 }, gives: { iron: 2, pelt: 1 }, name: 'Corn and pumpkins for the fair', desc: `"The county fair's coming. Eight ears of corn and two pumpkins to show off?"` },
+  { cost: { biscuits: 3 }, gives: { honey: 2, rope: 2 }, name: 'Three buttermilk biscuits', desc: `"Three of your biscuits, for the long road west."` },
+];
+/** Pick (or, with `saved` from the same visit, restore) the tinker's request. */
+export function newRequest(day, saved = null) {
+  const r = RECIPES.find((x) => x.id === 't-request');
+  const same = saved && saved.day === day && REQUESTS[saved.idx];
+  const idx = same ? saved.idx : Math.floor(Math.random() * REQUESTS.length);
+  const q = REQUESTS[idx];
+  Object.assign(r, { cost: q.cost, gives: q.gives, name: `Request: ${q.name}`, desc: q.desc, done: same ? !!saved.done : false, ready: true, day, idx });
+  return r;
+}
+
+/** What to save about the current request (so a reload mid-visit can't conjure a fresh one). */
+export function requestState() {
+  const r = RECIPES.find((x) => x.id === 't-request');
+  return r.ready ? { day: r.day, idx: r.idx, done: !!r.done } : null;
+}
+
+// Telegraph orders: a rush order wired down the line to the depot, to be filled at one of the whistle-stops' trading
+// posts within a few days, for well over the usual price. One at a time; a new one the morning after it's filled or
+// it lapses.
+const ORDERS = [
+  { land: 'breaks', cost: { cornbread: 3 }, pay: 14, name: 'Cornbread for the night shift', desc: 'REDROCK BREAKS STOP NIGHT SHIFT AT SILVER DIGGINGS WANTS THREE PANS CORNBREAD STOP WILL PAY FOURTEEN DOLLARS STOP' },
+  { land: 'breaks', cost: { rope: 4, wood: 10 }, pay: 15, name: 'Rope and timber for the shaft', desc: 'REDROCK BREAKS STOP SHAFT CAVED STOP NEED FOUR COILS ROPE TEN TIMBERS QUICK STOP FIFTEEN DOLLARS STOP' },
+  { land: 'prairie', cost: { egg: 6, milk: 2 }, pay: 13, name: 'Eggs and milk for a wedding', desc: 'GOLDEN PRAIRIE STOP WEDDING SATURDAY STOP SIX EGGS TWO PAILS MILK FOR THE CAKE STOP THIRTEEN DOLLARS STOP' },
+  { land: 'prairie', cost: { apples: 10 }, pay: 12, name: 'Apples for the schoolhouse', desc: 'GOLDEN PRAIRIE STOP NEW SCHOOLHOUSE OPENS STOP TEN APPLES FOR THE TEACHER AND PUPILS STOP TWELVE DOLLARS STOP' },
+  { land: 'pines', cost: { pie: 2 }, pay: 16, name: 'Pies for the logging camp', desc: 'BLUEPINE HIGHLANDS STOP CAMP COOK QUIT STOP SEND TWO PIES TO KEEP THE CREW STOP SIXTEEN DOLLARS STOP' },
+  { land: 'pines', cost: { wool: 4 }, pay: 15, name: 'Wool for winter', desc: 'BLUEPINE HIGHLANDS STOP SNOW COMING EARLY STOP FOUR FLEECES FOR BLANKETS STOP FIFTEEN DOLLARS STOP' },
+  { land: 'fen', cost: { honey: 3 }, pay: 15, name: 'Honey for the fever', desc: 'MISTY FEN STOP AGUE IN THE HOLLOW STOP THREE JARS HONEY FOR THE DOCTOR STOP FIFTEEN DOLLARS STOP' },
+  { land: 'fen', cost: { bricks: 6 }, pay: 14, name: 'Bricks for a chimney', desc: 'MISTY FEN STOP CHIMNEY FELL IN THE DAMP STOP SIX BRICKS TO REBUILD STOP FOURTEEN DOLLARS STOP' },
+  { land: 'hollows', cost: { iron: 2 }, pay: 15, name: 'Iron for the sugar kettles', desc: 'SILVER BIRCH HOLLOWS STOP SAP RUNNING STOP KETTLE CRACKED STOP TWO BARS IRON STOP FIFTEEN DOLLARS STOP' },
+  { land: 'hollows', cost: { pumpkin: 3, corn: 4 }, pay: 13, name: 'Harvest supper', desc: 'SILVER BIRCH HOLLOWS STOP HARVEST SUPPER AT THE MEETING HOUSE STOP THREE PUMPKINS FOUR CORN STOP THIRTEEN DOLLARS STOP' },
+];
+const LAND_NAME = { breaks: 'Redrock Breaks', prairie: 'Golden Prairie', pines: 'Bluepine Highlands', fen: 'Misty Fen', hollows: 'Silver Birch Hollows' };
+/** Wire a new order (or restore a saved one). `lands`: the posts there are. Returns the recipe. */
+export function newOrder(day, saved = null) {
+  const r = RECIPES.find((x) => x.id === 'tg-order');
+  const idx = saved ? saved.idx : Math.floor(Math.random() * ORDERS.length), q = ORDERS[idx];
+  const due = saved ? saved.due : day + 3;
+  Object.assign(r, { station: 'post-' + q.land, cost: q.cost, gives: { dollars: q.pay }, name: `Telegram: ${q.name}`, desc: `<i>${q.desc}</i> Deliver here by day ${due}.`, done: saved ? !!saved.done : false, ready: true, day: saved ? saved.day : day, due, idx, where: LAND_NAME[q.land], pay: q.pay });
+  return r;
+}
+/** The order standing now, for saving and for the almanac (null if none). */
+export function orderState() {
+  const r = RECIPES.find((x) => x.id === 'tg-order');
+  return r.ready ? { day: r.day, due: r.due, idx: r.idx, done: !!r.done, where: r.where, pay: r.pay, name: r.name.replace('Telegram: ', '') } : null;
+}
+/** Let the order lapse (past its day) or clear it once filled. */
+export function clearOrder() { const r = RECIPES.find((x) => x.id === 'tg-order'); r.ready = false; r.done = false; }
