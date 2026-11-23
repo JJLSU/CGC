@@ -25,10 +25,18 @@ func _initialize() -> void:
 	print("built %s, %d men" % [c.built, c.men.size()])
 	ok = ok and c.built and c.men.size() >= 3
 	var h0: float = p.health
-	await _wait(4.0)
+	await _wait(1.5)
 	var chasing: int = c.men.filter(func(m): return m.state == "chase").size()
+	await _wait(2.5)
 	print("chasing %d, health %.0f -> %.0f" % [chasing, h0, p.health])
 	ok = ok and chasing >= 2 and p.health < h0
+	# only men fight, three at least; the women aren't targets and keep to the shack in a fight
+	var men_ok: bool = c.men.size() >= 3 and c.men.all(func(m): return ClaimJumpers.MEN.has(m.fig.name))
+	var targets: Array = J.targets()
+	var women_safe: bool = c.women.all(func(w): return not targets.any(func(t): return t.pos == w.fig.root.position))
+	var by_shack: bool = c.women.all(func(w): return Vector2(w.fig.root.position.x - c.shack.x, w.fig.root.position.z - c.shack.z).length() < 4.0)
+	print("men %d (all men %s), women %d (not targets %s, at the shack in the fight %s), camp pieces %d" % [c.men.size(), men_ok, c.women.size(), women_safe, by_shack, c.nodes.size()])
+	ok = ok and men_ok and c.women.size() >= 1 and women_safe and by_shack and c.nodes.size() >= 10
 	# beat every one of them (blows straight to each), then pick up a poke
 	p.health = p.max_health; p.dead = false
 	for m in c.men: while not m.dead: J.damage(m, 3, main.jumper_hooks)

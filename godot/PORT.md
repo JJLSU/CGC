@@ -1494,3 +1494,17 @@ for N frames, then saves the viewport; needs a window, not --headless).
   on the margin arrow.
 - test_map, test_map2 PASS; smoke_actions: no errors at all. Looked at it opened, zoomed out and dragged
   (tools/shot_mappan.gd). The exe rebuilt.
+
+### Claim jumpers' camps grown, men who fight, women who don't (2026-11-22; the player's asks)
+- Each camp is now three tents and a lean-to shack (bldg_leanto) round a cookfire, with a sluice, an ore cart, a
+  handcart, crates, barrels, bedrolls and boulders, the lay-out turned its own way per camp, every piece kept off
+  water and slopes; the site needs dry ground 22 m all round (16 directions) and a 20 m clearing.
+- Only men fight: three to five a camp, from the men's models (ClaimJumpers.MEN: prospectors_1/4/6, the three
+  farmhands, folk_asa, trades_1). A line-up (tools/shot_lineup.gd) showed trades_2 and trades_5, in the old list, are
+  women. The camp's one or two women (ClaimJumpers.WOMEN: trades_2, trades_5, the calico girls, clothes re-dyed) go
+  about the fire, and in a fight hurry to the shack and wait; they're never targets and can't be hurt, as the
+  natives' camp folk.
+- tools/test_jumpers.gd now also checks: 3+ men, all men's models; the women not targets and at the shack in the
+  fight; 10+ camp pieces: PASS. Looked at a camp from above (tools/shot_jumpers.gd). smoke_actions: no errors. The
+  exe rebuilt.
+- Note: the lean-to model has "Old Asa's Hermit Lean-to" painted on its sign.
