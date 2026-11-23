@@ -41,7 +41,7 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 			var x := depot.x + cos(a) * r; var z := depot.z + sin(a) * r
 			Terrain.land_at(x, z)
 			for k in LAND_KEYS:
-				if not found.has(k) and Terrain.L_w[k] > 0.9 and not Terrain.is_water(x, z): found[k] = Vector3(x, 0, z)
+				if not found.has(k) and Terrain.L_w[k] > 0.9 and not Terrain.is_water(x, z) and _open_ground(x, z): found[k] = Vector3(x, 0, z)
 			a += 0.08
 		r += 25.0
 	var at := start
@@ -50,19 +50,23 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 		left.sort_custom(func(p, q): return found[p].distance_to(at) < found[q].distance_to(at))
 		var k: String = left.pop_front()
 		stops.append({"land": k, "name": NAMES[k], "at": found[k]}); at = found[k]
-	# the route: the depot, a straight run out past the church, then stop to stop, swinging wide of the town and home
+	# the route: the depot, a straight run out past the church, then stop to stop, swinging wide of the town and home,
+	# and (the port's own: the web runs straight) round the mountains, never up them
 	var pts := [depot, start]
 	var avoid := [[A, 58.0], [home, 48.0]]
 	for s in stops:
 		var from: Vector3 = pts[-1]
-		for av in avoid:
-			var c: Vector3 = av[0]; var rr: float = av[1]
-			var d: Vector3 = s.at - from; var len := d.length(); var u := d / len
-			var t := clampf((c - from).dot(u), 0.0, len); var close := from + u * t
-			if close.distance_to(c) < rr and t > 1.0 and t < len - 1.0:
-				var side := Vector3(-u.z, 0, u.x)
-				if side.dot(close - c) < 0.0: side = -side
-				pts.append(c + side * (rr + 10.0)) # (around it)
+		var leg := _route(from, s.at, avoid)
+		if leg.is_empty():
+			for av in avoid:
+				var c: Vector3 = av[0]; var rr: float = av[1]
+				var d: Vector3 = s.at - from; var len := d.length(); var u := d / len
+				var t := clampf((c - from).dot(u), 0.0, len); var close := from + u * t
+				if close.distance_to(c) < rr and t > 1.0 and t < len - 1.0:
+					var side := Vector3(-u.z, 0, u.x)
+					if side.dot(close - c) < 0.0: side = -side
+					pts.append(c + side * (rr + 10.0)) # (around it)
+		else: pts.append_array(leg)
 		pts.append(s.at)
 	# sampled every TIE metres
 	for i in pts.size() - 1:
@@ -88,6 +92,45 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 		world.exclusions.append({"x": s.geo.post.x, "z": s.geo.post.z, "r": 6.5})
 		if s.land == "breaks": # (your gold claim, if you file one: claim.js)
 			s.geo.claim = path[i] + side * 11.0 - alg * 17.0; world.exclusions.append({"x": s.geo.claim.x, "z": s.geo.claim.z, "r": 9.5})
+
+## A stop's ground: open country, no mountain within a stone's throw.
+static func _open_ground(x: float, z: float) -> bool:
+	for k in 9:
+		var a := k * TAU / 8.0; var d := 0.0 if k == 8 else 18.0
+		if Terrain.range_at(x + cos(a) * d, z + sin(a) * d) > 0.04: return false
+	return true
+
+## The line between two points round the mountains (and wide of the town and the farm): a grid search, 12 m cells
+## over the pair's box and 240 m round it; mountain ground is solid, water dearer (the track bridges it on trestles).
+## The way it finds is smoothed (corner-cutting, twice) and returned without its ends; empty if there's none.
+const CELL := 12.0
+static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
+	var x0 := minf(a.x, b.x) - 240.0; var z0 := minf(a.z, b.z) - 240.0
+	var w := int((absf(a.x - b.x) + 480.0) / CELL) + 1; var h := int((absf(a.z - b.z) + 480.0) / CELL) + 1
+	var g := AStarGrid2D.new(); g.region = Rect2i(0, 0, w, h); g.cell_size = Vector2(CELL, CELL)
+	g.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES; g.update()
+	var cell := func(p: Vector3) -> Vector2i: return Vector2i(clampi(int((p.x - x0) / CELL), 0, w - 1), clampi(int((p.z - z0) / CELL), 0, h - 1))
+	var ca: Vector2i = cell.call(a); var cb: Vector2i = cell.call(b)
+	for j in h:
+		for i in w:
+			var x := x0 + (i + 0.5) * CELL; var z := z0 + (j + 0.5) * CELL
+			var c := Vector2i(i, j)
+			if c == ca or c == cb: continue
+			var blocked := Terrain.range_at(x, z) > 0.1
+			for av in avoid: if Vector2(x - av[0].x, z - av[0].z).length() < av[1]: blocked = true
+			if blocked: g.set_point_solid(c, true)
+			elif Terrain.is_water(x, z): g.set_point_weight_scale(c, 3.0)
+	var ids := g.get_id_path(ca, cb)
+	if ids.size() < 2: return []
+	var pts := []
+	for c in ids: pts.append(Vector3(x0 + (c.x + 0.5) * CELL, 0, z0 + (c.y + 0.5) * CELL))
+	pts[0] = a; pts[-1] = b
+	for it in 2: # (Chaikin: each corner cut to a curve)
+		var sm := [pts[0]]
+		for k in pts.size() - 1:
+			sm.append(pts[k].lerp(pts[k + 1], 0.25)); sm.append(pts[k].lerp(pts[k + 1], 0.75))
+		sm.append(pts[-1]); pts = sm
+	return pts.slice(1, pts.size() - 1)
 
 func ty(p: Vector3) -> float: return 0.55 if Terrain.is_water(p.x, p.z) else Terrain.get_height(p.x, p.z) + 0.04
 

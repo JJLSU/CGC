@@ -1056,6 +1056,21 @@ func _settlers_card(dt: float) -> void:
 	var store_line := ("In the storehouse: " + stock if stock != "" else "The storehouse is empty for now.") if build.pieces.any(func(q): return q.type == "storehouse") else "No storehouse yet: build one (B, Works shelf) and folk will come looking for work."
 	hud.set_settlers(store_line, settlers.larder_text(), settlers.rows(build.pieces))
 
+## The guarded sites within r chunks of (cx, cz): those of every chunk already laid out (the world, the map and the
+## rumours keep them in Props.site_cache), and at most `budget` more laid out now, nearest first. (The saloon's tip and
+## the sheriff's bounty laid out every chunk in reach at the press of E: 289 and 441 chunks, up to ~14 s frozen.)
+func _sites_near(cx: int, cz: int, r: int, budget := 3) -> Array:
+	var cells := []
+	for dz in range(-r, r + 1):
+		for dx in range(-r, r + 1): cells.append(Vector2i(dx, dz))
+	cells.sort_custom(func(a, b): return a.length_squared() < b.length_squared())
+	var out := []; var made := 0
+	for c in cells:
+		var k := "%d,%d" % [cx + c.x, cz + c.y]
+		if Props.site_cache.has(k): out.append_array(Props.site_cache[k].sites)
+		elif made < budget: out.append_array(Props.sites_for(cx + c.x, cz + c.y, world.exclusions).sites); made += 1
+	return out
+
 ## Reaching a landmark for the first time: what you find there (the lookout's view and the hermit's inking go onto the
 ## county map).
 func _landmark_reached() -> void:
@@ -1259,13 +1274,11 @@ func _town_doors() -> bool:
 			elif bounty != null: hud.toast("\"That %s is still out there, about %d paces %s of town. It's on your map.\"" % [String(bounty.name).to_lower(), roundi(Vector2(bounty.x - town.at.x, bounty.z - town.at.z).length() * 1.3 / 10.0) * 10, dir_to.call(bounty.x, bounty.z)])
 			else:
 				var tcx := floori(town.at.x / Terrain.CHUNK); var tcz := floori(town.at.z / Terrain.CHUNK); var best = null; var bd := INF
-				for dz in range(-10, 11):
-					for dx in range(-10, 11):
-						for st in Props.place(tcx + dx, tcz + dz, world.exclusions).sites:
-							if not st.get("guards", 0) or st.kind == "landmark": continue
-							var d := Vector2(st.x - town.at.x, st.z - town.at.z).length()
-							if d < 60.0 or d > 320.0 or beaten.call({"key": st.key, "guards": st.guards}): continue
-							if d < bd: bd = d; best = st
+				for st in _sites_near(tcx, tcz, 10):
+					if not st.get("guards", 0) or st.kind == "landmark": continue
+					var d := Vector2(st.x - town.at.x, st.z - town.at.z).length()
+					if d < 60.0 or d > 320.0 or beaten.call({"key": st.key, "guards": st.guards}): continue
+					if d < bd: bd = d; best = st
 				if best == null: hud.toast("\"Quiet as a churchyard out there, thanks to you. Nothing on the board today.\"")
 				else:
 					var kind: String = best.get("guard", "") if best.get("guard", "") != "" else ("boar" if best.kind == "grove" else "coyote")
@@ -1351,12 +1364,10 @@ func _town_doors() -> bool:
 			if inv.get("dollars", 0) >= 3:
 				inv.dollars -= 3; player.fullness = 100.0; player.health = minf(player.max_health, player.health + 20.0)
 				var pcx := floori(player.pos.x / Terrain.CHUNK); var pcz := floori(player.pos.z / Terrain.CHUNK); var tip = null; var td := INF
-				for dz in range(-8, 9):
-					for dx in range(-8, 9):
-						for st in Props.place(pcx + dx, pcz + dz, world.exclusions).sites:
-							if st.kind == "landmark" or tips_heard.has(st.key): continue
-							var d := Vector2(st.x - player.pos.x, st.z - player.pos.z).length()
-							if d < td: td = d; tip = st
+				for st in _sites_near(pcx, pcz, 8):
+					if st.kind == "landmark" or tips_heard.has(st.key): continue
+					var d := Vector2(st.x - player.pos.x, st.z - player.pos.z).length()
+					if d < td: td = d; tip = st
 				var said := "The stew is hot and the bread is fresh. An old-timer at the bar has nothing new to tell you tonight."
 				if tip != null:
 					tips_heard[tip.key] = true; hud.county_map.reveal(tip.x, tip.z, 14.0) # (pencilled onto your map)

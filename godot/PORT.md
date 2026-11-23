@@ -1450,3 +1450,23 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - tools/test_jumpers.gd (five camps; built near; all three came, 100 -> 25 health in 4 s; beaten, three pokes, one
   picked up; the camp saved as cleared; six warriors a camp and a parfleche from one): PASS. smoke_actions: clean but
   the known first-dusk line; test_craft_press PASS. The exe rebuilt.
+
+### The saloon freeze, the title card, the railroad off the mountains, the passes (2026-11-22; the player's notes)
+- The saloon's supper froze the game: the old-timer's tip laid out every chunk within 8 (289 chunks, 17-50 ms each
+  the first time: up to ~14 s); the sheriff's bounty did the same over 441. Both now use main._sites_near: the
+  sites of chunks already laid out (Props.site_cache, kept as you explore and open the map) and at most three more,
+  nearest first. tools/test_saloon.gd: each E answered in one ~260 ms frame (before the budget cut to three): PASS.
+- The title card drawn a size down (Hud.TITLE_SCALE 0.82), on top of the interface's own scale.
+- The railroad on the mountains: on a new county (the mountain ring 60-115 m out) the line ran straight from stop to
+  stop, up and over the ranges, with the whistle-stops' trading posts (the cottages) and their keepers up on the
+  slopes; seen from afar the track floated where the mountain under it wasn't drawn. Now each stop is picked on open
+  ground (no range within 18 m), and each leg is found round the mountains on a 12 m AStarGrid2D (range ground solid,
+  water three times dearer, the town and the farm walled off), smoothed with Chaikin's corners twice; the old straight
+  line stays as the fallback. tools/probe_mountains.gd over five new counties: before, up to 113 of the line's points
+  on mountain and 28 m up; after, 0-3 points just brushing a foot (range <= 0.07, ~1.6 m). The route costs ~85 ms at
+  startup.
+- Low passes: Terrain.impassable stopped you wherever the range mask passed 0.24 (only ~3.4 m into a mountain's
+  rise), which shut low gentle saddles. Now a range's ground stops you only where it's steep (slope over 0.6, ~31
+  deg); the county's outer wall stays a wall.
+- smoke_actions: clean but the known first-dusk line; test_saloon, test_jumpers, test_raids, test_title PASS. The
+  exe rebuilt.

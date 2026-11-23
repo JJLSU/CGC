@@ -588,6 +588,7 @@ const CONTROLS := [["WASD", "walk"], ["Shift", "sprint"], ["Space", "jump"], ["M
 	["I", "open your pack (wood, stone, food…)"], ["J", "settlers & works: who's working where, what's in the storehouse"],
 	["P", "depth of field on/off"], ["N", "sound on/off"], ["F3", "show the frame rate and time-of-day buttons"],
 	["O", "graphics: auto · high · medium · low"], ["Esc", "pause"]]
+const TITLE_SCALE := 0.82 ## the title card drawn smaller than its page layout, as the rest of the interface
 const CONTROLS_SPLIT := 10 ## (the first column: WASD to K, as the page's two CSS columns break)
 var overlay: ColorRect
 var overlay_on := true
@@ -739,7 +740,7 @@ func _overlay_tick(dt: float) -> void:
 		# (the page scrolls a card taller than the window; here it is scaled to fit, 12 px clear top and bottom)
 		var cs := _title_card.get_combined_minimum_size()
 		if _title_card.size != cs: _title_card.size = cs
-		var fit := minf(1.0, (root.size.y - 24.0) / maxf(1.0, cs.y))
+		var fit := minf(TITLE_SCALE, (root.size.y - 24.0) / maxf(1.0, cs.y)) # (a size down from the rest: the player's ask)
 		_title_card.pivot_offset = cs / 2.0; _title_card.scale = Vector2(fit, fit)
 		_title_card.position = ((root.size - cs) / 2.0).round()
 		_pulse_t += dt

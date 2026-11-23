@@ -142,7 +142,15 @@ static func mtn_lattice(x: float, z: float) -> float:
 
 ## How deep in the mountains (x, z) is: 0 in the valleys, 1 on the crests.
 static func range_at(x: float, z: float) -> float: return range_mask(x, z)
-static func impassable(x: float, z: float) -> bool: return range_at(x, z) > RANGE_STOP
+## Mountain you can't walk: the county's outer wall always; inside it, a range's ground only where it's steep (over
+## ~31 deg). The web stops at the range mask alone (0.24: only ~3.4 m up its rise), which shut low gentle passes
+## between peaks; the player found those should go through.
+const STEEP := 0.6
+static func impassable(x: float, z: float) -> bool:
+	if range_at(x, z) <= RANGE_STOP: return false
+	if sqrt(x * x + z * z) > 950.0 + RC.length() * 0.5 - 30.0: return true # (the outer wall)
+	var gx := absf(get_height(x + 1.5, z) - get_height(x - 1.5, z)); var gz := absf(get_height(x, z + 1.5) - get_height(x, z - 1.5))
+	return maxf(gx, gz) / 3.0 > STEEP
 
 # ------------------------------------------------------------------ region field and elevation
 static func region_height(x: float, z: float) -> float:
