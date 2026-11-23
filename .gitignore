@@ -16,3 +16,4 @@ Thumbs.db
 
 # exported game builds (godot/export_presets.cfg writes here)
 build/
+build_debug/

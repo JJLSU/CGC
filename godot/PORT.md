@@ -1409,3 +1409,20 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - The far blur: the tilt-shift blurred what lies beyond the focus as hard as the foreground; post.gdshader's new
   far_gain (0.35) softens only the far side, so the distance reads crisper and the miniature foreground stays.
 - smoke_actions: clean but the known first-dusk engine line; test_craft_press PASS. The exe rebuilt.
+
+### Quitting while the models load; the exe's exit (2026-11-22)
+- Checking the rebuilt exe, it segfaulted when it quit within its first seconds: the background model preload
+  (ResourceLoader threaded requests, four in flight) was still loading GLBs on worker threads. Now _finish_loads()
+  waits out the loads in flight and starts no more, and runs before every way out: the Quit button, closing the
+  window (auto_accept_quit is off; NOTIFICATION_WM_CLOSE_REQUEST goes through _quit_game, which saves first), and
+  New game's reload. The exe quit at 1, 2, 3, 4.5 and 6 s (CGC_QUIT_AT_MS, a check hook, on a throwaway save): no
+  more segfaults.
+- Open: the exported release exe still ends with a Windows heap-corruption code (0xC0000374) as it exits, every time,
+  after the save; the bash shell showed it as 127. Not the tear logger (same with it off, CGC_NO_TEAR=1); the same
+  project run through the editor binary exits 0, and a debug export exits 0 listing leaks at exit (88 ObjectDB
+  instances, render RIDs). Clearing the scripts' static caches before quitting only turned it into an access
+  violation (0xC0000005), so that was taken back out. It happens only at shutdown, after saving; nothing in play.
+  Next to try: free the static caches' owners in order before the scene goes, or report it upstream with a minimal
+  export.
+- (Two quit checks ran the game on the player's real save before CGC_SAVE_PATH was set for them: each loaded it and
+  saved it back a few seconds of game time later; nothing lost.)

@@ -207,6 +207,8 @@ var autosave_t := 0.0
 var saved_fullness = null
 
 func _ready() -> void:
+	get_tree().auto_accept_quit = false # (closing the window goes through _quit_game: saved, and the model loads finished first)
+	if OS.get_environment("CGC_QUIT_AT_MS") != "": get_tree().create_timer(float(OS.get_environment("CGC_QUIT_AT_MS")) / 1000.0).timeout.connect(_quit_game) # (a check: quit as the Quit button does, mid-load)
 	saved = _read_save() if saving else null
 	if saved == null and saving: world_seed = randi() & 0x7fffffff; world_ring = Vector2(60, 115) # (a new game: a county of its own, wild lands close by)
 	if saved != null: _apply_early(saved)
@@ -240,7 +242,7 @@ func _ready() -> void:
 	_load_display()
 	hud.on_time_preset = func(i: int) -> void: sky.time = Hud.TIME_PRESETS[i][1]; hud.set_time_chip(i); sound.click()
 	if keep_prefs and FileAccess.file_exists(DEV_PATH): hud.set_dev(true)
-	tear_logger = TearLogger.new(self); OS.add_logger(tear_logger)
+	if OS.get_environment("CGC_NO_TEAR") == "": tear_logger = TearLogger.new(self); OS.add_logger(tear_logger)
 	input.on_lock_change = func(locked: bool) -> void:
 		lock_changed_at = Time.get_ticks_msec()
 		hud.show_overlay(not locked and not panel.open); hud.show_peek(false); hud.cta.text = "Click to resume"
@@ -820,7 +822,9 @@ func _cycle_option(id: String) -> String:
 ## Quit (the title card's button): save, then out to the desktop.
 func _quit_game() -> void:
 	save_all()
+	_finish_loads()
 	get_tree().quit()
+
 
 ## Dev: $500 at a click (the +$500 button, or F4).
 func _dev_cash() -> void:
@@ -860,6 +864,7 @@ func _new_game() -> void:
 	get_tree().root.add_child(layer)
 	input.unlock()
 	for i in 3: await get_tree().process_frame # (the card drawn before the long lay-out)
+	_finish_loads()
 	reset_world()
 	get_tree().reload_current_scene()
 
@@ -1997,6 +2002,14 @@ func _ambience(dt: float) -> void:
 ## threads at startup and kept, so a guardian's site, a landmark or a herd coming into range never waits on a disk
 ## read and import (~100 ms each the first time otherwise).
 var _models := []
+var _loading: Array = [] ## model loads in flight on worker threads (quitting must wait for them: see _finish_loads)
+var _quitting := false
+## Let the background model loads finish before the game goes: quitting with a GLB half-loaded on a worker thread
+## crashed the exported game (a segfault at exit, in its first seconds). Blocks briefly; then no more are started.
+func _finish_loads() -> void:
+	_quitting = true
+	for q in _loading.duplicate(): ResourceLoader.load_threaded_get(q)
+	_loading.clear()
 func _preload_models() -> void:
 	var paths := []
 	for d in ["res://assets/models/folk/", "res://assets/models/animals/", "res://assets/models/props/", "res://assets/baked/landmarks/", "res://assets/baked/rail/"]:
@@ -2005,8 +2018,9 @@ func _preload_models() -> void:
 			if g.ends_with(".glb") and not paths.has(d + g): paths.append(d + g)
 	# (a few at a time and no sub-threads: a model the game asks for on the main thread meanwhile then only waits on
 	# its own load, never on a pile of others; with every request in at once the main thread could stall for good)
-	var live := []
+	var live := _loading
 	while paths.size() or live.size():
+		if _quitting: return
 		while live.size() < 4 and paths.size():
 			var q: String = paths.pop_front()
 			if ResourceLoader.has_cached(q): continue
@@ -2025,7 +2039,8 @@ func _read_save():
 	return d if d is Dictionary else null
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED: save_all()
+	if what == NOTIFICATION_WM_CLOSE_REQUEST: _quit_game() # (the window's close: saved, the loads let finish, then out; auto-accept is off)
+	elif what == NOTIFICATION_APPLICATION_PAUSED: save_all()
 
 ## What has to be known before the world is built: its seed, what you carry, what's gone for good, the clock.
 func _apply_early(d: Dictionary) -> void:
