@@ -20,6 +20,7 @@ func _initialize() -> void:
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	main.save_path = copy; main.saving = true
 	root.add_child(main)
+	if OS.get_environment("UI_SCALE") != "": root.content_scale_factor = float(OS.get_environment("UI_SCALE")) # (the game's own interface size: tests run at 1.0)
 	await process_frame
 	main.saving = false
 	main.force_active = true; main.weather.rain = 0.0; main.weather.target = 0; main.sky.time = 0.5

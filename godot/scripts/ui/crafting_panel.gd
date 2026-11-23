@@ -19,14 +19,19 @@ var feed_open: Callable; var drygoods_open: Callable; var cooper_open: Callable;
 var post_open: Callable; var camp_open: Callable; var fair_today: Callable
 var pieces: Array = []
 
+const ZOOM := 0.78
+
 func _init(h: Hud, c: Crafting) -> void:
 	hud = h; crafting = c
 	pieces = JSON.parse_string(FileAccess.open("res://assets/baked/data/pieces_list.json", FileAccess.READ).get_as_text())
 	card = hud.card(-0.5, Vector4(22, 14, 22, 12))
 	# (where index.html puts every centre panel, held to its 100vh - 320px: 580 tall at 900, the list scrolling)
 	card.anchor_left = 0.5; card.anchor_right = 0.5; card.anchor_top = Hud.CENTRE_Y; card.anchor_bottom = Hud.CENTRE_Y
-	card.custom_minimum_size = Vector2(520, 0)
-	card.offset_left = -260; card.offset_right = 260; card.offset_top = -290; card.offset_bottom = 290
+	# zoomed out (the player's ask): laid out ZOOM times larger and drawn at ZOOM, so it fills the same box on screen
+	# with smaller type and more of the list showing
+	card.custom_minimum_size = Vector2(520.0 / ZOOM, 0)
+	card.offset_left = -260.0 / ZOOM; card.offset_right = 260.0 / ZOOM; card.offset_top = -290.0 / ZOOM; card.offset_bottom = 290.0 / ZOOM
+	card.scale = Vector2(ZOOM, ZOOM)
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 2)
 	var head := HBoxContainer.new()

@@ -775,6 +775,7 @@ func _pond_ice(dt: float) -> void:
 ## canvas_items). Kept in user://display.json; full screen by default. Tests leave the window alone.
 const DISPLAY_PATH := "user://display.json"
 const UI_SIZES := [1.0, 1.25, 0.8]
+const UI_BASE := 0.95 ## the whole interface 5% smaller than its 1600x900 layout (the player's ask); "Interface size" scales from here
 var display := {"fullscreen": true, "vsync": true, "ui": 1.0}
 func _load_display() -> void:
 	if not keep_prefs: return
@@ -790,7 +791,7 @@ func _apply_display() -> void:
 		var sz := Vector2i(mini(1600, scr.size.x - 40), mini(900, scr.size.y - 60))
 		DisplayServer.window_set_size(sz); DisplayServer.window_set_position(scr.position + (scr.size - sz) / 2)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if display.vsync else DisplayServer.VSYNC_DISABLED)
-	get_tree().root.content_scale_factor = float(display.ui)
+	get_tree().root.content_scale_factor = float(display.ui) * UI_BASE
 	if keep_prefs:
 		var f := FileAccess.open(DISPLAY_PATH, FileAccess.WRITE)
 		if f: f.store_string(JSON.stringify(display)); f.close()

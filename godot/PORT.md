@@ -1386,3 +1386,10 @@ for N frames, then saves the viewport; needs a window, not --headless).
   children was flaky (it depends on frame timing); probe_material4.gd is kept for another look.
 - Not covered headless: K (the postcard needs a rendered frame; tested windowed in 22b).
 - The exe rebuilt; a headless run of it logs nothing.
+
+### The interface a size down (2026-11-22; the player's ask)
+- The crafting panel zoomed out: laid out 1/0.78 larger and drawn at 0.78 (CraftingPanel.ZOOM), so it fills the same
+  box on screen with smaller type: seven recipes showing where four did.
+- The whole interface 5% smaller: main.UI_BASE 0.95 multiplies the root's content scale; the Options card's
+  "Interface size" (100/125/80 %) now scales from that. (Test runs keep 1.0; tools/compare_cards.gd takes UI_SCALE to
+  show the game's.) The exe rebuilt.
