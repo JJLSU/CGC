@@ -29,7 +29,7 @@ func _initialize() -> void:
 	# a hard snow: the ice comes (sped up: the page takes ~40 s)
 	main.weather.kind = "snow"; main.weather.snow = 1.0; main.ice = 0.79
 	await _wait(1.5, main, 1.0)
-	var toasted: bool = main.hud.live.any(func(n): return "frozen over" in n.text) or main.hud.queue.any(func(t): return "frozen over" in t)
+	var toasted: bool = main.hud.heard.any(func(h): return "frozen over" in h)
 	print("ice %.2f  ice_on %s  toast %s" % [main.ice, p.ice_on, toasted])
 	var ok: bool = p.ice_on and toasted
 	# out onto the pond, gliding

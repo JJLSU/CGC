@@ -8,7 +8,7 @@ func _wait(sec: float) -> void:
 	while Time.get_ticks_msec() - t < sec * 1000.0: await process_frame
 
 func _has(hud: Hud, s: String) -> bool:
-	return hud.live.any(func(n): return s in n.text) or hud.queue.any(func(t): return s in t)
+	return hud.heard.any(func(h): return s in h)
 
 func _initialize() -> void:
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()

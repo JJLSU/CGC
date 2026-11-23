@@ -434,34 +434,61 @@ func set_calm(all_well: bool, dt: float) -> void:
 		b.modulate.a = move_toward(b.modulate.a, target, dt / 0.8)
 
 # ------------------------------------------------------------------ the loot notes
-## A paper note: long ones stay up long enough to read, the same note twice just stays longer, two are pinned at
-## a time and the rest wait their turn (a short "+2 wood" replaces the last short one instead of queueing).
+## A paper note, one short line (the player's ask: fewer of them, simpler, each on one line): brief() keeps the gist,
+## one shows at a time and at most three wait (the oldest let go), the same note twice just stays longer, a short
+## "+2 wood" replaces the last short one instead of queueing.
+const NOTE_MAX := 58
+const NOTES_UP := 1
+const NOTES_WAITING := 3
+var heard: Array = []  ## the last notes in full, before brief() cut them (newest last; tests read these)
 func toast(text: String) -> void:
+	heard.append(text)
+	if heard.size() > 40: heard.remove_at(0)
+	text = brief(text)
+	if text == "": return
 	for n in live:
 		if n.text == text and not n.out: n.t = note_s(text); return
 	if text in queue: return
-	var short := text.length() < 40
+	var short := text.length() < 30
 	if short:
 		for n in live:
-			if not n.out and n.text.length() < 40:
+			if not n.out and n.text.length() < 30:
 				n.text = text; n.label.text = text; n.t = note_s(text); return
 	var pinned := 0
 	for n in live: if not n.out: pinned += 1
-	if pinned >= 2:
-		if short: queue.push_front(text)
-		else: queue.push_back(text)
-		if queue.size() > 8: queue.remove_at(1)
+	if pinned >= NOTES_UP:
+		queue.push_back(text)
+		while queue.size() > NOTES_WAITING: queue.remove_at(0)
 		return
 	_pin(text)
 
-func note_s(text: String) -> float: return minf(10.0, 2.4 + text.length() * 0.05)
+## A long note cut to its gist: asides in brackets and quote marks dropped, the first sentence (or, if that has no
+## number in it, the first that does: the paces, the dollars, the count), at most NOTE_MAX characters.
+static func brief(text: String) -> String:
+	var t := RegEx.create_from_string("\\s*\\([^)]*\\)").sub(text, "", true)
+	t = t.replace("\"", "").replace("“", "").replace("”", "").strip_edges()
+	var parts := RegEx.create_from_string("(?<=[.!?])\\s+").sub(t, "\n", true).split("\n", false)
+	if parts.is_empty(): return ""
+	var pick: String = parts[0]
+	if pick.length() < 18 and parts.size() > 1: pick = pick + " " + parts[1] # ("Snap!" alone says nothing)
+	var digit := RegEx.create_from_string("[0-9]")
+	if digit.search(pick) == null:
+		for q in parts: if digit.search(q) != null: pick = q; break
+	var colon := pick.rfind(": ")
+	if colon > 0 and digit.search(pick.substr(colon)) != null and pick.length() > NOTE_MAX: pick = pick.substr(colon + 2) # (the tip, not who told it)
+	pick = pick.strip_edges()
+	if pick.length() > 0: pick = pick.left(1).to_upper() + pick.substr(1)
+	if pick.length() > NOTE_MAX:
+		var cut := pick.left(NOTE_MAX - 1); var sp := cut.rfind(" ")
+		pick = (cut.left(sp) if sp > 30 else cut).rstrip(",;: ") + "…"
+	return pick
+
+func note_s(text: String) -> float: return minf(6.0, 2.2 + text.length() * 0.05)
 
 func _pin(text: String) -> void:
-	var c := card((randf() - 0.5) * 1.6, Vector4(12, 4, 12, 5))
-	var l := label(text, 17); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var c := card((randf() - 0.5) * 1.2, Vector4(10, 2, 10, 3))
+	var l := label(text, 15); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.add_child(l); c.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if text.length() > 50: # (a long note wraps inside the 560 px column, as the web's max-width does)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; l.custom_minimum_size.x = 536
 	toasts.add_child(c)
 	live.append({"card": c, "label": l, "text": text, "t": note_s(text), "out": false, "fade": 0.0})
 

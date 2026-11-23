@@ -37,8 +37,8 @@ func _initialize() -> void:
 	print("dollars %d -> %d" % [d0, main.inventory.get("dollars", 0)])
 	_boom(); _boom()
 	await _wait(0.5)
-	ok = ok and main.tears == 2 and not hud.error_card.visible and (hud.live.any(func(n): return "little tear" in n.text) or hud.queue.any(func(t): return "little tear" in t))
-	print("tears %d, toast %s" % [main.tears, (hud.live.any(func(n): return "little tear" in n.text) or hud.queue.any(func(t): return "little tear" in t))])
+	ok = ok and main.tears == 2 and not hud.error_card.visible and hud.heard.any(func(h): return "little tear" in h)
+	print("tears %d, toast %s" % [main.tears, hud.heard.any(func(h): return "little tear" in h)])
 	await _wait(1.5)
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)

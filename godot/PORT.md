@@ -1508,3 +1508,12 @@ for N frames, then saves the viewport; needs a window, not --headless).
   fight; 10+ camp pieces: PASS. Looked at a camp from above (tools/shot_jumpers.gd). smoke_actions: no errors. The
   exe rebuilt.
 - Note: the lean-to model has "Old Asa's Hermit Lean-to" painted on its sign.
+
+### Notes kept to one short line (2026-11-22; the player's ask: too many, too long)
+- Hud.toast: one note up at a time (was two), at most three waiting (the oldest dropped), 15 px on a slimmer card,
+  never wrapping, gone in 2-6 s. Hud.brief cuts each to its gist: brackets and quote marks dropped, the first
+  sentence (with the next if the first is under 18 characters: "Snap!"), or the first with a number in it if the first
+  has none (the paces, the dollars), the part after a colon when that's where the number is (the saloon's tip), at
+  most 58 characters ("…" past that). Hud.heard keeps the last 40 in full; the tests read those.
+- tools/test_brief.gd prints samples. test_raids, test_toasts23c, test_dev PASS against heard; smoke_actions clean.
+  The exe rebuilt.
