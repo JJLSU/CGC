@@ -367,11 +367,14 @@ func _tool_name(id: String, t: Dictionary) -> String:
 
 ## main.js renderBuildBar: the shelves named across the top (the current one underlined), then that shelf's pieces,
 ## the selected one raised and gold, the ones you can't afford faded, each with its cost (shortfalls in red).
-func set_buildbar(on: bool, selected: int, order: Array, groups: Array, pieces: Dictionary, inv: Dictionary) -> void:
+## built: type -> how many stand. On the Works shelf (one of each is all a settler needs) a work already standing is
+## marked "✓ built" and set back (the player's ask: it says you don't need another).
+const ONE_EACH := "Works"
+func set_buildbar(on: bool, selected: int, order: Array, groups: Array, pieces: Dictionary, inv: Dictionary, built := {}) -> void:
 	buildbar.visible = on
 	if not on: return
 	var cur: String = order[selected]
-	var sig := "%d|%s" % [selected, str(inv)]
+	var sig := "%d|%s|%s" % [selected, str(inv), str(built)]
 	if sig == bar_sig: return
 	bar_sig = sig
 	for c in buildbar.get_children(): buildbar.remove_child(c); c.queue_free()
@@ -398,8 +401,13 @@ func set_buildbar(on: bool, selected: int, order: Array, groups: Array, pieces: 
 		var cl := RichTextLabel.new(); cl.bbcode_enabled = true; cl.fit_content = true; cl.autowrap_mode = TextServer.AUTOWRAP_OFF; cl.scroll_active = false
 		cl.add_theme_font_size_override("normal_font_size", 12); cl.add_theme_font_size_override("bold_font_size", 12); cl.add_theme_color_override("default_color", INK_SOFT)
 		cl.text = "[center]%s[/center]" % ", ".join(parts); cl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		v.add_child(cl); c.add_child(v)
-		if poor: c.modulate.a = 0.55
+		v.add_child(cl)
+		var have: bool = groups[gi][0] == ONE_EACH and built.get(t, 0) > 0
+		if have:
+			var bl := label("✓ built", 13, Color("3f7a3a")); bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(bl)
+		c.add_child(v)
+		if have: c.modulate.a = 0.6
+		elif poor: c.modulate.a = 0.55
 		row.add_child(c)
 	buildbar.add_child(row)
 

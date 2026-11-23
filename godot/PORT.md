@@ -1470,3 +1470,9 @@ for N frames, then saves the viewport; needs a window, not --headless).
   deg); the county's outer wall stays a wall.
 - smoke_actions: clean but the known first-dusk line; test_saloon, test_jumpers, test_raids, test_title PASS. The
   exe rebuilt.
+
+### "Built" on the Works shelf (2026-11-22; the player's ask)
+- Build mode's fifth shelf, Works (the storehouse and each settler's work: woodlot, quarry, weir, clay pit, diggings,
+  sluice, bee yard, mill, kiln, sugar shack, tannery, charcoal pit): one of each is all you need, so a work already
+  standing is marked "✓ built" in green under its cost and set back (Hud.set_buildbar takes main's count of the
+  pieces standing, by type). You can still place another. Looked at it (tools/shot_works.gd); smoke_actions clean.

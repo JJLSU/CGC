@@ -1667,7 +1667,9 @@ func _building(dt: float, active: bool) -> void:
 			var msg := build.remove_hovered(inventory)
 			if msg != "": hud.toast(msg); sound.tear()
 	build.update(dt, inventory, player.pos, sky.night)
-	hud.set_buildbar(build.active, build.selected, BuildSystem.ORDER, BuildSystem.DATA.PIECE_GROUPS, BuildSystem.PIECES, inventory)
+	var built := {}
+	if build.active: for q in build.pieces: built[q.type] = built.get(q.type, 0) + 1
+	hud.set_buildbar(build.active, build.selected, BuildSystem.ORDER, BuildSystem.DATA.PIECE_GROUPS, BuildSystem.PIECES, inventory, built)
 	if build.active and build.preview != null and not build.preview.valid: hud.set_hint(build.preview.reason)
 
 # ------------------------------------------------------------------ the yard's E actions (main.js)
