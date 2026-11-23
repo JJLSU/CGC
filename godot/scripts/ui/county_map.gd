@@ -10,7 +10,7 @@ const CELL := 16.0
 const SEE := 3
 const SPAN := 320.0
 const W := 560.0
-const N := 140
+const N := 96 ## wash samples a side (blurred soft after; 140 cost ~150 ms each time the map opened)
 const WASH := {"water": "8fb3ad", "forest": "93a35c", "meadow": "d6c47a", "field": "e2b65a", "highland": "b8a68a", "peak": "d9d2c4"}
 const INK := Color("3a2a1c")
 const MARKS := {"campfire": "e07a2e", "bed": "b5473a", "dock": "c99a5e", "skep": "d9a948", "woodpile": "7a5636", "feeder": "4f6f96", "press": "c4362f", "patch": "de7a32", "homeapple": "7d9a4e", "forge": "8a8580"}
@@ -27,6 +27,14 @@ var serif_i: SystemFont
 var serif_bi: SystemFont
 var serif_b: SystemFont
 var inset := Control.new()
+## Panning and zooming (the player's ask): the sheet looks at the farmer + view, SPAN wide by default; the wash is
+## painted for one view (wash_c, wash_span) and slid and scaled to follow until it's painted afresh.
+var view := Vector2.ZERO
+var span := SPAN
+var wash_c := Vector2.ZERO
+var wash_span := SPAN
+const SPAN_MIN := 120.0
+const SPAN_MAX := 1400.0
 var paper := ColorRect.new()
 var wash_rect := TextureRect.new()
 var wash_sharp := TextureRect.new()
@@ -84,9 +92,32 @@ func seen(x: float, z: float) -> bool: return explored.has("%d,%d" % [floori(x /
 static func _hash(a: int, b: int) -> float:
 	var h := sin(a * 127.1 + b * 311.7) * 43758.5453; return h - floorf(h)
 
+func center() -> Vector2: return Vector2(ctx.player.x + view.x, ctx.player.z + view.y) if not ctx.is_empty() else view
+
 func _px(x: float, z: float) -> Vector2:
-	var c: Vector3 = ctx.player
-	return Vector2(((x - c.x) / SPAN + 0.5) * W, ((z - c.z) / SPAN + 0.5) * W)
+	var c := center()
+	return Vector2(((x - c.x) / span + 0.5) * W, ((z - c.y) / span + 0.5) * W)
+
+## Drag the sheet by (dx, dy) screen pixels (it follows the mouse); zoom by steps of the wheel (in: smaller span).
+func pan(d: Vector2) -> void:
+	if d == Vector2.ZERO or ctx.is_empty(): return
+	view -= d * span / W
+	view = view.limit_length(1600.0)
+	_place_wash(); repaint()
+func zoom(steps: float) -> void:
+	if steps == 0.0 or ctx.is_empty(): return
+	span = clampf(span * pow(1.18, steps), SPAN_MIN, SPAN_MAX)
+	_place_wash(); repaint()
+func recenter() -> void:
+	view = Vector2.ZERO; span = SPAN
+	_place_wash(); repaint()
+func moved() -> bool: return center().distance_to(wash_c) > 1.0 or absf(span - wash_span) > 1.0
+
+func _place_wash() -> void:
+	var c := center()
+	var tl := ((wash_c - Vector2(wash_span, wash_span) / 2.0) - (c - Vector2(span, span) / 2.0)) / span * W
+	for r in [wash_rect, wash_sharp]: r.position = tl; r.size = Vector2.ONE * wash_span / span * W
+	if not ctx.is_empty(): var hp := _px(ctx.home.x, ctx.home.z); inset.visible = _on(hp) and span <= SPAN * 1.4
 
 func _on(p: Vector2) -> bool: return p.x >= 0 and p.y >= 0 and p.x <= W and p.y <= W
 
@@ -95,27 +126,27 @@ func _on(p: Vector2) -> bool: return p.x >= 0 and p.y >= 0 and p.x <= W and p.y 
 func paint(c: Dictionary, rewash := true) -> void:
 	ctx = c
 	if not rewash: repaint(); return
-	var cx: float = c.player.x; var cz: float = c.player.z
+	var vc := center(); var cx: float = vc.x; var cz: float = vc.y
+	wash_c = vc; wash_span = span
 	# 1. the watercolour wash of the land, sampled coarse and scaled up soft; unexplored left as parchment
 	var img := Image.create(N, N, false, Image.FORMAT_RGBA8)
 	named = {}
 	for j in N:
 		for i in N:
-			var x := cx + (float(i) / N - 0.5) * SPAN; var z := cz + (float(j) / N - 0.5) * SPAN
+			var x := cx + (float(i) / N - 0.5) * span; var z := cz + (float(j) / N - 0.5) * span
 			var jx := (_hash(i >> 1, j >> 1) - 0.5) * 14.0; var jz := (_hash(j >> 1, i >> 1) - 0.5) * 14.0
 			if not seen(x + jx, z + jz): img.set_pixel(i, j, Color(0, 0, 0, 0)); continue
 			var col := Color(WASH.get(Terrain.region_at(x, z), WASH.meadow))
 			var t := Terrain.land_tint(x, z) # (the wild lands wash in their own colours; also sets L_id/L_wild)
 			if Terrain.L_wild > 0.7:
-				var n: Array = named.get(Terrain.L_id, [0, 0, 0]); n[0] += i; n[1] += j; n[2] += 1; named[Terrain.L_id] = n
+				var n: Array = named.get(Terrain.L_id, [0.0, 0.0, 0]); n[0] += x; n[1] += z; n[2] += 1; named[Terrain.L_id] = n # (in the world: they move with the sheet)
 			img.set_pixel(i, j, Color(minf(1.0, col.r * t.x), minf(1.0, col.g * t.y), minf(1.0, col.b * t.z), 215.0 / 255.0))
 	wash = ImageTexture.create_from_image(img)
 	wash_rect.texture = wash; wash_sharp.texture = wash
 	# 2. paper fibre specks
 	specks = PackedVector3Array()
 	for k in 700: specks.append(Vector3(randf() * W, randf() * W, randf() * 0.08))
-	var home: Vector3 = c.home; var hp := _px(home.x, home.z)
-	inset.visible = _on(hp)
+	_place_wash()
 	inset.position = Vector2(14, W - 150 - 62); inset.size = Vector2(150, 150); inset.rotation = -0.02; inset.pivot_offset = Vector2(75, 75)
 	repaint()
 
@@ -142,10 +173,14 @@ func _draw() -> void:
 	var cx: float = ctx.player.x; var cz: float = ctx.player.z
 	for s in specks: draw_rect(Rect2(s.x, s.y, 1.5, 1.5), Color(90 / 255.0, 60 / 255.0, 30 / 255.0, s.z))
 	# the wild lands you've seen, lettered big across their country
-	for id in named:
+	var put_names := [_px(ctx.home.x, ctx.home.z), _px(ctx.town.at.x, ctx.town.at.z) - Vector2(0, 30)] # (never over home or the town's chit)
+	var by_size := named.keys(); by_size.sort_custom(func(a, b): return named[a][2] > named[b][2]) # (the biggest stretch named first)
+	for id in by_size:
 		var n: Array = named[id]
 		if n[2] < 40: continue
-		var p := Vector2(float(n[0]) / n[2] / N * W, float(n[1]) / n[2] / N * W)
+		var p := _px(n[0] / n[2], n[1] / n[2])
+		if put_names.any(func(q): return absf(q.x - p.x) < 150.0 and absf(q.y - p.y) < 34.0): continue # (zoomed out they gather: one per spot)
+		put_names.append(p)
 		var nm: String = String(Terrain.LANDS[id].name).trim_prefix("the ").to_upper()
 		_label(nm, p, 22, serif_i, Color(58 / 255.0, 42 / 255.0, 28 / 255.0, 0.75))
 	# Cold Glitter Creek: each street an ochre band with a row of false fronts down either side, its name on a chit
@@ -206,7 +241,13 @@ func _draw() -> void:
 			for k in segs: var a0 := k * TAU / segs; draw_arc(p, rr, a0, a0 + TAU / segs * 0.5, 3, Color("a8352a"), 2.0, true)
 			_poly(PackedVector2Array([p + Vector2(-8, 7), p + Vector2(0, -9), p + Vector2(8, 7)]), Color("e6d3ae"), 1.5)
 			draw_polyline(PackedVector2Array([p + Vector2(-2, -13), p + Vector2(0, -9), p + Vector2(2, -13)]), INK, 1.5)
-			_label(("Friends: welcome %d day%s" % [site.peace, "s" if site.peace > 1 else ""]) if site.peace > 0 else "Their land", p + Vector2(0, rr + 16))
+			_label(("Friends: welcome %d day%s" % [site.peace, "s" if site.peace > 1 else ""]) if site.peace > 0 else "Natives", p + Vector2(0, rr + 16))
+			continue
+		if site.kind == "jumpers": # a claim jumpers' camp: a dark tent and a crossed pick and pistol, in red
+			var col := Color("8a2a20") if not site.cleared else Color(INK, 0.45)
+			_poly(PackedVector2Array([p + Vector2(-9, 7), p + Vector2(0, -8), p + Vector2(9, 7)]), Color("6b5a48") if not site.cleared else Color("b8a890"), 1.5)
+			draw_arc(p, 15.0, 0, TAU, 20, col, 2.0, true)
+			_label("Claim Jumpers" + (" (cleared)" if site.cleared else ""), p + Vector2(0, 31), 15, serif_b, col)
 			continue
 		if site.kind == "vein": # crossed picks; inked faint from the assayer's say-so till you've seen it
 			iron_on = true; var c := Color(INK, 1.0 if known else 0.55)
@@ -237,9 +278,12 @@ func _draw() -> void:
 	draw_arc(rose, 22, 0, TAU, 32, INK, 1.5, true)
 	draw_colored_polygon(PackedVector2Array([rose + Vector2(0, -30), rose + Vector2(6, 0), rose + Vector2(0, 30), rose + Vector2(-6, 0)]), INK)
 	_label("N", rose + Vector2(0, -34), 16, serif_b)
-	var px50 := 50.0 / SPAN * W
+	var yards := 50.0
+	for yd in [25.0, 50.0, 100.0, 200.0, 400.0]: if yd / span * W >= 40.0: yards = yd; break
+	var px50 := yards / span * W
 	for seg in [[Vector2(24, W - 28), Vector2(24 + px50, W - 28)], [Vector2(24, W - 33), Vector2(24, W - 23)], [Vector2(24 + px50, W - 33), Vector2(24 + px50, W - 23)]]: draw_line(seg[0], seg[1], INK, 2.0)
-	draw_string(serif_i, Vector2(24, W - 38), "50 yards, more or less", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, INK)
+	draw_string(serif_i, Vector2(24, W - 38), "%d yards, more or less" % yards, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, INK)
+	if view.length() > 2.0 or absf(span - SPAN) > 1.0: draw_string(serif_i, Vector2(W - 210, W - 14), "right-click or R: back to you", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(INK, 0.7))
 	var to_margin := func(q: Vector2, m: float) -> Array:
 		var d := q - Vector2(W / 2, W / 2); var k := (W / 2 - m) / maxf(absf(d.x), absf(d.y))
 		return [Vector2(W / 2, W / 2) + d * k, atan2(d.y, d.x)]
@@ -255,7 +299,7 @@ func _draw() -> void:
 	if camps.size() and not camps.any(func(q): return _on(_px(q.x, q.z))):
 		camps.sort_custom(func(a, b): return Vector2(a.x - cx, a.z - cz).length() < Vector2(b.x - cx, b.z - cz).length())
 		var cs: Dictionary = camps[0]; var m: Array = to_margin.call(_px(cs.x, cs.z), 44.0); _arrow(m[0], m[1], Color("a8352a"))
-		_label("%s, %d paces" % ["Friends" if cs.peace > 0 else "Their land", roundi(Vector2(cs.x - cx, cs.z - cz).length() * 1.3 / 10.0) * 10], Vector2(clampf(m[0].x - cos(m[1]) * 60, 90, W - 90), clampf(m[0].y - sin(m[1]) * 32, 24, W - 16)))
+		_label("%s, %d paces" % ["Friends" if cs.peace > 0 else "Natives", roundi(Vector2(cs.x - cx, cs.z - cz).length() * 1.3 / 10.0) * 10], Vector2(clampf(m[0].x - cos(m[1]) * 60, 90, W - 90), clampf(m[0].y - sin(m[1]) * 32, 24, W - 16)))
 	# home: an arrow on the margin when it's off the sheet, else a big red house on a cream badge
 	var home: Vector3 = ctx.home; var hp := _px(home.x, home.z); var hd := Vector2(home.x - cx, home.z - cz).length()
 	if not _on(hp):

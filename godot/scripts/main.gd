@@ -548,6 +548,7 @@ func _process(dt: float) -> void:
 	_pm("player.build")
 	_building(dt, active)
 	_pm("_building")
+	_map_pan(dt) # (before the player: an open map takes the mouse and the wheel)
 	var step: Dictionary = player.update(dt, input, world, active and not extras.sitting and not train.passenger) # (aboard the train you ride, not walk)
 	_pm("player.update")
 	extras.porch_update(dt, player)
@@ -953,10 +954,26 @@ func _update_hud(dt: float) -> void:
 	hud.set_fortune("$%d in your poke" % inventory.get("dollars", 0) if fortune or inventory.get("dollars", 0) else "")
 	if input.hit("KeyM") or input.hit("Tab"):
 		if hud.map_card.visible: hud.map_card.visible = false
-		else: _open_map()
+		else: hud.county_map.recenter(); _open_map()
 		sound.tear()
 	if player.fullness < 30.0 and hunger_warned < 1: hunger_warned = 1; hud.toast("Hungry! Eat something (F).")
 	if player.fullness < 10.0 and hunger_warned < 2: hunger_warned = 2; hud.toast("STARVING! Eat now (F).")
+
+## The open map pans with the mouse and zooms with the wheel (the camera and its zoom held meanwhile); right-click or
+## R puts it back on you. A moment after it comes to rest it's washed afresh and its marks gathered for where it looks.
+var _map_rest := 0.0
+func _map_pan(dt: float) -> void:
+	if not hud.map_card.visible: return
+	var M := hud.county_map
+	if (force_active or input.locked):
+		var was := M.center(); var ws := M.span
+		M.pan(Vector2(input.dx, input.dy)); M.zoom(input.wheel)
+		if input.right_clicked or input.hit("KeyR"): M.recenter()
+		if M.center() != was or M.span != ws: _map_rest = 0.3
+		input.dx = 0.0; input.dy = 0.0; input.wheel = 0.0 # (the map has them, not the camera)
+	if _map_rest > 0.0:
+		_map_rest -= dt
+		if _map_rest <= 0.0 and M.moved(): _open_map()
 
 ## Whether a tool-bar slot is yours (main.js owns()).
 func owns(id: String) -> bool:
@@ -2202,12 +2219,16 @@ var _map_filling := false
 func _open_map(rewash := true) -> void:
 	var M := hud.county_map
 	var sites := []; var orchards := []
-	var r := 9; var pcx := floori(player.pos.x / Terrain.CHUNK); var pcz := floori(player.pos.z / Terrain.CHUNK)
+	# round the sheet's centre (it pans and zooms), only what's laid out already: the rest comes in from _fill_map,
+	# a slice at a time (laying out every seen chunk at once here stalled the opening ~250 ms)
+	if M.ctx.is_empty(): M.ctx = {"player": player.pos}
+	var vc := M.center()
+	var r := clampi(ceili(M.span / 2.0 / Terrain.CHUNK) + 1, 6, 26); var pcx := floori(vc.x / Terrain.CHUNK); var pcz := floori(vc.y / Terrain.CHUNK)
 	for dz in range(-r, r + 1):
 		for dx in range(-r, r + 1):
 			var x0 := (pcx + dx) * Terrain.CHUNK + Terrain.CHUNK / 2.0; var z0 := (pcz + dz) * Terrain.CHUNK + Terrain.CHUNK / 2.0
 			var seen_it := M.seen(x0, z0)
-			var L = _layout(pcx + dx, pcz + dz, seen_it)
+			var L = _layout(pcx + dx, pcz + dz, false)
 			if L == null: continue
 			if not seen_it:
 				for s in L.sites: if s.kind == "vein": var q: Dictionary = s.duplicate(); q.rumour = true; sites.append(q)
@@ -2219,6 +2240,7 @@ func _open_map(rewash := true) -> void:
 				var o = L.orchard
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
 	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": 46.0, "peace": maxi(0, c.peace_until - sky.day)})
+	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
 	var mended := 0
 	for k in town.tiers: if town.tiers[k]: mended += 1
 	var offs := [0.0]
@@ -2238,22 +2260,25 @@ func _may_hold_vein(cx: int, cz: int) -> bool:
 			if r == "highland" or r == "peak": return true
 	return false
 
-## While the map's open: lay out the unexplored chunks round you that aren't yet, nearest first, ~20 ms a frame, and
+## While the map's open: lay out the chunks round the sheet's centre that aren't yet (the seen ones, for their marks,
+## and unexplored ones that may hold iron), nearest first, each a slice at a time (Props.place_sliced, ~5 ms a frame:
+## a whole layout at once is 17-50 ms, which was the lag), and
 ## redraw the ink every half second as their faint iron comes in (and once at the end). Folding the map stops it.
 func _fill_map(pcx: int, pcz: int) -> void:
 	var todo := []
 	for dz in range(-9, 10):
 		for dx in range(-9, 10):
-			if not Props.site_cache.has("%d,%d" % [pcx + dx, pcz + dz]) and _may_hold_vein(pcx + dx, pcz + dz): todo.append(Vector2i(pcx + dx, pcz + dz))
+			var cx0 := pcx + dx; var cz0 := pcz + dz
+			if Props.site_cache.has("%d,%d" % [cx0, cz0]): continue
+			if hud.county_map.seen(cx0 * Terrain.CHUNK + Terrain.CHUNK / 2.0, cz0 * Terrain.CHUNK + Terrain.CHUNK / 2.0) or _may_hold_vein(cx0, cz0): todo.append(Vector2i(cx0, cz0))
 	if todo.is_empty(): return
 	todo.sort_custom(func(a, b): return (a - Vector2i(pcx, pcz)).length_squared() < (b - Vector2i(pcx, pcz)).length_squared())
 	_map_filling = true
 	var last_paint := Time.get_ticks_msec(); var dirty := false
 	while todo.size() and hud.map_card.visible:
-		var t0 := Time.get_ticks_usec()
-		while todo.size() and Time.get_ticks_usec() - t0 < 20000:
-			var c: Vector2i = todo.pop_front()
-			if not Props.site_cache.has("%d,%d" % [c.x, c.y]): Props.sites_for(c.x, c.y, world.exclusions); dirty = true
+		var c: Vector2i = todo.pop_front()
+		if not Props.site_cache.has("%d,%d" % [c.x, c.y]): await Props.place_sliced(c.x, c.y, world.exclusions, 5000); dirty = true
+		if not is_inside_tree(): return
 		if dirty and (Time.get_ticks_msec() - last_paint > 500 or todo.is_empty()): _open_map(false); last_paint = Time.get_ticks_msec(); dirty = false
 		if not is_inside_tree(): return
 		await get_tree().process_frame

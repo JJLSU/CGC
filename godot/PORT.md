@@ -1476,3 +1476,21 @@ for N frames, then saves the viewport; needs a window, not --headless).
   sluice, bee yard, mill, kiln, sugar shack, tannery, charcoal pit): one of each is all you need, so a work already
   standing is marked "✓ built" in green under its cost and set back (Hud.set_buildbar takes main's count of the
   pieces standing, by type). You can still place another. Looked at it (tools/shot_works.gd); smoke_actions clean.
+
+### The county map: no lag, pan and zoom, the claim jumpers, "Natives" (2026-11-22; the player's asks)
+- The lag: opening laid out every seen chunk not yet laid out, at once (~250 ms), and the faint-iron fill laid out a
+  whole chunk a time (17-50 ms) up to 20 ms a frame (p95 60 ms, worst 190 ms). Now the opening takes only what's
+  laid out already; the fill also takes the seen chunks, each through Props.place_sliced at 5 ms a frame; the wash is
+  sampled 96 a side (was 140; it's blurred soft). tools/probe_map_lag.gd: p95 60 -> 11.5 ms while open;
+  tools/probe_map_open.gd: an opening ~20 ms (the session's first ~110 ms: the engine's first use of the fonts and
+  the blur shader).
+- Pan and zoom (CountyMap.view/span/pan/zoom/recenter): while the map is open the mouse drags the sheet and the
+  wheel zooms it (120-1400 m across; the camera and its zoom held), right-click or R puts it back on you; it opens
+  on you. The wash slides and scales with the view (_place_wash) and is washed afresh, its marks gathered round the
+  new centre (cache only, more filled in behind), 0.3 s after it comes to rest. The scale bar picks 25-400 yards to
+  suit; the wild lands' names are placed in the world, biggest first, never over one another, home or the town.
+- Claim jumpers' camps on the map: a dark tent in a red ring, "Claim Jumpers" ("(cleared)" while it's empty), all
+  five, as the natives' camps are always shown. The natives' land reads "Natives" (was "Their land"), on the sheet and
+  on the margin arrow.
+- test_map, test_map2 PASS; smoke_actions: no errors at all. Looked at it opened, zoomed out and dragged
+  (tools/shot_mappan.gd). The exe rebuilt.
