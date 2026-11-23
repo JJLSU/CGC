@@ -1393,3 +1393,19 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - The whole interface 5% smaller: main.UI_BASE 0.95 multiplies the root's content scale; the Options card's
   "Interface size" (100/125/80 %) now scales from that. (Test runs keep 1.0; tools/compare_cards.gd takes UI_SCALE to
   show the game's.) The exe rebuilt.
+
+### The farmer up close: the rocker, his grip, a run; the crafting panel, the interface, the far blur (2026-11-22)
+- The rocker: porch.js seats the model's hips on the cushion, a little back in the chair, after his sit clip has
+  posed him; the port only set the root 0.32 down, so he sat off the seat. Now FarmExtras.porch_update moves the
+  root so the Hips bone lands at the chair's group + (back 0.08, up 0.6), as the web and as Horse.seat_rider does.
+- Tools in his hand: the model's hand is one bone with no fingers, so the grip point decides it. It sat 0.06 down the
+  hand bone and on the back of the hand, so every handle lay past his fingertips; now 0.035 down and 0.035 toward the
+  palm (Avatar.grip_along/grip_palm), and the paper fist wraps the handle. The guns' grips pulled back into the palm
+  too (0.075 -> 0.045 ahead of the wrist). Looked at every tool from the front (tools/shot_hands.gd).
+- A run: his model (folk_jim) has walk but no run; the warriors' models have a run on the same 24-bone skeleton.
+  ModelFigure.borrow_clip copies it in, re-pointed at his skeleton, and update() plays run above RUN_AT (8 m/s: he
+  walks at 6, sprints at 11.5). tools/test_run_clip.gd: walk at a walk, run at a sprint: PASS; looked at the stride.
+- The crafting panel further out (ZOOM 0.66: nine recipes showing); the whole interface 10% smaller (UI_BASE 0.90).
+- The far blur: the tilt-shift blurred what lies beyond the focus as hard as the foreground; post.gdshader's new
+  far_gain (0.35) softens only the far side, so the distance reads crisper and the miniature foreground stays.
+- smoke_actions: clean but the known first-dusk engine line; test_craft_press PASS. The exe rebuilt.

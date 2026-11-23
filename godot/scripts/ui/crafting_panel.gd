@@ -19,7 +19,7 @@ var feed_open: Callable; var drygoods_open: Callable; var cooper_open: Callable;
 var post_open: Callable; var camp_open: Callable; var fair_today: Callable
 var pieces: Array = []
 
-const ZOOM := 0.78
+const ZOOM := 0.66
 
 func _init(h: Hud, c: Crafting) -> void:
 	hud = h; crafting = c

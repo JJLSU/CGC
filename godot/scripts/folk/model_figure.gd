@@ -22,7 +22,29 @@ var rate := 1.0
 var phase := 0.0
 var t := 0.0
 
+const RUN_AT := 8.0 ## m/s: faster than this, a figure with a run clip runs (the farmer walks at 6, sprints at 11.5)
+
 static func has_folk(n: String) -> bool: return ResourceLoader.exists(BASE + n + ".glb")
+
+## Borrow a clip from another figure on the same skeleton (the same bone names), re-pointed at this one's skeleton:
+## the farmer's model has no run, the warriors' do (the player's ask: he should run when he sprints).
+func borrow_clip(clip: String, from_model: String) -> bool:
+	if player == null or skeleton == null or player.has_animation(clip) or not has_folk(from_model): return false
+	var src: Node3D = (load(BASE + from_model + ".glb") as PackedScene).instantiate()
+	var aps := src.find_children("*", "AnimationPlayer", true, false)
+	if aps.is_empty() or not (aps[0] as AnimationPlayer).has_animation(clip): src.free(); return false
+	var anim: Animation = (aps[0] as AnimationPlayer).get_animation(clip).duplicate(true)
+	src.free()
+	var to_skel := String(player.get_node(player.root_node).get_path_to(skeleton))
+	for i in anim.get_track_count():
+		var path := anim.track_get_path(i)
+		var bone := path.get_concatenated_subnames()
+		if bone != "" and skeleton.find_bone(bone) >= 0: anim.track_set_path(i, NodePath(to_skel + ":" + bone))
+	anim.loop_mode = Animation.LOOP_LINEAR
+	var lib := player.get_animation_library("")
+	if lib == null: lib = AnimationLibrary.new(); player.add_animation_library("", lib)
+	lib.add_animation(clip, anim)
+	return true
 
 func _init(model_name: String, spec := {}) -> void:
 	name = model_name
@@ -67,5 +89,6 @@ func update(dt: float, speed := 0.0, pose = null) -> void:
 	t += dt; phase += dt * (2.4 + speed * 1.9)
 	if pose == "swing" and player and player.has_animation("work"): play("work", 0.08, player.get_animation("work").length / 0.55)
 	elif pose != null and POSE_CLIP.has(pose): play(POSE_CLIP[pose])
+	elif speed > RUN_AT and player and player.has_animation("run"): play("run", 0.2, clampf(speed / 9.0, 0.8, 1.6))
 	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0))
 	else: play("idle", 0.4)

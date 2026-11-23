@@ -228,6 +228,14 @@ func porch_update(dt: float, player: Player) -> void:
 	a.root.position = seat - Vector3(0, 0.32, 0)
 	a.root.rotation_order = EULER_ORDER_YXZ
 	a.root.rotation = Vector3(rock * 0.8, seat_facing, 0)
+	# (porch.js: the model plays its own sit clip; seat its hips on the cushion, a little back in the chair: the clip
+	# alone leaves them where the clip puts them, off the seat)
+	var sk := a.fig.skeleton
+	var hb := sk.find_bone("Hips") if sk else -1
+	if hb >= 0:
+		var hips := sk.global_transform * sk.get_bone_global_pose(hb).origin
+		var target := g.global_position + Vector3(-sin(seat_facing) * 0.08, 0.6, -cos(seat_facing) * 0.08)
+		a.root.position += target - hips
 
 # ------------------------------------------------------------------ woodpiles and giant pumpkins
 func piles_update(pieces: Array, center: Vector3) -> void:

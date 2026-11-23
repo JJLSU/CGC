@@ -18,6 +18,7 @@ uniform float band = 0.3;
 uniform float ramp = 0.3;
 uniform float depth_weight = 0.8;
 uniform float near_gain = 1.55;
+uniform float far_gain = 0.35;    // how hard what lies beyond the focus blurs: a third of the near side (the player found the distance too soft)
 uniform float night = 0.0;
 uniform float saturation = 0.98;
 uniform float shadow_warmth = 0.7;
@@ -66,7 +67,7 @@ void fragment() {
 	float cc = mix(sY, sD, depth_weight);
 	float a0 = clamp((abs(cc) - band * 0.5) / ramp, 0.0, 1.0);
 	float a1 = a0 * a0 * (3.0 - a0 * 2.0) * 0.35 + a0 * 0.65;
-	float blur_amt = min(a1 * (sD < 0.0 ? near_gain : 1.0), 1.0) * dof_enabled;
+	float blur_amt = min(a1 * (sD < 0.0 ? near_gain : far_gain), 1.0) * dof_enabled;
 	vec3 base = textureLod(screen, uv, 0.0).rgb;
 	// ---- one bounce of light
 	vec3 around = textureLod(screen, uv, 4.5).rgb;

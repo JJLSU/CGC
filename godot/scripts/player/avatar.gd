@@ -18,6 +18,7 @@ var tool := "axe"
 func _init() -> void:
 	var me := "folk_jim" if ModelFigure.has_folk("folk_jim") else "folk_player"
 	fig = ModelFigure.new(me)
+	fig.borrow_clip("run", "folk_native_warrior") # (a run for his sprint: his own model has only walk)
 	root = fig.root
 	_build_tools()
 
@@ -52,6 +53,8 @@ func update(dt: float, speed: float, air: bool, swim: bool) -> bool:
 # ------------------------------------------------------------------ the tools in his fist (avatar.js)
 var tools_by := {}        ## id -> Node3D (axe, pick, hammer, spear, rod, bow, revolver, rifle)
 var grip := Node3D.new()
+var grip_along := 0.035  ## the fist's middle, this far down the hand bone from the wrist (was 0.06: the handle sat past his fingertips)
+var grip_palm := 0.035   ## and this far across it, toward the palm (was -0.025, on the back of the hand)
 var fist: MeshInstance3D
 var quiver := Node3D.new()
 var has_bow := false
@@ -160,7 +163,7 @@ func _hold_tools() -> void:
 	var z := root.global_basis.z.normalized(); z = z - y * z.dot(y)
 	if z.length_squared() < 1e-4: z = root.global_basis.y
 	z = z.normalized(); var x := y.cross(z).normalized(); var yy := z.cross(x)
-	p += y * 0.06 - q.z * 0.025 # (in the palm)
+	p += y * grip_along + q.z * grip_palm # (in the palm)
 	grip.global_transform = Transform3D(Basis(x, yy, z), p)
 
 ## The quiver rides the upper spine, set back by the depth of his back, slung on the slant, its mouth over his right shoulder.
@@ -175,7 +178,7 @@ func _aim_guns() -> void:
 	var gun: Node3D = tools_by.revolver if tools_by.revolver.visible else (tools_by.rifle if tools_by.rifle.visible else null)
 	if gun == null or _hand_i < 0: return
 	var gp := _bone_xf(_hand_i).origin
-	if _fore_i >= 0: gp += (gp - _bone_xf(_fore_i).origin).normalized() * (0.065 if aiming else 0.075)
+	if _fore_i >= 0: gp += (gp - _bone_xf(_fore_i).origin).normalized() * (0.04 if aiming else 0.045) # (the grip in his palm, not out past the fingers)
 	gun.position = root.to_local(gp); gun.rotation = Vector3(-0.05 if aiming else 0.55, 0, 0)
 
 func _show_tools(swim: bool) -> void:
