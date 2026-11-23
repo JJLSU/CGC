@@ -132,7 +132,7 @@ func update(dt: float, night: float, near_fire: float, water: float, rain: float
 	var gust := 0.5 + 0.3 * sin(t * 0.21) + 0.2 * sin(t * 0.57 + 1.3)
 	var LW: Array = LAND_WIND.get(land_id, LAND_WIND.home)
 	_bed("wind", 0.045 * LW[0] * gust * indoors_wind, 1.5, dt); beds.wind.fx.cutoff_hz = lerpf(beds.wind.fx.cutoff_hz, LW[1] + gust * 260.0, 1.0 - exp(-dt / 1.5))
-	_bed("rain", (0.09 if sheltered else 0.13) * rain, 0.6, dt); beds.rain.fx.cutoff_hz = lerpf(beds.rain.fx.cutoff_hz, 900.0 if sheltered else 3200.0, 1.0 - exp(-dt / 0.4))
+	_bed("rain", (0.055 if sheltered else 0.08) * rain, 0.6, dt) # (the player found the web's 0.09/0.13 a little much); beds.rain.fx.cutoff_hz = lerpf(beds.rain.fx.cutoff_hz, 900.0 if sheltered else 3200.0, 1.0 - exp(-dt / 0.4))
 	_bed("water", 0.22 * water * (0.6 + 0.4 * sin(t * 0.9)), 0.3, dt)
 	# the land's own voices, now and then (never a constant bed)
 	land_t -= dt

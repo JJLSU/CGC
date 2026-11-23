@@ -243,12 +243,12 @@ class Camp extends Node3D:
 			var x: float = at.x + e[2]; var z: float = at.z + e[3]; p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = rng.next() * 6.0; add_child(p)
 		# the warriors, armed as in the reference art: spear and bow, bow, stone-headed club
 		var kinds := [["folk_native_warrior", "spear"], ["folk_native_archer", "bow"], ["folk_native_hunter", "club"]]
-		for i in kinds.size():
-			var fig := ModelFigure.new(kinds[i][0]); var arm: String = kinds[i][1]
+		for i in kinds.size() * 2: # (twice the web's three: the player's ask)
+			var fig := ModelFigure.new(kinds[i % kinds.size()][0]); var arm: String = kinds[i % kinds.size()][1]
 			if arm != "club": fig.hands[0].add_child(NativeCamps.bow_mesh())
 			if arm == "spear": fig.hands[1].add_child(NativeCamps.spear_mesh())
 			if arm == "club": fig.hands[1].add_child(NativeCamps.club_mesh())
-			var a := (i / float(kinds.size())) * TAU; var hm := Vector3(at.x + cos(a) * 9.0, 0, at.z + sin(a) * 9.0)
+			var a := (i / float(kinds.size() * 2)) * TAU; var rr := 9.0 if i % 2 == 0 else 13.0; var hm := Vector3(at.x + cos(a) * rr, 0, at.z + sin(a) * rr)
 			fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); add_child(fig.root)
 			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
 		# the camp's folk: about the lodges and the fire; at the first sign of a fight they gather out of the way

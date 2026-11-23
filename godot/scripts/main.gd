@@ -141,6 +141,10 @@ var meeting_day := -1
 var opera_day := -1
 var landmarks: Landmarks
 var climbs: Climbs
+var jumpers: ClaimJumpers
+var jumper_hooks := {}
+var jumper_t = null
+const JUMPER_LOOT := [{"dollars": 6}, {"dollars": 11}, {"gold": 1, "dollars": 3}, {"cartridges": 4, "dollars": 2}, {"silver": 1}, {"dollars": 4, "rope": 1}]
 var camp_t = null        ## a warrior in front, this frame (for a blow)
 var camp_hooks := {}
 var arrivals: Array = []
@@ -387,11 +391,13 @@ func _ready() -> void:
 	hunting.on_thunk = func() -> void: sound.knock()
 	hunting.targets = func() -> Array: # (the guardians and the camps' warriors)
 		var out := camp.targets()
+		if jumpers: out.append_array(jumpers.targets())
 		for e in enemies.list: if not e.dying: out.append({"pos": Enemies.pos(e), "r": 0.65 * e.spec.scale, "h": e.spec.top * e.spec.scale, "enemy": e})
 		return out
 	hunting.on_target = func(t: Dictionary, a: Dictionary) -> void:
 		if t.has("enemy"): guardian_hit(t.enemy, a.get("dmg", 6))
 		elif t.has("w"): camp.damage(t.w, a.get("dmg", 6), camp_hooks, raid_hooks); sound.land()
+		elif t.has("j"): jumpers.damage(t.j, a.get("dmg", 6), jumper_hooks); sound.land()
 	hunting.on_hit = func(c: Dictionary) -> void:
 		if not hunt_told: hunt_told = true; hud.toast("A clean shot. The %s folds down in the grass: walk up to it to dress it." % c.type)
 	hunting.on_wound = func(c: Dictionary) -> void:
@@ -417,11 +423,25 @@ func _ready() -> void:
 	geese.on_first = func() -> void: hud.toast("Honk-honk! A skein of Canada geese goes over in a V, headed south. Folks say an early flight means an early frost.")
 	# the people of the valleys: three camps, each in a valley of its own, in a clearing (before the chunks are built)
 	camp = NativeCamps.new(center, world); add_child(camp)
+	# claim jumpers (the player's addition): their ragged camps out in the county, clear of the town and the lodges
+	jumpers = ClaimJumpers.new(); add_child(jumpers)
+	jumpers.setup(center, [town.at] + camp.list.map(func(c): return c.at), world)
+	jumper_hooks = {
+		"on_hit": func(dmg: int) -> void:
+			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
+			if out: death_timer = 3.0; hud.toast("The claim jumpers leave you in the dirt and go through your pockets. You come to a long while later."),
+		"on_fall": func(m: Dictionary) -> void:
+			sound.knock(); var p: Vector3 = m.fig.root.position
+			add_drop("prop_pouch", 0.45, Vector3(p.x + 0.5, 0, p.z + 0.3), "his poke", JUMPER_LOOT[randi() % JUMPER_LOOT.size()])
+			hud.toast("The claim jumper goes down hard and stays down. His poke lies in the dirt."),
+		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
+		"on_spotted": func(_c) -> void: hud.toast("Claim jumpers! A ragged camp of hard cases, and they've seen you. They come at you swinging. Fight, or run for it."),
+	}
 	camp_hooks = {
 		"on_warn": func() -> void: hud.toast("A warrior blocks your way and signals you back. This is their land: the painted poles mark it. An arrow thuds into the ground at your feet."),
 		"on_fight": func() -> void: hud.toast("You stayed. The warriors come for you, bows drawn: get back over the poles!"),
 		"on_leave": func() -> void: hud.toast("You're off their land. The warriors watch you go, then turn back to their camp."),
-		"on_fall": func(_w) -> void: sound.knock(); hud.toast("The warrior falls. The camp will not forget it."),
+		"on_fall": func(w) -> void: sound.knock(); hud.toast("The warrior falls. The camp will not forget it. Something of his lies in the grass."); drop_native(w),
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
 			if out: death_timer = 3.0; hud.toast("The warriors drive you off their land, and you come to far from their camp."),
@@ -481,7 +501,7 @@ func _ready() -> void:
 			for pr in town.projects(): if pr.id == id: nm = pr.name
 			if town.unmend(id): hud.toast("The raiders wrecked the %s and rode off. It wants mending again (half the cost: the frame's sound)." % nm),
 		"on_repelled": func() -> void: hud.toast("The war party breaks and wheels away into the hills. The town is safe, and folk come out to cheer you."); inventory.dollars = inventory.get("dollars", 0) + 10,
-		"on_fall": func(_w) -> void: sound.knock(); hud.toast("A raider tumbles from his horse."),
+		"on_fall": func(w) -> void: sound.knock(); hud.toast("A raider tumbles from his horse, and something of his falls with him."); drop_native(w),
 		"on_off": func() -> void: hud.toast("With nobody left in town to stand against them, the war party wheels about and rides back into the hills."),
 		"on_hit": camp_hooks.on_hit,
 	}
@@ -565,6 +585,7 @@ func _process(dt: float) -> void:
 	_pm("NativeCamps.set_lodge_glow")
 	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle")
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
+	jumpers.update(dt, sky.day, player, jumper_hooks)
 	_pm("camp.update")
 	_raid_tick()
 	_pm("_raid_tick")
@@ -777,7 +798,7 @@ func _pond_ice(dt: float) -> void:
 ## canvas_items). Kept in user://display.json; full screen by default. Tests leave the window alone.
 const DISPLAY_PATH := "user://display.json"
 const UI_SIZES := [1.0, 1.25, 0.8]
-const UI_BASE := 0.90 ## the whole interface 10% smaller than its 1600x900 layout (the player's ask); "Interface size" scales from here
+const UI_BASE := 0.855 ## the whole interface ~15% smaller than its 1600x900 layout (the player's ask); "Interface size" scales from here
 var display := {"fullscreen": true, "vsync": true, "ui": 1.0}
 func _load_display() -> void:
 	if not keep_prefs: return
@@ -1424,7 +1445,8 @@ func _gather(active: bool, connected: bool) -> void:
 		if input.hit("Digit%d" % (i + 1)) and not build.active: pick_tool(hud.data.TOOLBAR[i].id)
 	enemy_t = enemies.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if active and not player.dead and not build.active else null
 	camp_t = camp.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and active and not player.dead and not build.active else null
-	target = player.find_target(world) if active and not player.dead and enemy_t == null else null
+	jumper_t = jumpers.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and camp_t == null and active and not player.dead and not build.active else null
+	target = player.find_target(world) if active and not player.dead and enemy_t == null and jumper_t == null else null
 	piece_t = null
 	if active and not player.dead and enemy_t == null and not build.active:
 		var f := player.forward(); piece_t = build.find_target(player.pos, f.x, f.z, Player.REACH)
@@ -1451,6 +1473,9 @@ func _gather(active: bool, connected: bool) -> void:
 	if e_pick: connected = true
 	if connected and enemy_t != null:
 		guardian_hit(enemy_t.enemy, edge("enemy")); blow()
+	elif connected and jumper_t != null:
+		blow(); sound.chop(); jumpers.damage(jumper_t, maxi(2, edge("enemy")), jumper_hooks)
+		confetti.burst(jumper_t.fig.root.position + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
 	elif connected and camp_t != null:
 		blow(); sound.chop(); camp.damage(camp_t, maxi(2, edge("enemy")), camp_hooks, raid_hooks)
 		confetti.burst(NativeCamps.Camp.wpos(camp_t) + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
@@ -2092,6 +2117,7 @@ func _apply_save(d: Dictionary) -> void:
 	settlers.load_state(d.get("settlers"))
 	dog.found_day = int(d.get("dogDay", 0)) # (he's already been digging today, if the save says so)
 	camp.load_state(d.get("campPeace")) # (days of peace bought with gifts)
+	jumpers.load_state(d.get("jumpers")) # (camps cleared, and when)
 	var rr = d.get("railroad")
 	if rr != null and rr.get("built", false):
 		railroad.build()
@@ -2132,7 +2158,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -2397,6 +2423,7 @@ func _visitors() -> bool:
 	return false
 
 func _pets(dt: float, active: bool) -> void:
+	if _drops_tick(active): return
 	if jar_count and sky.night < 0.15: jar_count = 0; hud.toast("First light: you unscrew the lid and the lightning bugs drift off home.") # (the jar let go at dawn)
 	dog.day = sky.day
 	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
@@ -2597,6 +2624,35 @@ func _pets(dt: float, active: bool) -> void:
 		if input.hit("KeyE"): cat.pat(); journal.record("cat"); hud.toast(CAT_PURRS[randi() % CAT_PURRS.size()])
 
 var beast_prompt := ""
+
+# ------------------------------------------------------------------ things left lying where someone fell (the player's ask)
+## A pickup: a fallen warrior's painted parfleche, a claim jumper's poke. It lies where he fell, bobbing a little till
+## you come by; E beside it takes what's inside. Gone at the next dawn if left. [{node, pos, what, loot, day}]
+var drops: Array = []
+const NATIVE_LOOT := [{"pelt": 2}, {"leather": 1, "rope": 1}, {"venison": 2}, {"amber": 1, "pelt": 1}, {"cartridges": 3}, {"honey": 1, "berries": 4}]
+func drop_native(w: Dictionary) -> void:
+	var p: Vector3 = w.fig.root.position
+	add_drop("prop_parfleche", 0.7, Vector3(p.x + 0.6, 0, p.z + 0.4), "his painted parfleche", NATIVE_LOOT[randi() % NATIVE_LOOT.size()])
+func add_drop(model: String, length: float, at: Vector3, what: String, loot: Dictionary) -> void:
+	var n: Node3D = NativeCamps.prop(model, length)
+	if n == null: var b := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.4, 0.25, 0.3); b.mesh = bm; b.material_override = PaperMats.paper(Color("8a5a30")); n = b
+	at.y = Terrain.get_height(at.x, at.z); n.position = at; n.rotation.y = randf() * TAU
+	add_child(n)
+	drops.append({"node": n, "pos": at, "what": what, "loot": loot, "day": sky.day, "t": randf() * 6.0})
+func _drops_tick(active: bool) -> bool:
+	var near = null
+	for d in drops.duplicate():
+		if sky.day > d.day + 1 or (sky.day > d.day and sky.time > 0.25): (d.node as Node3D).queue_free(); drops.erase(d); continue
+		d.t += get_process_delta_time(); (d.node as Node3D).position.y = d.pos.y + 0.04 + sin(d.t * 2.2) * 0.03
+		if near == null and Vector2(player.pos.x - d.pos.x, player.pos.z - d.pos.z).length() < 1.8: near = d
+	if near == null or not active or player.dead or build.active: return false
+	beast_prompt = "[E] Pick up %s" % near.what
+	if input.hit("KeyE"):
+		var got := []
+		for k in near.loot: inventory[k] = inventory.get(k, 0) + int(near.loot[k]); got.append("%d %s" % [near.loot[k], k])
+		hud.toast("Inside %s: %s." % [near.what, ", ".join(got)]); sound.pick()
+		(near.node as Node3D).queue_free(); drops.erase(near)
+	return true
 func _livestock(dt: float, active: bool) -> void:
 	beast_prompt = ""
 	if critters.barn == null:

@@ -1426,3 +1426,27 @@ for N frames, then saves the viewport; needs a window, not --headless).
   export.
 - (Two quit checks ran the game on the player's real save before CGC_SAVE_PATH was set for them: each loaded it and
   saved it back a few seconds of game time later; nothing lost.)
+
+### Claim jumpers, a camp's warriors doubled, pickups, a shorter crafting list (2026-11-22; the player's asks)
+- The interface another 5% smaller (UI_BASE 0.855). The rain bed quieter: 0.13 -> 0.08 in the open, 0.09 -> 0.055
+  under a roof (Sound.update).
+- The crafting panel shows By hand always, and otherwise only what you can make or buy where you stand: the
+  workbench, campfire, forge, the tinker, each shop, the depot, a trading post, a camp's fire, the fair, each only
+  when its station_near says you're at it. The long build-piece list gave way to one line ("Build pieces: B, once you
+  have a hammer"), with a pointer to go and stand at a place when nothing's here.
+- Pickups (main.drops / add_drop / _drops_tick): a thing left lying where someone fell, bobbing; E beside it takes
+  what's inside; gone by the next morning. A fallen warrior (a camp's or a raider) leaves his painted parfleche
+  (prop_parfleche: pelts, leather and rope, venison, amber, cartridges, honey and berries); a claim jumper his poke.
+- The native camps' warriors doubled: six a camp (the three kinds twice, at 9 and 13 m round the fire).
+- Claim jumpers (scripts/folk/jumpers.gd, ClaimJumpers): five ragged camps placed by the world's seed 150-650 m
+  out, clear of water, the mountains, the town and the lodges (a small clearing kept round each fire), each a tent,
+  cookfire, handcart, bedroll and barrel, built only within 170 m. Three or four men a camp on the prospectors',
+  farmhands' and tradesmen's models, clothes re-dyed (ModelFigure hue; skin never), with the warriors' borrowed run.
+  Violent and quick: no warning, within 30 m the camp comes for you at 6.4 m/s (you can just outrun them at a
+  sprint); brawlers swing pick handles, gunmen keep 10 m off and fire every ~2 s (45% hit); a hit is 25 (a
+  quarter of your starting health; the coat turns a third). They give up 90 m from their fire. Struck (blows, arrows,
+  bullets: they're hunting targets and melee targets), one falls and drops his poke (dollars, gold, silver,
+  cartridges); a camp beaten to the last man stays empty three days (saved: "jumpers").
+- tools/test_jumpers.gd (five camps; built near; all three came, 100 -> 25 health in 4 s; beaten, three pokes, one
+  picked up; the camp saved as cleared; six warriors a camp and a parfleche from one): PASS. smoke_actions: clean but
+  the known first-dusk line; test_craft_press PASS. The exe rebuilt.

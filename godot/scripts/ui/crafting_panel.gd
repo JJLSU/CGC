@@ -129,26 +129,24 @@ func render() -> void:
 	for k in crafting.inventory:
 		if crafting.inventory[k] > 0: have.append("%d %s" % [crafting.inventory[k], k])
 	have_label.text = "You have " + (" · ".join(have) if have.size() else "nothing yet")
-	_tier("By hand", null); _tier("Workbench", "workbench"); _tier("Campfire", "campfire"); _tier("Forge", "forge"); _tier("Tinker's wagon", "tinker")
+	# only what you can make or buy where you stand (the player's ask: go to each place to buy from it), and by hand
+	var here := func(st: String) -> bool: return crafting.station_near.is_valid() and crafting.station_near.call(st)
+	_tier("By hand", null)
+	var any := false
+	for t in [["Workbench", "workbench"], ["Campfire", "campfire"], ["Forge", "forge"], ["Tinker's wagon", "tinker"]]:
+		if here.call(t[1]): _tier(t[0], t[1]); any = true
 	for t in [[store_open, "General store · Cold Glitter Creek", "store"], [smithy_open, "Blacksmith's · Cold Glitter Creek", "smithy"], [bakery_open, "Bakery · Second Street", "bakery"],
 			[bank_open, "Miners' bank · Second Street", "bank"], [feed_open, "Feed & grain · Second Street", "feed"], [drygoods_open, "Dry goods · Third Street", "drygoods"],
 			[cooper_open, "Cooperage · Third Street", "cooper"], [depot_open, "Freight office · Overland & Western", "depot"]]:
-		if (t[0] as Callable).is_valid() and t[0].call(): _tier(t[1], t[2])
+		if (t[0] as Callable).is_valid() and t[0].call() and here.call(t[2]): _tier(t[1], t[2]); any = true
 	if post_open.is_valid():
 		var p = post_open.call()
-		if p: _tier("Trading post · %s" % p.name, "post-" + p.land)
-	if camp_open.is_valid() and camp_open.call(): _tier("Trading at the camp fire", "camp")
-	if fair_today.is_valid() and fair_today.call(): _tier("County Fair · judging today", "fair")
-	# the build pieces
-	var m := MarginContainer.new(); m.add_theme_constant_override("margin_top", 12)
-	var hb := HBoxContainer.new(); hb.add_child(hud.label("Build pieces", 21)); hb.add_child(hud.label("— craft a hammer, then press B", 15, Hud.INK_SOFT))
-	m.add_child(hb); list.add_child(m)
-	var grid := GridContainer.new(); grid.columns = 2; grid.add_theme_constant_override("h_separation", 18)
-	for p in pieces:
-		var l := _rich(15, Hud.INK)
-		l.text = "• %s [color=#6b5b49]%s%s[/color]" % [p.name, _cost_bb(_ints(p.cost)), "" if p.free else " · near a workbench"]
-		grid.add_child(l)
-	list.add_child(grid)
+		if p and here.call("post-" + p.land): _tier("Trading post · %s" % p.name, "post-" + p.land); any = true
+	if camp_open.is_valid() and camp_open.call() and here.call("camp"): _tier("Trading at the camp fire", "camp"); any = true
+	if fair_today.is_valid() and fair_today.call() and here.call("fair"): _tier("County Fair · judging today", "fair"); any = true
+	var note := MarginContainer.new(); note.add_theme_constant_override("margin_top", 12)
+	var nl := hud.label(("" if any else "More is made at a workbench, a campfire or a forge, and bought in town: stand at one and open this again. ") + "Build pieces: B, once you have a hammer.", 15, Hud.INK_SOFT)
+	nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; note.add_child(nl); list.add_child(note)
 
 static func _ints(d: Dictionary) -> Dictionary:
 	var o := {}
