@@ -139,7 +139,7 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - [x] 26. Next: another side-by-side pass for what the panels pass didn't cover (the county map card, the story and
   letter cards, the crafting panel's look, the toasts' placement while a panel is up).
 - [x] 27. Performance at the player's full-screen size (4K: the game now opens full screen on a 3840x2160 screen).
-- [ ] 28. The 12-18 ms "chunk finish" spikes walking into new country: spread the props' layout (Props.place,
+- [x] 28. The 12-18 ms "chunk finish" spikes walking into new country: spread the props' layout (Props.place,
   17-50 ms for a chunk not laid out before, 4-8 ms after) over frames as the terrain mesh already is.
 - [x] 29. The player's notes from playing: the railroad ties lie across the rails; the cars tilt up and down the
   hills; a slower train; no raids on the town till you have a ranged weapon.
@@ -1617,3 +1617,8 @@ for N frames, then saves the viewport; needs a window, not --headless).
   quit the ordinary way. The display options are written when changed, so nothing waits on the quit. Three exe
   runs quitting by themselves (CGC_QUIT_AT_MS, headless, a throwaway save): exit 0 each time, the save written.
   (A debug run still reports ~34 multimeshes, 37 meshes and 3 stray MeshInstance3Ds leaked at exit: not chased.)
+- Step 28 finished: World._create_chunk_sliced now awaits Props.place_sliced (the layout spread over frames within the
+  slice budget) and hands the result to create_chunk. perf_walk (windowed): worst frames farm 13.2 (was 22.9), lane 15.7
+  (28.5), Main Street 13.3 (12.1), woods 14.8 (28.1), wilds 15.1 (32.1), farm at night 17.1 (23.3) ms; no spike over
+  20 ms; averages unchanged. test_place_sliced 40/40 the same: PASS; smoke clean but one headless-renderer line
+  (texture_2d_initialize in the dummy storage) not seen again in four plain starts with or without the change.

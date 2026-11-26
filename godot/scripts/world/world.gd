@@ -113,8 +113,11 @@ func _create_chunk_sliced(cx: int, cz: int) -> void:
 			if not is_inside_tree(): return
 			await get_tree().process_frame; t0 = Time.get_ticks_usec()
 	_map_dirty = true
+	# the props' layout too, spread over frames (step 28: a chunk not laid out before cost 17-50 ms here in one go)
+	var placed: Dictionary = await Props.place_sliced(cx, cz, exclusions, SLICE_US)
+	if not is_inside_tree(): return
 	var tc := Time.get_ticks_usec()
-	if not chunks.has(key(cx, cz)): create_chunk(cx, cz, job.mesh, true)
+	if not chunks.has(key(cx, cz)): create_chunk(cx, cz, job.mesh, true, placed)
 	last_finish_ms = (Time.get_ticks_usec() - tc) / 1000.0
 	_building = false
 
