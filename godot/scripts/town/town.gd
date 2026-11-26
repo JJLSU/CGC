@@ -425,6 +425,9 @@ func projects() -> Array:
 	out.append({"id": "church", "name": "church", "cost": 40, "door": doors.church})
 	for k in opened:
 		for b in STREETS[k].buildings: out.append({"id": b.id, "name": b.name, "cost": c.call(b.id, b.cost), "door": doors[b.id]})
+	for i in MARKET.size(): # (each market stall, tent and wagon, put to rights on its own: the player's ask)
+		var id := "mkt_%d" % i
+		out.append({"id": id, "name": MARKET_NAMES[i], "cost": c.call(id, MARKET_COST[i]), "door": at + along * (MARKET_S - 2.6) + toward * MARKET_O[i]})
 	return out
 ## Is every building on Main Street (k = -1) or on the k-th new street mended?
 func street_done(k: int) -> bool:
@@ -491,6 +494,7 @@ func dress_up(id: String) -> void:
 		k += 1
 
 func mend(id: String) -> void:
+	if id.begins_with("mkt_"): tiers[id] = 1; raided.erase(id); market_refresh(); return
 	var k := street_of(id)
 	if k >= 0 and not k in opened: open_street(k) # (a saved game: put the street up first)
 	tiers[id] = 1; raided.erase(id); dress_up(id)
@@ -515,6 +519,7 @@ func raidable() -> Array: return projects().filter(func(pr): return pr.id != "ch
 ## Raiders wrecked it: run-down again, its folk gone, until it's mended once more.
 func unmend(id: String) -> bool:
 	if not tiers.get(id, 0) or id == "church": return false
+	if id.begins_with("mkt_"): tiers[id] = 0; raided[id] = true; market_refresh(); return true
 	tiers[id] = 0; raided[id] = true
 	for key in folk.keys():
 		if key == id or String(key).begins_with(id + "_"):
@@ -744,6 +749,7 @@ func load_state(d) -> void:
 	var order: Array = BUILDINGS.map(func(b): return b.id) + ["church"]
 	for st in STREETS: order.append_array(st.buildings.map(func(b): return b.id))
 	for id in order: if int(d.get(id, 0)) == 1: mend(id)
+	for i in MARKET.size(): if int(d.get("mkt_%d" % i, 0)) == 1: mend("mkt_%d" % i)
 	for id in d.get("raided", []): if not tiers.get(id, 0): raided[id] = true
 
 ## Where settler i lives: most scrape by on Squatters' Row; newcomers who came for the boarding house's rooms live
@@ -1240,28 +1246,34 @@ func _hall_life(dt: float, night: float) -> void:
 
 # ------------------------------------------------------------------ the market row (the player's market stalls)
 ## Along the far side of the north cross street: stalls, tents and wagons of the market, each from its own model pair.
-## Wrecked and bare while the town is run-down; once Main Street is all mended they stand restored, stocked, a
-## stallkeeper at each by day and baskets of food beside.
+## Each is wrecked and bare till you pay to put it to rights (the player: anything with a ruined and a good model is
+## yours to fix up); then it stands restored and stocked, a stallkeeper at it by day and baskets of food beside.
 const MARKET_S := CROSS_N + CROSS_HW + 2.2 # (right at the street's edge: behind, the land is left as it lies, a terraced bank where there is one: the player liked it)
 const MARKET_O := [-30.0, -18.0, -6.0, 6.0, 18.0, 30.0]
 const MARKET := ["mkt_stall_green", "mkt_tent_ochre", "mkt_wagon_burgundy", "mkt_stall_red", "mkt_tent_blue", "mkt_wagon_ochre"]
+const MARKET_NAMES := ["green produce stall", "ochre market tent", "burgundy market wagon", "red-striped food stall", "blue-trimmed market tent", "ochre market wagon"]
+const MARKET_COST := [15, 12, 18, 15, 12, 18]
 const MARKET_FOLK := ["cgc_woman_blueapron", "cgc_man_youth", "cgc_woman_greenapron", "cgc_man_suspenders", "cgc_woman_patched", "cgc_woman_calico"]
-var market_tier := -1
+var market_tier := ""
 var market_parts: Array = []
+var market_cols := false
 func market_refresh() -> void:
-	var tier := 1 if street_done(-1) else 0
-	if tier == market_tier or not ResourceLoader.exists("res://assets/models/props/bldg_mkt_stall_green_ruined.glb"): return
-	market_tier = tier
+	var key := ""
+	for i in MARKET.size(): key += str(tiers.get("mkt_%d" % i, 0))
+	if key == market_tier or not ResourceLoader.exists("res://assets/models/props/bldg_mkt_stall_green_ruined.glb"): return
+	market_tier = key
 	for n in market_parts: if is_instance_valid(n): n.queue_free()
 	market_parts = []
 	for k in folk.keys(): if String(k).begins_with("mkt_"): folk[k].fig.root.queue_free(); folk.erase(k)
+	var first := not market_cols
 	var face := atan2(-along.x, -along.z) # (their fronts to the cross street)
 	for i in MARKET.size():
+		var tier: int = tiers.get("mkt_%d" % i, 0)
 		var p: Vector3 = at + along * MARKET_S + toward * MARKET_O[i]
 		var wagon: bool = String(MARKET[i]).contains("wagon")
 		var g := model_building(MARKET[i], tier, 4.2 if wagon else 4.6, 3.6)
 		g.position = Vector3(p.x, y0, p.z); g.rotation.y = face + (0.12 if wagon else 0.0); add_child(g); market_parts.append(g)
-		world.colliders.append({"x": p.x, "z": p.z, "r": 1.8})
+		if not market_cols: world.colliders.append({"x": p.x, "z": p.z, "r": 1.8})
 		if tier:
 			var bq: Vector3 = p + toward * (2.9 if i % 2 else -2.9) - along * 1.2
 			var bk := model("prop_food_baskets", 1.3, 1)
@@ -1272,3 +1284,4 @@ func market_refresh() -> void:
 				var fp: Vector3 = p - along * 2.1 + toward * 0.6
 				f.root.position = Vector3(fp.x, y0, fp.z); f.root.rotation.y = face; add_child(f.root) # (facing out to the street, the stall at their back)
 				folk["mkt_%d" % i] = {"fig": f, "pose": null, "face": face}
+	if first: market_cols = true # (their colliders laid once)
