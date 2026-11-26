@@ -133,6 +133,7 @@ const DIRS8 := ["east", "south-east", "south", "south-west", "west", "north-west
 var dance: BarnDance
 var dance_t := 0.0
 var fireworks: Fireworks
+var quitting := false
 var celebrate_day := -1   ## the night the town fires off rockets for a boss beaten and his prize brought home
 var fire_smoke: FireSmoke
 var fw_day := -1
@@ -859,7 +860,9 @@ func _cycle_option(id: String) -> String:
 func _quit_game() -> void:
 	save_all()
 	_finish_loads()
-	get_tree().quit()
+	if quitting: return
+	quitting = true
+	Shutdown.quit(get_tree()) # (see core/shutdown.gd: an exported game skips the engine's broken teardown)
 
 
 ## Dev: $500 at a click (the +$500 button, or F4).

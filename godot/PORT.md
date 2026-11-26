@@ -1610,3 +1610,10 @@ for N frames, then saves the viewport; needs a window, not --headless).
   (3 / 3 / 4 thrown, each hurts); test_boss PASS; looked at the rockfall (tools/shot_boss.gd ... special).
 - A boss's prize brought home sets off the town's fireworks that night (main.celebrate_day, saved), whether or not the town is all mended; a note says so at the hand-in. test_boss: the rockets go up that night: PASS.
 - The "Parameter material is null" line the smoke run sometimes shows comes from servers/rendering/dummy/storage/material_storage.cpp (material_get_instance_shader_parameters): the dummy renderer of a headless run only, so not something a player sees. A probe stepping dusk, rain, snow and a storm by itself could not raise it; left as known headless noise.
+- The exe's crash on the way out (0xC0000374 heap corruption on every quit, headless or not): inside the engine's own
+  teardown. Freeing the scene first and letting go of every static cache beforehand only moved it about (0xC0000005 on
+  some runs). Now an exported game (OS.has_feature("template")), once _quit_game has written the save and let the
+  loads finish, ends its own process (core/shutdown.gd) instead of going through that teardown; editor and test runs
+  quit the ordinary way. The display options are written when changed, so nothing waits on the quit. Three exe
+  runs quitting by themselves (CGC_QUIT_AT_MS, headless, a throwaway save): exit 0 each time, the save written.
+  (A debug run still reports ~34 multimeshes, 37 meshes and 3 stray MeshInstance3Ds leaked at exit: not chased.)
