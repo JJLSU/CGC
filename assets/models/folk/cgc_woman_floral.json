@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_floral",
+  "height": 1.68,
+  "tris": 20390,
+  "tris_before": 20390,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
