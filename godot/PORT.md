@@ -1609,3 +1609,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
   the marks are now a darker brown stain (they were faint on the pale dirt). tools/test_boss_special.gd PASS
   (3 / 3 / 4 thrown, each hurts); test_boss PASS; looked at the rockfall (tools/shot_boss.gd ... special).
 - A boss's prize brought home sets off the town's fireworks that night (main.celebrate_day, saved), whether or not the town is all mended; a note says so at the hand-in. test_boss: the rockets go up that night: PASS.
+- The "Parameter material is null" line the smoke run sometimes shows comes from servers/rendering/dummy/storage/material_storage.cpp (material_get_instance_shader_parameters): the dummy renderer of a headless run only, so not something a player sees. A probe stepping dusk, rain, snow and a storm by itself could not raise it; left as known headless noise.
