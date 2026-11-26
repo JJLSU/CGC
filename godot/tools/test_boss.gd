@@ -104,5 +104,31 @@ func _initialize() -> void:
 	ok = ok and A.delivered and 1 in T.opened
 	var all: Dictionary = main._bosses_save()
 	ok = ok and all.jebediah.delivered and all.angus.delivered
+	# Thaddeus Crane: once Third Street is mended he's the one left holding the town (the mortgage); dynamite blasts wide
+	var C: Boss = main.bosses[2]
+	ok = ok and main._boss_holding() == null
+	for bb in Town.STREETS[1].buildings: T.mend(bb.id)
+	print("Third done %s; holding: %s" % [T.street_done(1), main._boss_holding().title() if main._boss_holding() else "none"])
+	ok = ok and main._boss_holding() == C
+	var off3: Vector3 = C.at + (C.at - T.at).normalized() * -18.0
+	p.pos = Vector3(off3.x, Terrain.get_height(off3.x, off3.z), off3.z); p.health = p.max_health
+	var h3 := p.health; var sticks := 0
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 7000:
+		p.pos = Vector3(off3.x, Terrain.get_height(off3.x, off3.z), off3.z); p.health = maxf(p.health, 30.0); p.dead = false
+		sticks = maxi(sticks, C.picks.size()); await process_frame
+	print("Crane built %s, props %d, fighting %s, sticks out %d, health %.0f -> %.0f" % [C.built, C.nodes.size(), C.fighting(), sticks, h3, p.health])
+	ok = ok and C.built and C.nodes.size() >= 15 and C.fighting() and sticks >= 1 and p.health < h3
+	p.health = p.max_health
+	while not C.beaten: C.damage(5, C.hooks)
+	await _wait(0.3)
+	var mg = main.drops.filter(func(d): return d.loot.has("mortgage"))
+	ok = ok and mg.size() == 1
+	var mp: Vector3 = mg[0].pos; p.pos = Vector3(mp.x, Terrain.get_height(mp.x, mp.z), mp.z)
+	await _wait(0.2); main.input.pressed["KeyE"] = true; await _wait(0.2)
+	var cash0: int = main.inventory.get("dollars", 0)
+	p.pos = Vector3(ad.x, Terrain.get_height(ad.x, ad.z), ad.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
+	print("mortgage handed in %s, +$%d, holding now %s" % [C.delivered, main.inventory.get("dollars", 0) - cash0, main._boss_holding()])
+	ok = ok and C.delivered and main.inventory.get("dollars", 0) - cash0 == 150 and main._boss_holding() == null
 	print("PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

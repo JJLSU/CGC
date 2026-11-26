@@ -2837,10 +2837,13 @@ func _boss_hooks(b: Boss) -> Dictionary:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
 			if out: death_timer = 3.0; hud.toast("%s laughs over you. You come to a long while later, far from his camp." % nm),
 		"on_throw": func() -> void: sound.tear(),
-		"on_land": func(_at: Vector3) -> void: sound.chop(),
+		"on_land": func(at: Vector3) -> void:
+			if b.spec.weapon == "dynamite": sound.land(); sound.knock(); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
+			else: sound.chop(),
 		"on_slam": func(at: Vector3) -> void: sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2),
 		"on_spotted": func() -> void:
-			hud.toast(("%s! The giant roars and hefts a pickaxe. Watch where they land." if b.spec.weapon == "pick" else "%s! The giant lumberjack grins and spins a hand axe. They fly fast and flat.") % nm.to_upper()),
+			hud.toast({"pick": "%s! The giant roars and hefts a pickaxe. Watch where they land.", "axe": "%s! The giant lumberjack grins and spins a hand axe. They fly fast and flat.",
+				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark."}[b.spec.weapon] % nm.to_upper()),
 		"on_fall": func(at: Vector3) -> void:
 			sound.tear(); journal.record("boss")
 			_drop_prize(b, at + Vector3(1.2, 0, 0.6))
@@ -2875,7 +2878,9 @@ func _drop_prize(b: Boss, at: Vector3) -> void:
 
 ## A prize back at the assay office: his street goes up for good (and the assayer pays a finder's fee).
 func _hand_in(b: Boss) -> void:
-	inventory[b.spec.prize_key] = 0; b.delivered = true; inventory.dollars = inventory.get("dollars", 0) + 40
+	var pay: int = b.spec.get("reward", 40)
+	inventory[b.spec.prize_key] = 0; b.delivered = true; inventory.dollars = inventory.get("dollars", 0) + pay
 	sound.craft(); journal.record("deed")
-	hud.toast("The assayer files %s. \"Cold Glitter Creek grows again.\" +$40" % b.spec.prize)
+	if b.id == "crane": hud.toast("The assayer burns the mortgage in the stove. \"Cold Glitter Creek owes no man.\" +$%d" % pay)
+	else: hud.toast("The assayer files %s. \"Cold Glitter Creek grows again.\" +$%d" % [b.spec.prize, pay])
 	town.grow()

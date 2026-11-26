@@ -12,7 +12,9 @@ extends Node3D
 ##
 ## The second is Big Angus Hackett, a giant lumberjack who has taken the county's timber rights for himself: Third
 ## Street can't go up without lumber. He keeps a logging camp farther out, throws hand axes in a flat, fast spin (a
-## shorter warning), hits harder and takes more beating. Each boss is one entry in SPECS.
+## shorter warning), hits harder and takes more beating. The third, once the town is grown, is Thaddeus Crane, a
+## mining baron holding the whole town's mortgage from a fenced compound: slow and stout, he lobs lit dynamite whose
+## blast reaches wider (a bigger mark). Each boss is one entry in SPECS.
 
 const AGGRO := 34.0
 const LEASH := 85.0
@@ -30,8 +32,12 @@ const SPECS := {
 	"angus": {"name": "Big Angus Hackett", "model": "boss_lumberjack", "scale": 2.15, "hp": 72, "speed": 3.8, "weapon": "axe", "throw_hit": 22, "slam_hit": 28,
 		"cool": 2.1, "fly": 18.0, "arc": 0.35, "r0": 480.0, "r1": 620.0, "salt": 1313, "lair": "logging", "street": 1,
 		"prize": "the timber rights", "prize_key": "timber_rights"},
+	# the mining baron: holds the whole town's mortgage once it's grown; slow and stout, but his lit dynamite blasts wide
+	"crane": {"name": "Thaddeus Crane", "model": "boss_tycoon", "scale": 2.2, "hp": 90, "speed": 3.0, "weapon": "dynamite", "throw_hit": 24, "slam_hit": 26,
+		"cool": 2.6, "fly": 12.0, "arc": 1.1, "hit_r": 2.6, "r0": 380.0, "r1": 520.0, "salt": 2929, "lair": "mansion", "street": 2,
+		"prize": "the town's mortgage", "prize_key": "mortgage", "reward": 150},
 }
-const ORDER := ["jebediah", "angus"]
+const ORDER := ["jebediah", "angus", "crane"]
 
 var id := "jebediah"
 var spec: Dictionary = SPECS.jebediah
@@ -207,7 +213,7 @@ func _throw(from: Vector3, p: Vector3, v: Vector3, dp: float, side: float) -> vo
 	to += Vector3(-fwd.z, 0, fwd.x) * side
 	to.y = Terrain.get_height(to.x, to.z)
 	var n := _weapon(2.3); add_child(n)
-	var mark := MeshInstance3D.new(); var dm := CylinderMesh.new(); dm.top_radius = PICK_R; dm.bottom_radius = PICK_R; dm.height = 0.02; dm.radial_segments = 20
+	var mark := MeshInstance3D.new(); var dm := CylinderMesh.new(); var hr: float = spec.get("hit_r", PICK_R); dm.top_radius = hr; dm.bottom_radius = hr; dm.height = 0.02; dm.radial_segments = 20
 	mark.mesh = dm; mark.material_override = _mark_mat(); mark.position = to + Vector3(0, 0.05, 0); add_child(mark)
 	picks.append({"node": n, "mark": mark, "from": from + Vector3(0, 4.2, 0), "to": to, "t": 0.0, "dur": dur, "landed": -1.0})
 
@@ -216,7 +222,7 @@ func _picks_update(dt: float, player: Player, hooks: Dictionary) -> void:
 		var n: Node3D = k.node
 		if k.landed >= 0.0:
 			k.landed += dt
-			if k.landed > 4.0: n.queue_free(); picks.erase(k)
+			if k.landed > (0.15 if spec.weapon == "dynamite" else 4.0): n.queue_free(); picks.erase(k) # (a stick is gone in the blast)
 			continue
 		k.t += dt
 		var u := clampf(k.t / k.dur, 0.0, 1.0)
@@ -227,7 +233,7 @@ func _picks_update(dt: float, player: Player, hooks: Dictionary) -> void:
 			k.landed = 0.0; m.queue_free()
 			n.position = k.to + Vector3(0, 0.5, 0); n.rotation = Vector3(-2.3, n.rotation.y, 0) # (stuck in the dirt, handle up)
 			if hooks.has("on_land"): hooks.on_land.call(k.to)
-			if Vector2(player.pos.x - k.to.x, player.pos.z - k.to.z).length() < PICK_R and not player.dead and hooks.has("on_hit"): hooks.on_hit.call(int(spec.throw_hit))
+			if Vector2(player.pos.x - k.to.x, player.pos.z - k.to.z).length() < float(spec.get("hit_r", PICK_R)) and not player.dead and hooks.has("on_hit"): hooks.on_hit.call(int(spec.throw_hit))
 
 func _build() -> void:
 	built = true
@@ -242,6 +248,7 @@ func _build() -> void:
 	var side := Vector3(cos(face), 0, -sin(face)) # (across the mine's face)
 	var outw := (at - mouth).normalized()
 	if spec.lair == "logging": _build_logging(place, rng, face, side, outw)
+	elif spec.lair == "mansion": _build_mansion(place, rng, face, side, outw)
 	else: _build_diggings(place, rng, face, side, outw)
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.86; tm.outer_radius = 1.0; tm.rings = 32; tm.ring_segments = 4
 	ring.mesh = tm; ring.material_override = PaperMats.paper(Color("a8352a")); ring.visible = false; add_child(ring); nodes.append(ring)
@@ -272,6 +279,26 @@ func _build_diggings(place: Callable, rng: PNoise.Mulberry32, face: float, side:
 	for i in 5:
 		var pk := _weapon(1.4); var q := mouth - side * (4.0 + rng.next() * 2.5) + outw * (2.5 + rng.next() * 1.5)
 		pk.position = Vector3(q.x, Terrain.get_height(q.x, q.z) + 0.12, q.z); pk.rotation = Vector3(PI / 2.0 + rng.next() * 0.2, rng.next() * TAU, 0); add_child(pk); nodes.append(pk)
+
+## Thaddeus Crane's compound: a fine painted house (his "mouth": the porch he holds court on) fenced round, his
+## stagecoach and a freight wagon of company stores, crates of powder, barrels, a tall lamppost, and a strongbox.
+func _build_mansion(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:
+	place.call("bldg_cottage_restored", 8.5, mouth - outw * 4.0, face)
+	place.call("veh_stagecoach", 5.0, at + side * 8.5 + outw * 2.0, face + 1.5)
+	place.call("veh_freight_wagon", 5.5, at - side * 9.0 + outw * 1.0, face - 1.3)
+	place.call("prop_crates", 1.6, mouth + side * 3.5 + outw * 1.5, face)
+	place.call("prop_crates", 1.3, mouth + side * 4.6 + outw * 2.6, face + 0.6)
+	place.call("prop_barrel", 0.9, mouth - side * 3.8 + outw * 1.8, 0.0)
+	place.call("prop_barrel", 0.9, mouth - side * 4.6 + outw * 1.2, 0.0)
+	place.call("prop_lamppost_tall", 3.6, at + side * 3.0 - outw * 2.0, face)
+	place.call("prop_cookfire", 1.1, at - side * 2.0 + outw * 0.5, 0.0)
+	for i in 10: # a white paling fence round the yard, open toward the town
+		var a := face + PI * 0.35 + i * (PI * 1.3 / 9.0); var q := at + Vector3(sin(a), 0, cos(a)) * 15.0
+		place.call("prop_fence_gate", 3.0, q, a + PI / 2.0)
+	# his powder: open sticks laid on the crates
+	for i in 3:
+		var dy := _weapon(1.2); var q := mouth + side * (3.0 + i * 0.5) + outw * 1.0
+		dy.position = Vector3(q.x, Terrain.get_height(q.x, q.z) + 1.0, q.z); dy.rotation = Vector3(0, face + i * 0.4, 0); add_child(dy); nodes.append(dy)
 
 ## Big Angus's logging camp: the chopping block (his "mouth": where he works) with a great woodpile, a felled pine,
 ## a lean-to and freight wagon for the timber he's hoarding, his fire and tent, stumps, and a row of axes.
@@ -308,7 +335,26 @@ func _unbuild() -> void:
 	nodes = []; picks = []; ring = null
 	if fig: fig.root.queue_free(); fig = null; hand_pick = null
 
-func _weapon(length: float) -> Node3D: return _axe_mesh(length) if spec.weapon == "axe" else _pick_mesh(length)
+func _weapon(length: float) -> Node3D:
+	match spec.weapon:
+		"axe": return _axe_mesh(length)
+		"dynamite": return _dynamite_mesh(length)
+	return _pick_mesh(length)
+
+## A stick of dynamite (three, bound, when it's thrown big): red paper, a twist of fuse with a spark at its end.
+static func _dynamite_mesh(length: float) -> Node3D:
+	var g := Node3D.new(); var l := length * 0.32
+	for i in 3:
+		var m := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = l * 0.13; cm.bottom_radius = l * 0.13; cm.height = l; cm.radial_segments = 8
+		m.mesh = cm; m.material_override = PaperMats.paper(Color("b8332a")); m.rotation.x = PI / 2.0; m.position = Vector3((i - 1) * l * 0.24, 0, l * 0.5); g.add_child(m)
+	var band := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(l * 0.8, l * 0.3, l * 0.08)
+	band.mesh = bm; band.material_override = PaperMats.paper(Color("e8dcc0")); band.position = Vector3(0, 0, l * 0.5); g.add_child(band)
+	var fuse := MeshInstance3D.new(); var fm := CylinderMesh.new(); fm.top_radius = l * 0.025; fm.bottom_radius = l * 0.025; fm.height = l * 0.4; fm.radial_segments = 4
+	fuse.mesh = fm; fuse.material_override = PaperMats.paper(Color("3a2f25")); fuse.rotation.x = PI / 2.0; fuse.position = Vector3(0, 0, l * 1.2); g.add_child(fuse)
+	var spark := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = l * 0.07; sm.height = l * 0.14; sm.radial_segments = 6; sm.rings = 3
+	var smat := StandardMaterial3D.new(); smat.albedo_color = Color("ffd25a"); smat.emission_enabled = true; smat.emission = Color("ffb030"); smat.emission_energy_multiplier = 2.0
+	spark.mesh = sm; spark.material_override = smat; spark.position = Vector3(0, 0, l * 1.4); g.add_child(spark)
+	return g
 
 ## A felling axe: a hickory handle along its own z, a broad iron bit at the far end.
 static func _axe_mesh(length: float) -> Node3D:

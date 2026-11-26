@@ -1589,3 +1589,8 @@ for N frames, then saves the viewport; needs a window, not --headless).
   men): every keeper and neighbour listed above wears their own figure now; looked at the jail, bakery, dry goods,
   boarding house, dance hall, the Row and the night revue (tools/shot_townfolk.gd <door|rowN> [flip] [night]).
   test_boss PASS; smoke_actions: only the known "material is null" line. The exe rebuilt.
+- A third boss (the tycoon model): Thaddeus Crane, a mining baron who holds the town's mortgage. Once Third Street is
+  all mended NEXT sends you after him (no street left to hold: his "street" is past the last). His fenced compound
+  (a painted house, stagecoach, freight wagon, powder crates, barrels, a tall lamp) lies 380-520 m out. 90 health,
+  slow (3.0), lobs lit dynamite whose blast reaches 2.6 m (24), a slam of 26. The mortgage handed in pays $150 and is
+  burnt in the assayer's stove. test_boss PASS with him; looked at mid-throw (tools/shot_boss.gd ... crane).
