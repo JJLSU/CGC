@@ -14,14 +14,14 @@ const HP_MAX := 54
 const AGGRO := 34.0
 const LEASH := 85.0
 const SPEED := 3.4          ## he lumbers (the farmer walks at 6): you can always get away
-const SCALE := 2.4
+const SCALE := 2.1
 const PICK_HIT := 20
 const SLAM_HIT := 25
 const SLAM_R := 4.2
 const PICK_R := 1.5         ## a thrown pick lands this close to you: it hits
 const NEAR := 170.0
 const FAR := 210.0
-const MODEL := "prospectors_6" ## (the white-bearded one with the bedroll pack: looked at in tools/shot_lineup.gd)
+const MODEL := "boss_jebediah" ## (his own model, from the player's drawing via Meshy: 2.0 m, so 2.1x makes him ~4.2 m)
 
 var at := Vector3.ZERO      ## his fire, before the mine mouth
 var mouth := Vector3.ZERO
@@ -30,6 +30,8 @@ var built := false
 var nodes: Array = []
 var fig: ModelFigure
 var hand_pick: Node3D
+var act := ""             ## a one-off clip playing (throw, slam), and how long it has left
+var act_t := 0.0
 var hp := HP_MAX
 var beaten := false
 var delivered := false     ## the deed is back at the assay office
@@ -136,7 +138,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		var enraged := hp * 2 < HP_MAX
 		if slam_t >= 0.0:
 			# the slam: the pick held high while the ring spreads, then down
-			slam_t -= dt; pose = "work"
+			slam_t -= dt; pose = "work"; _act("work", 0.2) # (his Heavy Hammer Swing, the pick brought down overhead)
 			var k := 1.0 - clampf(slam_t / 0.9, 0.0, 1.0)
 			ring.visible = true; ring.position = Vector3(me.x, Terrain.get_height(me.x, me.z) + 0.06, me.z); ring.scale = Vector3(SLAM_R * k, 1, SLAM_R * k)
 			if slam_t < 0.0:
@@ -150,7 +152,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 				elif dp < 32.0:
 					var n := 2 if enraged else 1
 					for i in n: _throw(me, p, vel, dp, (i - (n - 1) / 2.0) * 2.6)
-					cool = (1.9 if enraged else 2.5) + randf() * 0.6; pose = "swing"
+					cool = (1.9 if enraged else 2.5) + randf() * 0.6; pose = "swing"; _act("throw", 0.9)
 					if hooks.has("on_throw"): hooks.on_throw.call()
 		r.rotation.y = _turn(r.rotation.y, atan2(to_p.x, to_p.z), dt * 6.0)
 	else:
@@ -169,8 +171,15 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	speed = lerpf(speed, spd, minf(1.0, dt * 6.0))
 	me.y = Terrain.get_height(me.x, me.z); r.position = me
 	r.rotation.x = sin(hurt_t * 40.0) * 0.05 if hurt_t > 0.0 else 0.0
-	hand_pick.visible = cool < (1.9 if hp * 2 < HP_MAX else 2.5) - 0.5 or state != "fight" # (a fresh one from his pack)
-	fig.update(dt, speed / SCALE * 1.6, pose)
+	# (the pick never leaves his hand: each one he throws is a fresh one from his pack)
+	act_t -= dt
+	if act_t > 0.0 and fig.player and fig.player.has_animation(act): fig.play(act, 0.12)
+	else: fig.update(dt, speed / SCALE * 1.6, pose)
+
+## A one-off clip of his own (Meshy's Over Shoulder Throw, Jump Attack), held for at least sec.
+func _act(clip: String, sec: float) -> void:
+	if act != clip or act_t <= 0.0: act = clip; act_t = sec
+	else: act_t = maxf(act_t, sec)
 
 ## A pickaxe lobbed at where you'll be (he leads you a little), side: metres off to one side (the second of a pair).
 func _throw(from: Vector3, p: Vector3, v: Vector3, dp: float, side: float) -> void:

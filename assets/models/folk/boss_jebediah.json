@@ -1,0 +1,19 @@
+{
+  "name": "boss_jebediah",
+  "height": 2.0,
+  "tris": 20779,
+  "tris_before": 20779,
+  "clips": [
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "slam",
+    "throw",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

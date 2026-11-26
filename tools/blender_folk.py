@@ -67,7 +67,7 @@ def process(name):
         if img.packed_file is None and img.size[0]: img.pack()
     # clips: rename in the order they were asked for
     # clips: named by what Meshy called them (they don't come in the order asked for)
-    KEYS = [('sit', 'sit'), ('walk', 'walk'), ('wave', 'wave'), ('hammer', 'work'), ('chop', 'work'), ('swing', 'work'), ('danc', 'dance'), ('run', 'run'), ('idle', 'idle')]
+    KEYS = [('sit', 'sit'), ('walk', 'walk'), ('wave', 'wave'), ('hammer', 'work'), ('chop', 'work'), ('swing', 'work'), ('danc', 'dance'), ('run', 'run'), ('idle', 'idle'), ('throw', 'throw'), ('jump', 'slam'), ('attack', 'attack')]
     acts = list(bpy.data.actions)
     print(f'   actions found: {[a.name for a in acts]}')
     for a in acts:

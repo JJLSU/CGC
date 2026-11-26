@@ -1,0 +1,19 @@
+{
+  "name": "boss_spirit",
+  "height": 2.1,
+  "tris": 20710,
+  "tris_before": 20710,
+  "clips": [
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "slam",
+    "throw",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

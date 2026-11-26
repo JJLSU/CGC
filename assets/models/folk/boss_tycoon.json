@@ -1,0 +1,19 @@
+{
+  "name": "boss_tycoon",
+  "height": 1.9,
+  "tris": 20624,
+  "tris_before": 20624,
+  "clips": [
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "slam",
+    "throw",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

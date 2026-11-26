@@ -1,0 +1,19 @@
+{
+  "name": "boss_lumberjack",
+  "height": 2.0,
+  "tris": 20404,
+  "tris_before": 20404,
+  "clips": [
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "slam",
+    "throw",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

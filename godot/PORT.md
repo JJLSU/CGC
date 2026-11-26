@@ -1564,3 +1564,9 @@ for N frames, then saves the viewport; needs a window, not --headless).
   again on load). On the county map: crossed red picks in a double ring, "Mad Jebediah" ("beaten" after).
 - tools/test_boss.gd PASS (lair 405 m out; Second Street held then opened; picks thrown and landing hurt; a slam;
   the deed dropped, kept past two days, picked up, handed in; flags saved). Looked at mid-fight (tools/shot_boss.gd).
+- The bosses' own models (the player's drawings, assets/refs/boss_*.png, through tools/meshy_batch.py and
+  tools/blender_folk.py): boss_jebediah, boss_lumberjack, boss_tycoon, boss_spirit, 1.9-2.1 m, ~20k tris. Their
+  clips: Meshy's Slow Orc Walk in place of the Casual Walk (which read feminine on a giant), Over Shoulder Throw
+  (throw), Attack, Run, and the rest the folk get (Meshy's action 86 came back a Basic Jump, kept as "slam" but
+  unused: the slam plays the Heavy Hammer Swing). Mad Jebediah is boss_jebediah at 2.1x; the pick never leaves his
+  hand (each thrown one is fresh from his pack). The other three wait for later streets.
