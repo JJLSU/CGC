@@ -24,6 +24,8 @@ const FAR := 210.0
 ## natives' do and can't be hurt. (Looked at in a line-up, tools/shot_lineup.gd: trades_2 and trades_5 are women.)
 const MEN := ["prospectors_1", "prospectors_4", "prospectors_6", "folk_farmhand_01", "folk_farmhand_02", "folk_farmhand_03", "folk_asa", "trades_1",
 	"cgc_man_ragged", "cgc_man_goatee", "cgc_man_bandana", "cgc_man_youth"] # (and the player's new rough men, re-dyed)
+## the player's six outlaws: once their models are in, most of a camp's fighting men are these (their own clothes)
+const OUTLAWS := ["cgc_man_outlaw_rawboned", "cgc_man_outlaw_bruiser", "cgc_man_outlaw_gambler", "cgc_man_outlaw_veteran", "cgc_man_outlaw_cowboy", "cgc_man_outlaw_rustler"]
 const WOMEN := ["trades_2", "trades_5", "folk_calico_01", "folk_calico_02", "folk_calico_03", "cgc_woman_patched", "cgc_woman_gingham", "cgc_woman_greenapron"]
 
 var camps: Array = []      ## {at, seed, cleared_day, built, nodes: [], men: []}
@@ -134,9 +136,11 @@ func _build(c: Dictionary) -> void:
 	if day < c.cleared_day + RESPAWN_DAYS: return # (cleared out, and nobody back yet)
 	var count := 3 + int(rng.next() * 3.0) # (three to five fighting men)
 	for i in count:
-		var nm: String = MEN[int(rng.next() * MEN.size())]
+		var have_outlaws := OUTLAWS.filter(func(n): return ModelFigure.has_folk(n))
+		var outlaw := have_outlaws.size() > 0 and rng.next() < 0.75
+		var nm: String = have_outlaws[int(rng.next() * have_outlaws.size())] if outlaw else MEN[int(rng.next() * MEN.size())]
 		if not ModelFigure.has_folk(nm): continue
-		var fig := ModelFigure.new(nm, {"hue": 0.35 + rng.next() * 2.2}) # (their clothes re-dyed: never the skin)
+		var fig := ModelFigure.new(nm, {"hue": 0.0 if outlaw else 0.35 + rng.next() * 2.2}) # (borrowed townsfolk re-dyed, never the skin; an outlaw in his own clothes)
 		fig.borrow_clip("run", "folk_native_warrior")
 		var gun := i % 3 == 2
 		if gun:

@@ -64,7 +64,7 @@ const TOWNSFOLK := {
 	"hotel2": {"new": "cgc_man_gent", "model": "prospectors_4", "hue": -0.35},
 	"feed": {"new": "cgc_man_suspenders", "model": "prospectors_1", "hue": 0.7},
 	"barber": {"new": "cgc_man_goatee", "model": "townsfolk_3", "hue": 2.8},
-	"jail": {"new": "cgc_man_bandana", "model": "trades_1", "hue": 1.6},
+	"jail": {"new": ["cgc_man_sheriff", "cgc_man_bandana"], "model": "trades_1", "hue": 1.6}, # (the sheriff himself, once in)
 	"bank": {"new": "cgc_man_elder", "model": "townsfolk_2"},
 	"cn_store": {"new": "cgc_man_cn_elder", "model": "townsfolk_2", "hue": 1.2, "with": [{"new": "cgc_boy_cn", "model": "townsfolk_4", "at": -2.2, "out": 0.6, "turn": 0.4}]},
 	"cn_laundry": {"new": "cgc_woman_cn_thin", "model": "trades_6", "hue": 0.9, "with": [{"new": "cgc_man_cn_rust", "model": "trades_1", "at": -2.4, "out": 0.6, "turn": 0.3, "pose": "work"}, {"new": "cgc_woman_cn_curvy", "model": "trades_6", "at": 2.6, "out": 0.5, "turn": -0.35}]},
@@ -1178,6 +1178,9 @@ func _stage(dt: float) -> void:
 
 ## Who a TOWNSFOLK entry (or its company) is: [model, hue]. Their own new figure if it's in, else the old one re-dyed.
 static func folk_of(T: Dictionary) -> Array:
+	if T.has("new") and T.new is Array: # (a few in order of preference: the first that's in)
+		for n in T.new: if ModelFigure.has_folk(n): return [n, 0.0]
+		return [T.model, float(T.get("hue", 0.0))]
 	if T.has("new") and ModelFigure.has_folk(T.new): return [T.new, 0.0]
 	# Chinatown's folk are Chinese (the player: no one else standing about there): one not in from Meshy yet is stood
 	# in for by another of them, a man for a man, a woman for a woman, re-dyed; a child waits for its own model
