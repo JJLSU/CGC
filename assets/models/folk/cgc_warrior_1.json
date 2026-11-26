@@ -1,0 +1,18 @@
+{
+  "name": "cgc_warrior_1",
+  "height": 1.75,
+  "tris": 20616,
+  "tris_before": 20616,
+  "clips": [
+    "Archery_Shot",
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
