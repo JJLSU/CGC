@@ -30,9 +30,9 @@ def process(name):
     # an idle of the figure's own (tools/meshy_idles.py), in place of the stock one everybody shares
     own = None; idle_src = os.path.join(SRC, name, 'idle.glb')
     if os.path.exists(idle_src):
-        keep, before = set(bpy.data.objects), set(bpy.data.actions)
+        keep, had = set(bpy.data.objects), set(bpy.data.actions)
         bpy.ops.import_scene.gltf(filepath=idle_src)
-        new = [a for a in bpy.data.actions if a not in before]
+        new = [a for a in bpy.data.actions if a not in had]
         own = new[0] if new else None
         for a in new[1:]: bpy.data.actions.remove(a)
         bpy.ops.object.select_all(action='DESELECT')
@@ -77,9 +77,9 @@ def process(name):
     # everyday extras (tools/meshy_extras.py: extras.glb), merged in as x_<what>, after the main clips have their names
     ex_src = os.path.join(SRC, name, 'extras.glb')
     if os.path.exists(ex_src):
-        keep, before = set(bpy.data.objects), set(bpy.data.actions)
+        keep, had = set(bpy.data.objects), set(bpy.data.actions)
         bpy.ops.import_scene.gltf(filepath=ex_src)
-        new = [a for a in bpy.data.actions if a not in before]
+        new = [a for a in bpy.data.actions if a not in had]
         bpy.ops.object.select_all(action='DESELECT')
         for o in bpy.data.objects:
             if o not in keep: o.select_set(True)

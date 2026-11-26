@@ -36,10 +36,10 @@ WARRIORS = {'folk_native_warrior', 'folk_native_archer', 'folk_native_hunter', '
 # the bosses (Cold Glitter Creek's boss battles) fight too: an attack, a run, and the heavy swing doubles as a slam
 BOSSES = {'boss_jebediah', 'boss_lumberjack', 'boss_tycoon', 'boss_spirit'}
 BOSS_ACTIONS = {'walk': 119, 'attack': 4, 'run': 14, 'throw': 421, 'slam': 86}  # a Slow Orc Walk (the casual one read feminine on a giant), Attack, Run, Over Shoulder Throw, Jump Attack
-CHILDREN = {'boss_jebediah': 2.0, 'boss_lumberjack': 2.0, 'boss_tycoon': 1.9, 'boss_spirit': 2.1, 'folk_native_girl': 1.25, 'townsfolk_4': 1.25, 'trades_4': 1.3, 'folk_jim': 1.95, 'folk_amos': 1.95}  # height in metres where it isn't an adult's 1.75 (children; the big men)
+CHILDREN = {'boss_jebediah': 2.0, 'boss_lumberjack': 2.0, 'boss_tycoon': 1.9, 'boss_spirit': 2.1, 'folk_native_girl': 1.25, 'townsfolk_4': 1.25, 'trades_4': 1.3, 'folk_jim': 1.95, 'folk_amos': 1.95, 'cgc_boy_cn': 1.2, 'cgc_girl_cn': 1.15}  # height in metres where it isn't an adult's 1.75 (children; the big men)
 # four-legged animals get Meshy's quadruped rig (walk and run); props, plants, rocks, birds and frogs are static models
 QUADRUPEDS = {'animal_bison', 'animal_horse', 'animal_donkey', 'animal_dog', 'animal_cat', 'animal_coyote', 'animal_fox', 'animal_rabbit',
-              'animal_cow', 'animal_calf', 'animal_ox', 'animal_sheep', 'animal_deer', 'animal_boar', 'animal_beaver', 'animal_hodag', 'animal_wampus', 'animal_babe', 'animal_gouger'}
+              'animal_cow', 'animal_calf', 'animal_ox', 'animal_sheep', 'animal_deer', 'animal_boar', 'animal_beaver', 'animal_hodag', 'animal_wampus', 'animal_babe', 'animal_gouger', 'animal_bear_black', 'animal_grizzly'}
 
 
 def key():
