@@ -1,0 +1,15 @@
+{
+  "name": "cgc_native_5",
+  "height": 1.75,
+  "tris": 20404,
+  "tris_before": 20404,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
