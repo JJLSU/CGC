@@ -119,6 +119,8 @@ func almanac_lines(recipe_name: Callable, piece_name: Callable) -> Array:
 		built.append(("a " + nm) if n == 1 else "%d %s%s" % [n, nm, "es" if nm.ends_with("s") else "s"])
 	if built.size(): out.append("raised " + ", ".join(built.slice(0, 4)))
 	if L.has("slay"): out.append("drove off " + plural(L.slay, "treasure guardian", "treasure guardians"))
+	if L.has("boss"): out.append("brought down a giant (a boss of the county)" if L.boss == 1 else "brought down %d giants" % L.boss)
+	if L.has("deed"): out.append("brought a boss's prize home to the assay office")
 	if L.has("deer"): out.append("spotted %s in the woods" % plural(L.deer, "deer", "deer"))
 	for pair in [["livestock", "did the milking and the shearing"], ["shoo", "shooed the crows out of the corn"], ["skep", "took honey from the bees"],
 			["letter", "read a letter from the mailbox"], ["star", "found a fallen star in the grass"], ["peace", "made peace with a guardian, with a gift"],

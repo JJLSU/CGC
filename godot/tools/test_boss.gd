@@ -157,6 +157,9 @@ func _initialize() -> void:
 	print("mortgage handed in %s, +$%d, holding now %s" % [C.delivered, main.inventory.get("dollars", 0) - cash0, main._boss_holding()])
 	ok = ok and C.delivered and main.inventory.get("dollars", 0) - cash0 == 150 and main._boss_holding() == null
 	print("trophies over the assay office: %d" % T.trophies.get_child_count())
+	var al: Array = main.journal.almanac_lines(func(i): return i, func(i): return i)
+	print("the day's almanac: %s" % "; ".join(al.filter(func(l): return String(l).contains("giant") or String(l).contains("prize"))))
+	ok = ok and al.any(func(l): return String(l).contains("giants")) and al.any(func(l): return String(l).contains("prize home"))
 	ok = ok and T.trophies.get_child_count() == 3
 	print("PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
