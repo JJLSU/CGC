@@ -31,7 +31,7 @@ func _initialize() -> void:
 	root.get_viewport().get_texture().get_image().save_png(out)
 	# board her: she leaves at once, taking the freight
 	main.inventory.dollars = 5
-	p.pos = TR.cars[3].position + Vector3(1.5, 0, 0)
+	p.pos = TR.ride_car().position + Vector3(1.5, 0, 0)
 	for i in 3: await process_frame
 	var prompt: String = main.beast_prompt
 	main.input.pressed["KeyE"] = true

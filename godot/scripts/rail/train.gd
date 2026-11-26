@@ -11,6 +11,13 @@ const CAR_GAP := 0.6
 const TIE := 0.9
 const RUNS := [0.33, 0.6]
 const CARS := [["locomotive", 5.2], ["tender", 2.8], ["boxcar", 5.6], ["coach", 6.2]]
+## (the Meshy cars, once in: the engine and its tender, a boxcar, a tank car, a gondola, and the caboose you ride on)
+const MESHY_CARS := [["veh_rail_engine", 7.6], ["veh_rail_boxcar", 6.0], ["veh_rail_tankcar", 5.6], ["veh_rail_gondola", 5.4], ["veh_rail_caboose", 5.4]]
+const ENGINE_TURN := PI / 2.0 ## (model -x to the car's +z: the smokestack end leading, the tender behind)
+var stack_at := Vector3(0, 3.0, 1.6)
+var ride_at := Vector3(0.35, 0.83, -3.35)
+## The car you ride on (the coach, or the caboose).
+func ride_car() -> Node3D: return cars[-1]
 
 var rr: Railroad
 var cars: Array = []
@@ -37,10 +44,22 @@ var on_depart: Callable
 
 func _init(railroad: Railroad) -> void:
 	rr = railroad
-	for c in CARS:
-		var car: Node3D = (load("res://assets/baked/rail/%s.glb" % c[0]) as PackedScene).instantiate()
-		Homestead.bake_materials(car)
-		add_child(car); cars.append(car); lens.append(c[1])
+	if ResourceLoader.exists("res://assets/models/props/veh_rail_engine.glb") and ResourceLoader.exists("res://assets/models/props/veh_rail_caboose.glb"):
+		# the player's Meshy rolling stock: each model lies along its x, turned to run along the car's +z (front first)
+		for c in MESHY_CARS:
+			var path := "res://assets/models/props/%s.glb" % c[0]
+			if not ResourceLoader.exists(path): continue
+			var car := Node3D.new(); var m := PaperMats.seated_axis(load(path), c[1], 0)
+			m.rotation.y = ENGINE_TURN; car.add_child(m)
+			add_child(car); cars.append(car); lens.append(c[1])
+		var eh: float = PaperMats._aabb(cars[0], Transform3D.IDENTITY).size.y
+		stack_at = Vector3(0, eh + 0.2, float(lens[0]) * 0.3)
+		ride_at = Vector3(0.0, 0.95, -float(lens[-1]) / 2.0 + 0.45) # (the caboose's back platform)
+	else:
+		for c in CARS:
+			var car: Node3D = (load("res://assets/baked/rail/%s.glb" % c[0]) as PackedScene).instantiate()
+			Homestead.bake_materials(car)
+			add_child(car); cars.append(car); lens.append(c[1])
 	visible = false
 	# where along the line (metres) each whistle-stop's platform lies (worked out once the line is built)
 	end = (rr.path.size() - 1) * TIE
@@ -77,7 +96,7 @@ func stopped_at():
 	if state == "dwell" and at_stop >= 0: var st: Dictionary = rr.stops[at_stop]; return {"name": st.name, "platform": st.platform, "depot": false}
 	return null
 ## The coach's back platform, where a passenger stands to ride.
-func ride_point() -> Vector3: return (cars[3] as Node3D).to_global(Vector3(0.35, 0.83, -3.35))
+func ride_point() -> Vector3: return ride_car().to_global(ride_at)
 ## The next stop she'll draw up at, by name.
 func next_stop_name() -> String: return "Cold Glitter Creek" # (her only stop)
 ## All aboard from the depot: she leaves straight away.
@@ -138,7 +157,7 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 				var dx: float = player.pos.x - c.position.x; var dz: float = player.pos.z - c.position.z; var dd := sqrt(dx * dx + dz * dz)
 				if dd < 1.9 and dd > 0.01: player.pos.x += (dx / dd) * (1.9 - dd); player.pos.z += (dz / dd) * (1.9 - dd)
 	# smoke from the stack while she runs (and a lazy wisp while she stands)
-	var stack: Vector3 = (cars[0] as Node3D).to_global(Vector3(0, 3.0, 1.6))
+	var stack: Vector3 = (cars[0] as Node3D).to_global(stack_at)
 	pacc += dt * (6.0 if moving else 0.8)
 	while pacc >= 1.0:
 		pacc -= 1.0; pp[pn].age = 0.0; pp[pn].pos = stack; pp[pn].s = 0.35 + randf() * 0.25; pn = (pn + 1) % pp.size()

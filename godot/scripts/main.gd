@@ -1328,7 +1328,7 @@ func _rail_doors() -> bool:
 		beast_prompt = "[E] Trade at the %s trading post" % pst.name
 		if input.hit("KeyE"): _open_craft()
 		return true
-	if stop != null and Vector2(player.pos.x - train.cars[3].position.x, player.pos.z - train.cars[3].position.z).length() < 5.0:
+	if stop != null and Vector2(player.pos.x - train.ride_car().position.x, player.pos.z - train.ride_car().position.z).length() < 5.0:
 		beast_prompt = "[E] Board the train ($1): she leaves at once" if stop.depot else "[E] Board the train at %s ($1)" % stop.name
 		if input.hit("KeyE"):
 			if inventory.get("dollars", 0) < 1: hud.toast("The fare is a dollar, and your poke is empty.")
