@@ -1597,3 +1597,6 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - Trophies (Town.set_trophies, main._trophies on load and each hand-in): every boss whose prize is back has his
   weapon nailed up on the assay office's false front: Jebediah's pick left of the sign, Angus's axe right, Crane's
   dynamite (fuse cut) on the peak. test_boss checks all three go up; looked at (tools/shot_townfolk.gd assay flip far high).
+- The rumour note points at the boss holding the town back (main._boss_rumour, ahead of the landmark tales): what
+  folks say of him and his lair, the paces and the arrow; once he's fallen, where his prize lies; gone at the lair or
+  with the prize in hand. The gate's note now leads with who holds what (it was cut off before saying). test_boss checks it.

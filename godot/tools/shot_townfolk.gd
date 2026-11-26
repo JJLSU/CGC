@@ -8,11 +8,11 @@ func _initialize() -> void:
 	await process_frame
 	main.force_active = true; main.sky.time = 0.45; main.weather.rain = 0.0
 	var T: Town = main.town
-	for b in main.bosses: b.delivered = true
+	for b in main.bosses: b.delivered = not args.has("holding") # (holding: Main Street mended, Jebediah holding the rest back)
 	main._trophies() # (all three trophies over the assay office)
 	for b in Town.BUILDINGS: T.mend(b.id)
 	T.mend("church")
-	for st in Town.STREETS: for b in st.buildings: T.mend(b.id)
+	if not args.has("holding"): for st in Town.STREETS: for b in st.buildings: T.mend(b.id)
 	var f = T.folk.get(id)
 	if id.begins_with("row"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
 	var d: Vector3 = T.doors.get(id, T.at)

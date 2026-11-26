@@ -27,6 +27,8 @@ func _initialize() -> void:
 	T.mend("church")
 	print("Main done %s; Second opened %s; gate told %s" % [T.street_done(-1), 0 in T.opened, gated])
 	ok = ok and T.street_done(-1) and not 0 in T.opened and gated == [0]
+	var rm = main._boss_rumour(); print("rumour: %s, %d paces" % [rm.text if rm else "none", rm.paces if rm else 0])
+	ok = ok and rm != null and String(rm.text).contains("Jebediah") and rm.paces > 100
 	# go to him
 	var off: Vector3 = B.at + (B.at - T.at).normalized() * -20.0
 	p.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); p.health = p.max_health

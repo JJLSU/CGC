@@ -2291,7 +2291,8 @@ func save_all() -> void:
 
 ## The rumour note under NEXT: the nearest landmark you haven't seen, and an arrow that turns with your view.
 func _rumour_note() -> void:
-	var r = rumours.update(player.pos, journal.GOALS.filter(func(_g): return false), func(k) -> bool: return landmarks.found.has(k))
+	var r = _boss_rumour() # (a boss holding the town back comes first: where his lair lies, and how far)
+	if r == null: r = rumours.update(player.pos, journal.GOALS.filter(func(_g): return false), func(k) -> bool: return landmarks.found.has(k))
 	if r == null: hud.set_rumour(null, 0.0); return
 	var cam := rig.camera; var a := cam.unproject_position(player.pos); var b := cam.unproject_position(player.pos + r.dir * 4.0)
 	hud.set_rumour(r, rad_to_deg(atan2(b.x - a.x, -(b.y - a.y))))
@@ -2829,7 +2830,7 @@ func _make_boss() -> void:
 	town.on_gate = func(n: int) -> void:
 		for b in bosses:
 			if b.spec.street == n:
-				hud.toast("The town wants to grow, but %s holds %s. Get it back (M)." % [b.title(), b.spec.prize])
+				hud.toast("%s holds %s. The town can't grow till you win it back." % [b.title(), b.spec.prize])
 
 func _boss_hooks(b: Boss) -> Dictionary:
 	var nm := b.title()
@@ -2888,3 +2889,15 @@ func _hand_in(b: Boss) -> void:
 	_trophies()
 
 func _trophies() -> void: town.set_trophies(bosses.filter(func(b): return b.delivered).map(func(b): return b.id))
+
+## While a boss holds the town back (or his prize lies where he fell, not yet picked up), the rumour note tells where
+## his lair is, with the arrow and the paces; gone once you're at the lair or carrying the prize.
+const BOSS_TALK := {"jebediah": "Folks say Mad Jebediah sits on the town's deed at his diggings", "angus": "Loggers say Big Angus keeps the timber rights at his camp in the pines",
+	"crane": "The bank clerk says Thaddeus Crane keeps the mortgage in his fenced house"}
+func _boss_rumour():
+	var b = _boss_holding()
+	if b == null or _prize_held() != null: return null
+	var to := Vector3(b.at.x - player.pos.x, 0, b.at.z - player.pos.z); var d := to.length()
+	if d < 40.0: return null
+	var text: String = ("%s lies where %s fell" % [b.spec.prize.capitalize(), b.title()]) if b.beaten else BOSS_TALK.get(b.id, b.title())
+	return {"key": "boss:" + b.id, "text": text, "paces": roundi(d * 1.3 / 10.0) * 10, "dir": to / d}
