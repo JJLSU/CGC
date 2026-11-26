@@ -261,9 +261,11 @@ class Camp extends Node3D:
 			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
 		# the camp's folk: about the lodges and the fire; at the first sign of a fight they gather out of the way
 		var people := ["folk_native_woman", "folk_native_maiden", "folk_native_elder", "folk_native_grandfather", "folk_native_girl"]
-		for i in 6: # (the player's six new men about the camp: three to a camp, each its own, by the seed)
+		var men := [] # (the player's six new men about the camps: up to three to a camp, from those made, by the seed)
+		for i in 6:
 			var nm := "cgc_native_%d" % (1 + (i + seed) % 6)
-			if i < 3 and ModelFigure.has_folk(nm): people.append(nm)
+			if ModelFigure.has_folk(nm) and men.size() < 3: men.append(nm)
+		people.append_array(men)
 		for nm in people:
 			if not ModelFigure.has_folk(nm): continue
 			var fig := ModelFigure.new(nm); var a := rng.next() * 6.28
