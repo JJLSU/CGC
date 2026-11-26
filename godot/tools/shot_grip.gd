@@ -30,7 +30,12 @@ func _initialize() -> void:
 	main.set_process(false)
 	var cam: Camera3D = main.rig.camera
 	var fwd: Vector3 = av.root.global_basis.z.normalized(); var right: Vector3 = -av.root.global_basis.x.normalized()
-	for v in [["a", right * 0.9 + fwd * 0.5], ["b", fwd * 1.0 + right * 0.2]]:
+	if OS.get_environment("NOFLIP") != "": av.blade_flip = false; av.made.clear()
+	for v in [["a", right * 0.9 + fwd * 0.5], ["b", fwd * 1.0 + right * 0.2], ["c", right * 1.6 + Vector3(0, 0.3, 0)]]:
+		if v[0] == "c": # (mid-swing, from his right side)
+			main.set_process(true); av.start_swing()
+			for i in 14: await process_frame
+			main.set_process(false); g = av.grip.global_position
 		cam.global_position = g + v[1] + Vector3(0, 0.25, 0); cam.look_at(g, Vector3.UP); cam.fov = 40.0
 		await process_frame; await process_frame
 		await RenderingServer.frame_post_draw
