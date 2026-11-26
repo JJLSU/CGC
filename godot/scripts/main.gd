@@ -2395,7 +2395,7 @@ func _open_map(rewash := true) -> void:
 					sites.append(q)
 				var o = L.orchard
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
-	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": 46.0, "peace": maxi(0, c.peace_until - sky.day)})
+	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": NativeCamps.R, "peace": maxi(0, c.peace_until - sky.day)})
 	for b in bosses: sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
 	for f in forts.forts: sites.append({"kind": "fort", "x": f.at.x, "z": f.at.z, "rumour": true, "name": f.name, "angry": f.angry})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})

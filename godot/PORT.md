@@ -1651,3 +1651,9 @@ for N frames, then saves the viewport; needs a window, not --headless).
   The troopers wear the player's cavalry figures (cgc_soldier_*, Meshy in progress) once made; townsmen in blue till then.
 - tools/test_forts.gd PASS (3 forts 314 m+ apart; 4 s among them unharmed; the wall a collider, the gate open; one
   struck: all 7 turn out and fire; a haversack; stood down far off; forgotten next day); looked at (tools/shot_fort.gd).
+- The native camps grown (the player's ask): their land 56 m round (46 before; 22 poles), the clearing 42 m; a second
+  ring of seven lodges (12 in all), more racks, a second travois, two more cookfires and a woodpile; nine warriors
+  (the three old kinds twice, and the player's three new warriors cgc_warrior_1-3 as the third set once Meshy has
+  made them, the old kinds standing in till then), on rings of 9, 13 and 17 m; three of the player's six new native
+  men (cgc_native_*) about each camp's lodges once made. Looked at from above (tools/shot_camp.gd: 12 lodges, 9
+  warriors); test_raids PASS.

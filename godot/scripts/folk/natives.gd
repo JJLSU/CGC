@@ -8,7 +8,7 @@ extends Node3D
 ## folk go about the lodges and the fire, abed at night, and gather out of the way in a fight. (The raids on the
 ## town: start_raid, driven from main.gd's _raid_tick.)
 
-const R := 46.0
+const R := 56.0  ## their land round the lodges (46 before the camps grew: the player's ask)
 const HIT := 25 ## a warrior's club or arrow: a quarter of the farmer's starting health (100) in one blow (the player's ask; the page has 8-12)
 static var lodge_glow := 0.0
 static var camp_abed := false
@@ -212,14 +212,16 @@ class Camp extends Node3D:
 				if ok: at = Vector3(x, Terrain.get_height(x, z), z)
 			r += 20
 		if at == null: return
-		if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 34.0}) # (a clearing: no tree, bush or rock among the lodges)
+		if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 42.0}) # (a clearing: no tree, bush or rock among the lodges)
 		# the boundary poles
-		for i in 18:
-			var a := (i / 18.0) * TAU; var x: float = at.x + cos(a) * R; var z: float = at.z + sin(a) * R
+		for i in 22:
+			var a := (i / 22.0) * TAU; var x: float = at.x + cos(a) * R; var z: float = at.z + sin(a) * R
 			if Terrain.is_water(x, z) or Terrain.range_at(x, z) > 0.2: continue
 			var p := NativeCamps.marker_pole(rng); p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = -a; add_child(p)
 		# the lodges round a cooking fire
-		var spots := [[0, -7, "prop_tipi"], [6.5, -2, "prop_tipi_painted"], [-6.5, -2.5, "prop_tipi"], [3.5, 6, "prop_tipi_painted"], [-4, 5.5, "prop_tipi"]]
+		var spots := [[0, -7, "prop_tipi"], [6.5, -2, "prop_tipi_painted"], [-6.5, -2.5, "prop_tipi"], [3.5, 6, "prop_tipi_painted"], [-4, 5.5, "prop_tipi"],
+			# (a second ring, the camp grown: the player's ask)
+			[9.5, -10.5, "prop_tipi_painted"], [-10.5, -9.5, "prop_tipi"], [13.5, 3.0, "prop_tipi"], [-13.5, 3.5, "prop_tipi_painted"], [8.5, 12.0, "prop_tipi"], [-7.5, 12.5, "prop_tipi_painted"], [0.5, -15.5, "prop_tipi"]]
 		for s in spots:
 			var t := NativeCamps.prop(s[2], 4.4, true)
 			var x: float = at.x + s[0]; var z: float = at.z + s[1]
@@ -237,27 +239,37 @@ class Camp extends Node3D:
 			var hx := px + cos(side) * k + cos(pa) * 1.6; var hz := pz + sin(side) * k + sin(pa) * 1.6
 			h.group.position = Vector3(hx, Terrain.get_height(hx, hz), hz); add_child(h.group)
 			horses.append({"puppet": h, "picket": Vector3(hx, 0, hz), "rider": null, "owner": null, "loose": 0.0, "looseA": null})
-		for e in [["prop_drying_rack", 2.4, 3, -4.5], ["prop_travois", 3.0, -8, 2], ["prop_drum", 0.9, 1.6, 1.4], ["prop_bedroll", 1.2, -2.2, 2.2]]:
+		for e in [["prop_drying_rack", 2.4, 3, -4.5], ["prop_travois", 3.0, -8, 2], ["prop_drum", 0.9, 1.6, 1.4], ["prop_bedroll", 1.2, -2.2, 2.2],
+				["prop_drying_rack", 2.4, -11.5, -4.0], ["prop_travois", 3.0, 11.0, 8.0], ["prop_cookfire", 1.3, 9.0, -5.5], ["prop_cookfire", 1.3, -9.5, 8.5], ["prop_woodpile", 2.0, 4.5, -12.0]]:
 			var p := NativeCamps.prop(e[0], e[1])
 			if p == null: continue
 			var x: float = at.x + e[2]; var z: float = at.z + e[3]; p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = rng.next() * 6.0; add_child(p)
 		# the warriors, armed as in the reference art: spear and bow, bow, stone-headed club
 		var kinds := [["folk_native_warrior", "spear"], ["folk_native_archer", "bow"], ["folk_native_hunter", "club"]]
-		for i in kinds.size() * 2: # (twice the web's three: the player's ask)
-			var fig := ModelFigure.new(kinds[i % kinds.size()][0]); var arm: String = kinds[i % kinds.size()][1]
+		var fresh := [["cgc_warrior_1", "spear"], ["cgc_warrior_2", "club"], ["cgc_warrior_3", "bow"]] # (the player's new warriors, once made)
+		var roll := []
+		for i in kinds.size() * 2: roll.append(kinds[i % kinds.size()]) # (twice the web's three: the player's ask)
+		for k in fresh: roll.append(k if ModelFigure.has_folk(k[0]) else kinds[roll.size() % kinds.size()]) # (and three more as the camps grew)
+		for i in roll.size():
+			var fig := ModelFigure.new(roll[i][0]); var arm: String = roll[i][1]
+			if not fig.player or not fig.player.has_animation("run"): fig.borrow_clip("run", "folk_native_warrior")
 			if arm != "club": fig.hands[0].add_child(NativeCamps.bow_mesh())
 			if arm == "spear": fig.hands[1].add_child(NativeCamps.spear_mesh())
 			if arm == "club": fig.hands[1].add_child(NativeCamps.club_mesh())
-			var a := (i / float(kinds.size() * 2)) * TAU; var rr := 9.0 if i % 2 == 0 else 13.0; var hm := Vector3(at.x + cos(a) * rr, 0, at.z + sin(a) * rr)
+			var a := (i / float(roll.size())) * TAU; var rr: float = [9.0, 13.0, 17.0][i % 3]; var hm := Vector3(at.x + cos(a) * rr, 0, at.z + sin(a) * rr)
 			fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); add_child(fig.root)
 			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
 		# the camp's folk: about the lodges and the fire; at the first sign of a fight they gather out of the way
-		for nm in ["folk_native_woman", "folk_native_maiden", "folk_native_elder", "folk_native_grandfather", "folk_native_girl"]:
+		var people := ["folk_native_woman", "folk_native_maiden", "folk_native_elder", "folk_native_grandfather", "folk_native_girl"]
+		for i in 6: # (the player's six new men about the camp: three to a camp, each its own, by the seed)
+			var nm := "cgc_native_%d" % (1 + (i + seed) % 6)
+			if i < 3 and ModelFigure.has_folk(nm): people.append(nm)
+		for nm in people:
 			if not ModelFigure.has_folk(nm): continue
 			var fig := ModelFigure.new(nm); var a := rng.next() * 6.28
 			var fp := Vector3(at.x + cos(a) * 3.0, 0, at.z + sin(a) * 3.0); fp.y = Terrain.get_height(fp.x, fp.z)
 			fig.root.position = fp; add_child(fig.root)
-			var kind: String = nm.replace("folk_native_", "")
+			var kind: String = "man" if nm.begins_with("cgc_native_") else nm.replace("folk_native_", "")
 			if kind == "elder": var staff := _cyl_static(); fig.hands[1].add_child(staff) # (her walking staff)
 			folk.append({"fig": fig, "kind": kind, "goal": fp, "t": rng.next() * 4.0, "sit": false, "hiding": false,
 				"speed": {"elder": 0.6, "grandfather": 0.7, "girl": 1.5}.get(kind, 1.0)})
