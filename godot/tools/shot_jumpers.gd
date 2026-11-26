@@ -20,4 +20,7 @@ func _initialize() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)
 	print("men %d women %d pieces %d" % [c.men.size(), c.women.size(), c.nodes.size()])
+	var names := []
+	for cp in main.jumpers.camps: for m in cp.men: names.append(m.fig.name)
+	print("men in the camps: %s (outlaws: %d)" % [names, names.filter(func(n): return String(n).contains("outlaw")).size()])
 	quit()

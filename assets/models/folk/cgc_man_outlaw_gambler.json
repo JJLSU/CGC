@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_outlaw_gambler",
+  "height": 1.75,
+  "tris": 20583,
+  "tris_before": 20583,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_outlaw_bruiser",
+  "height": 1.75,
+  "tris": 20755,
+  "tris_before": 20755,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
