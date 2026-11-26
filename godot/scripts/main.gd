@@ -604,6 +604,7 @@ func _process(dt: float) -> void:
 		b.update(dt, player, b.hooks)
 		if fb == null and b.fighting(): fb = b
 	hud.set_boss(fb.title() if fb != null else "", fb.hp_frac() if fb != null else 0.0)
+	_boss_tune(dt, fb)
 	hud.set_town_rank(town_rank())
 	_pm("camp.update")
 	_raid_tick()
@@ -2893,7 +2894,7 @@ func _boss_hooks(b: Boss) -> Dictionary:
 			if out: death_timer = 3.0; hud.toast("%s laughs over you. You come to a long while later, far from his camp." % nm),
 		"on_throw": func() -> void: sound.tear(),
 		"on_land": func(at: Vector3) -> void:
-			if b.spec.weapon == "dynamite": sound.land(); sound.knock(); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
+			if b.spec.weapon == "dynamite": sound.bang(true); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
 			else: sound.chop(),
 		"on_slam": func(at: Vector3) -> void: sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2),
 		"on_spotted": func() -> void:
@@ -3007,3 +3008,18 @@ func _boss_gossip() -> void:
 	gossip_day = sky.day
 	var lines: Array = GOSSIP[key]
 	hud.toast(lines[randi() % lines.size()])
+
+## A fight's fiddle: while a boss is on you, a low driving E-minor figure, bowed softly under everything; once he's
+## riled, quicker and harder bowed. (The baked reel notes, D4 to A5.)
+const BOSS_TUNE := [64, 64, 67, 64, 71, 69, 67, 66, 64, 64, 67, 69, 71, 72, 71, 67]
+var tune_t := 0.0
+var tune_i := 0
+func _boss_tune(dt: float, fb) -> void:
+	if fb == null: tune_i = 0; tune_t = 0.0; return
+	var riled: bool = fb.hp_frac() < 0.5
+	tune_t -= dt
+	if tune_t > 0.0: return
+	tune_t = 0.2 if riled else 0.28
+	var n: int = BOSS_TUNE[tune_i % BOSS_TUNE.size()]
+	sound.play("fiddle_%d" % n, (0.4 if riled else 0.32) if tune_i % 4 == 0 else (0.3 if riled else 0.22))
+	tune_i += 1
