@@ -249,6 +249,10 @@ func _draw() -> void:
 			draw_arc(p, 15.0, 0, TAU, 20, col, 2.0, true)
 			_label("Claim Jumpers" + (" (cleared)" if site.cleared else ""), p + Vector2(0, 31), 15, serif_b, col)
 			continue
+		if site.kind == "wayfarer": # a traveller's camp you've found: a small tent and his name
+			_poly(PackedVector2Array([p + Vector2(-6, 5), p + Vector2(0, -6), p + Vector2(6, 5)]), Color("e6d3ae"), 1.2)
+			_label(String(site.name), p + Vector2(0, 18), 13, null, Color(INK, 0.8))
+			continue
 		if site.kind == "fort": # the army's fort: a square stockade with the colours flying, in blue (red if you've riled it)
 			var col := Color("2e3e6a") if not site.angry else Color("8a2a20")
 			var sq := PackedVector2Array([p + Vector2(-9, -9), p + Vector2(9, -9), p + Vector2(9, 9), p + Vector2(-9, 9), p + Vector2(-9, -9)])

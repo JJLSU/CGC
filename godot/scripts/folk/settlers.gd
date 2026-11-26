@@ -19,10 +19,10 @@ const SETTLERS := [
 	{"id": "silas", "model": "folk_silas", "how": "hire", "name": "Silas Crane", "trade": "woodcutter", "work": "woodlot", "item": "wood", "every": 45, "camp": [-16, 14],
 		"wage": {"apples": 4, "berries": 6}, "pitch": "a lanky woodcutter with a two-bit axe, down on his luck",
 		"ask": "\"A sack of apples and a few handfuls of berries, and I'll cut your cordwood as long as you'll have me.\"", "hired": "Silas shoulders his axe. \"Point me at your woodlot, boss.\""},
-	{"id": "hattie", "model": "trades_6", "how": "hire", "name": "Hattie Boone", "trade": "quarrywoman", "work": "quarry", "item": "stone", "every": 60, "camp": [-19, 10],
+	{"id": "hattie", "new": "cgc_woman_greenapron", "model": "trades_6", "how": "hire", "name": "Hattie Boone", "trade": "quarrywoman", "work": "quarry", "item": "stone", "every": 60, "camp": [-19, 10],
 		"wage": {"wood": 8, "berries": 6}, "pitch": "a broad-shouldered quarrywoman who can split granite with a look",
 		"ask": "\"Eight sticks of wood for my lean-to and something sweet. Then I'll cut your stone.\"", "hired": "Hattie spits on her palms. \"Where's this quarry, then?\""},
-	{"id": "ada", "model": "townsfolk_2", "how": "help", "name": "Ada Hale", "trade": "fisherwoman", "work": "weir", "item": "fish", "every": 70, "camp": [-13, 18],
+	{"id": "ada", "new": "cgc_woman_calico", "model": "townsfolk_2", "how": "help", "name": "Ada Hale", "trade": "fisherwoman", "work": "weir", "item": "fish", "every": 70, "camp": [-13, 18],
 		"wage": {"wood": 10, "rope": 1}, "pitch": "a widow from down the creek whose lean-to blew in with the last storm",
 		"ask": "\"If you could spare ten sticks and a coil of rope to mend my lean-to, I'd keep you in fish till the creek runs dry.\"", "hired": "Ada ties off the last knot. \"There. Now, where's a good bend in the creek for a weir?\""},
 	{"id": "jim", "model": "folk_player", "how": "wrestle", "name": "Big Jim Tuttle", "trade": "clay digger", "work": "claypit", "item": "clay", "every": 60, "camp": [-22, 15],
@@ -32,7 +32,7 @@ const SETTLERS := [
 		"pitch": "a grizzled prospector with a burro's patience and a beard you could lose a pickaxe in",
 		"ask": "\"I've told tales from here to Sutter's Mill. Out-tell me by my fire some evening and I'll dig your ore.\"", "hired": "Cyrus slaps his knee. \"Blamed if that ain't the tallest one I ever heard! All right, I'm your man.\"",
 		"lost": "Cyrus yawns. \"Heard that one. Go listen by your own fire a while; come back with three tales worth the telling.\""},
-	{"id": "clem", "model": "prospectors_3", "how": "court", "name": "Clementine Rowe", "trade": "beekeeper", "work": "beeyard", "item": "honey", "every": 150, "camp": [-25, 11],
+	{"id": "clem", "new": "cgc_woman_plumstripe", "model": "prospectors_3", "how": "court", "name": "Clementine Rowe", "trade": "beekeeper", "work": "beeyard", "item": "honey", "every": 150, "camp": [-25, 11],
 		"gift": {"pie": 1}, "pitch": "a merry beekeeper's daughter with a laugh like a dinner bell and a straw hat full of daisies",
 		"ask": "\"A body likes to be courted proper: a reel at the barn dance, and a pie, if you can bake one. Then we'll see.\"", "hired": "Clementine blushes to her ears and takes the pie. \"Well! I suppose a farm like this could use some bees.\""},
 	{"id": "ezra", "model": "folk_ezra", "how": "help", "chore": "cut him a new millstone", "name": "Ezra Fenn", "trade": "miller", "work": "mill", "item": "flour", "every": 80, "camp": [-28, 18],
@@ -54,7 +54,7 @@ const SETTLERS := [
 	{"id": "gus", "model": "prospectors_1", "how": "hire", "name": "Gus Tolliver", "trade": "placer miner", "work": "sluice", "item": "gold", "every": 150, "camp": [-43, 12],
 		"wage": {"fish": 3, "apples": 4}, "pitch": "a stooped old placer miner who swears the creeks were never played out, just the men",
 		"ask": "\"Three fish and a sack of apples a week, and I'll rock your sluice from sunup to sundown. Gold's in them creeks yet, mark me.\"", "hired": "Gus spits, grins and shoulders his shovel. \"Build me a sluice box down by the water and I'll make it pay.\""},
-	{"id": "nell", "model": "prospectors_5", "how": "hire", "needs": "boarding", "name": "Nell Harper", "trade": "placer miner", "work": "sluice", "item": "gold", "every": 150, "camp": [-46, 16],
+	{"id": "nell", "new": "cgc_woman_greenbustle", "model": "prospectors_5", "how": "hire", "needs": "boarding", "name": "Nell Harper", "trade": "placer miner", "work": "sluice", "item": "gold", "every": 150, "camp": [-46, 16],
 		"wage": {"bread": 2, "honey": 1}, "pitch": "a hard-bitten freighter who drove mule wagons up the canyon road for ten years and has decided to get rich instead",
 		"ask": "\"Two loaves and a jar of honey, and I'll work any sluice you build like it owes me money.\"", "hired": "Nell rolls up her sleeves. \"Show me the water. I've washed more gravel than you've walked on.\""},
 	{"id": "otis", "model": "folk_otis", "how": "hire", "needs": "boarding", "name": "Otis Bell", "trade": "woodcutter", "work": "woodlot", "item": "wood", "every": 45, "camp": [-49, 12],
@@ -112,7 +112,7 @@ static func crate(item: String) -> Node3D:
 func _init(center: Vector3) -> void:
 	home = center
 	for S in SETTLERS:
-		var folk := ModelFigure.new(S.model)
+		var folk := ModelFigure.new(S.new if S.has("new") and ModelFigure.has_folk(S.new) else S.model) # (the player's new folk, once made)
 		folk.root.visible = false; add_child(folk.root)
 		# their camp: a little ring of stones and a tiny flame
 		var fire := Node3D.new()

@@ -1657,3 +1657,13 @@ for N frames, then saves the viewport; needs a window, not --headless).
   made them, the old kinds standing in till then), on rings of 9, 13 and 17 m; three of the player's six new native
   men (cgc_native_*) about each camp's lodges once made. Looked at from above (tools/shot_camp.gd: 12 lodges, 9
   warriors); test_raids PASS.
+- Wayfarers (scripts/folk/wayfarers.gd; the player's new folk "as random site campers, task doers and story elements"):
+  six travellers camped about the county (seeded, 110-630 m out, clear of the rest), each a fire and a tent or bedroll,
+  wearing the player's new folk re-dyed (stand-ins till made): Josiah Abernathy the surveyor (inks 300 m of map round
+  his camp), Ike Sorrel the peddler (rope, $3), Brother Amos the circuit preacher (his blessing mends you), Edwin Pell
+  the gold buyer ($6 a pinch, the assayer's $4), Tom Blevins the drover (jerky for a pelt), Widow Lowell going west with
+  a child (silver for any cooked meal). Each says who he is the first time; E once a day. Marked on the map once met.
+  Saved. tools/test_wayfarers.gd PASS (all six built, met, traded, not twice a day); looked at the widow's camp.
+- The new folk elsewhere: the claim jumpers' camps draw on four of the new rough men and three new women (re-dyed);
+  four settlers (Hattie, Ada, Clementine, Nell) wear the player's four newest women once made. test_jumpers PASS
+  (now expecting the camps' nine warriors).

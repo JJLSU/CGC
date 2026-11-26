@@ -60,6 +60,6 @@ func _initialize() -> void:
 	var w: Dictionary = main.camp.list[0].warriors[0]
 	while not w.dead: main.camp.damage(w, 3, main.camp_hooks, main.raid_hooks)
 	print("warriors in a camp: %d; parfleche dropped %s" % [main.camp.list[0].warriors.size(), main.drops.size() > n0])
-	ok = ok and main.camp.list[0].warriors.size() == 6 and main.drops.size() > n0
+	ok = ok and main.camp.list[0].warriors.size() == 9 and main.drops.size() > n0 # (nine since the camps grew)
 	print("JUMPERS TEST ", "PASS" if ok else "FAIL")
 	quit()

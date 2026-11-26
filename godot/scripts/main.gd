@@ -149,6 +149,7 @@ var jumper_t = null
 var forts: ArmyForts       ## the cavalry's posts out in the county (the player's ask)
 var fort_hooks := {}
 var soldier_t = null
+var wayfarers: Wayfarers  ## travellers camped about the county (the player's new folk)
 var boss: Boss            ## Mad Jebediah, who stole the townsite deed (the player's boss battles)
 var bosses: Array = []    ## every boss, in street order (Boss.ORDER): Jebediah, then Big Angus
 var boss_t = null
@@ -452,6 +453,8 @@ func _ready() -> void:
 	}
 	_make_boss()
 	_make_forts()
+	wayfarers = Wayfarers.new(); add_child(wayfarers)
+	wayfarers.setup(homestead.spawn, [homestead.spawn, town.at] + camp.list.map(func(c): return c.at) + jumpers.camps.map(func(c): return c.at) + bosses.map(func(b): return b.at) + forts.forts.map(func(f): return f.at), world)
 	camp_hooks = {
 		"on_warn": func() -> void: hud.toast("A warrior blocks your way and signals you back. This is their land: the painted poles mark it. An arrow thuds into the ground at your feet."),
 		"on_fight": func() -> void: hud.toast("You stayed. The warriors come for you, bows drawn: get back over the poles!"),
@@ -604,6 +607,7 @@ func _process(dt: float) -> void:
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	forts.update(dt, sky.day, player, fort_hooks)
+	wayfarers.update(dt, player)
 	var fb = null
 	for b in bosses:
 		b.day_now = sky.day
@@ -2295,6 +2299,7 @@ func _apply_save(d: Dictionary) -> void:
 	camp.load_state(d.get("campPeace")) # (days of peace bought with gifts)
 	jumpers.load_state(d.get("jumpers")) # (camps cleared, and when)
 	forts.load_state(d.get("forts"))
+	wayfarers.load_state(d.get("wayfarers"))
 	celebrate_day = int(d.get("celebrateDay", -1))
 	var bs = d.get("bosses")
 	if bs is Dictionary:
@@ -2343,7 +2348,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -2397,6 +2402,7 @@ func _open_map(rewash := true) -> void:
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
 	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": NativeCamps.R, "peace": maxi(0, c.peace_until - sky.day)})
 	for b in bosses: sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
+	for w in wayfarers.camps: sites.append({"kind": "wayfarer", "x": w.at.x, "z": w.at.z, "rumour": w.met, "name": String(w.kind.who).get_slice(",", 0)})
 	for f in forts.forts: sites.append({"kind": "fort", "x": f.at.x, "z": f.at.z, "rumour": true, "name": f.name, "angry": f.angry})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
 	var mended := 0
@@ -2621,6 +2627,7 @@ func _visitors() -> bool:
 func _pets(dt: float, active: bool) -> void:
 	if _drops_tick(active): return
 	if _boss_spoils(active): return
+	if _wayfarer(active): return
 	if jar_count and sky.night < 0.15: jar_count = 0; hud.toast("First light: you unscrew the lid and the lightning bugs drift off home.") # (the jar let go at dawn)
 	dog.day = sky.day
 	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
@@ -3065,3 +3072,41 @@ func _make_forts() -> void:
 		"on_angry": func(f: Dictionary) -> void: hud.toast("You've struck a trooper! %s turns out, rifles up. Get clear!" % f.name),
 		"on_first": func(f: Dictionary) -> void: hud.toast("%s: the colours over the stockade, a sentry at the gate. The troopers nod you by." % f.name),
 	}
+
+## A wayfarer at his fire: the first time, who he is and what he says; then E for what he offers, once a day.
+func _wayfarer(active: bool) -> bool:
+	if not active or player.dead or build.active: return false
+	var c = wayfarers.near_camper(player.pos)
+	if c == null: return false
+	var k: Dictionary = c.kind
+	if not c.met:
+		c.met = true; hud.toast("%s: \"%s\"" % [String(k.who).get_slice(",", 0), k.hello])
+	if c.day == sky.day: beast_prompt = "%s: \"Come by again tomorrow.\"" % String(k.who).get_slice(",", 0); return true
+	beast_prompt = k.act
+	if not input.hit("KeyE"): return true
+	var inv := inventory; var done := true
+	match k.id:
+		"surveyor":
+			hud.county_map.reveal(c.at.x, c.at.z, 300.0); sound.tear()
+			hud.toast("He unrolls his map and you copy out the country for a good way round (M).")
+		"peddler":
+			if inv.get("dollars", 0) < 3: hud.toast("\"Three dollars, friend. Come back when you're flush.\""); done = false
+			else: inv.dollars -= 3; inv.rope = inv.get("rope", 0) + 1; sound.craft(); hud.toast("A good coil of hemp rope (+1 rope).")
+		"preacher":
+			player.health = player.max_health; player.stamina = player.max_stamina; sound.lullaby()
+			hud.toast("He lays a hand on your shoulder and says a few plain words. You feel mended.")
+		"buyer":
+			if inv.get("gold", 0) <= 0: hud.toast("\"No colour? Then we've no business today.\""); done = false
+			else: inv.gold -= 1; inv.dollars = inv.get("dollars", 0) + 6; fortune += 6; sound.craft(); hud.toast("He weighs your pinch and counts out six silver dollars (+$6).")
+		"drover":
+			if inv.get("pelt", 0) <= 0: hud.toast("\"No hides on you? Bring me one and the jerky's yours.\""); done = false
+			else: inv.pelt -= 1; inv.venison = inv.get("venison", 0) + 3; sound.pick(); hud.toast("A hide for three strips of jerky (+3 venison).")
+		"widow":
+			var meal = null
+			for m in Wayfarers.MEALS: if inv.get(m, 0) > 0: meal = m; break
+			if meal == null: hud.toast("You've nothing cooked to give. Bread, biscuits, pie: anything would do."); done = false
+			else:
+				inv[meal] -= 1; inv.silver = inv.get("silver", 0) + 1; sound.lullaby()
+				hud.toast("The children fall on it. She presses her late husband's silver into your hand (+1 silver).")
+	if done: c.day = sky.day
+	return true

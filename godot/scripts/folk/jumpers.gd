@@ -22,8 +22,9 @@ const NEAR := 170.0        ## built while you're this close; let go past FAR
 const FAR := 210.0
 ## The fighting men (only men fight: the player's ask) and the camp's women, who keep clear of a fight as the
 ## natives' do and can't be hurt. (Looked at in a line-up, tools/shot_lineup.gd: trades_2 and trades_5 are women.)
-const MEN := ["prospectors_1", "prospectors_4", "prospectors_6", "folk_farmhand_01", "folk_farmhand_02", "folk_farmhand_03", "folk_asa", "trades_1"]
-const WOMEN := ["trades_2", "trades_5", "folk_calico_01", "folk_calico_02", "folk_calico_03"]
+const MEN := ["prospectors_1", "prospectors_4", "prospectors_6", "folk_farmhand_01", "folk_farmhand_02", "folk_farmhand_03", "folk_asa", "trades_1",
+	"cgc_man_ragged", "cgc_man_goatee", "cgc_man_bandana", "cgc_man_youth"] # (and the player's new rough men, re-dyed)
+const WOMEN := ["trades_2", "trades_5", "folk_calico_01", "folk_calico_02", "folk_calico_03", "cgc_woman_patched", "cgc_woman_gingham", "cgc_woman_greenapron"]
 
 var camps: Array = []      ## {at, seed, cleared_day, built, nodes: [], men: []}
 var day := 0
