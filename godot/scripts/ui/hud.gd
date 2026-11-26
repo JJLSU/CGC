@@ -372,6 +372,7 @@ func _tool_name(id: String, t: Dictionary) -> String:
 	match id:
 		"axe": return "Steel axe" if t.has("steelaxe") else ("Iron axe" if t.has("ironaxe") else ("Stone axe" if t.has("stoneaxe") else "Old hatchet"))
 		"pick": return "Steel pickaxe" if t.has("steelpick") else ("Iron pickaxe" if t.has("ironpick") else "Pickaxe")
+		"rifle": return "Lever-action rifle" if t.has("leverrifle") else "Buffalo rifle"
 	return TOOL_NAMES.get(id, id)
 
 ## main.js renderBuildBar: the shelves named across the top (the current one underlined), then that shelf's pieces,

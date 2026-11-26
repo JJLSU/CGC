@@ -1088,7 +1088,7 @@ func _hunt_and_fish(active: bool) -> void:
 	var can_act := active and not build.active and not player.dead
 	fishing.rain = weather.rain; fishing.night = sky.night
 	fish_r = fishing.update(dt, player, input, can_act, fishing.spot(player, held == "rod" and tools.has("rod")) if can_act and not player.ice_on else null) # (no fishing through the ice)
-	var W: Dictionary = Hunting.REVOLVER if held == "revolver" else (Hunting.RIFLE if held == "rifle" else Hunting.BOW)
+	var W: Dictionary = Hunting.REVOLVER if held == "revolver" else ((Hunting.LEVER if tools.has("leverrifle") else Hunting.RIFLE) if held == "rifle" else Hunting.BOW)
 	var gun := W != Hunting.BOW
 	if gun:
 		var g: Dictionary = guns[held]
@@ -1639,6 +1639,9 @@ func _gather(active: bool, connected: bool) -> void:
 			else: piece_t = null
 	player.avatar.tool = "hammer" if build.active else ("none" if held == "hands" else held) # (the hammer while building)
 	player.avatar.axe_tier = "steel" if tools.has("steelaxe") else ("iron" if tools.has("ironaxe") else ("stone" if tools.has("stoneaxe") else ""))
+	player.avatar.lever = tools.has("leverrifle")
+	var rsize := 7 if tools.has("leverrifle") else 1 # (the repeater: seven in the tube)
+	if guns.rifle.size != rsize: guns.rifle.size = rsize; guns.rifle.loaded = mini(guns.rifle.loaded, rsize) if rsize < guns.rifle.loaded else rsize
 	player.avatar.pick_tier = "steel" if tools.has("steelpick") else ("iron" if tools.has("ironpick") else "stone")
 	player.avatar.has_bow = tools.has("bow"); player.avatar.aiming = player.aiming # (his quiver; a gun comes up level while he aims)
 	player.avatar.jar_update(get_process_delta_time(), tools.has("jar"), jar_count, sky.night)

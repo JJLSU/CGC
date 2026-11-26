@@ -44,7 +44,7 @@ func blocked(r: Dictionary) -> String:
 	if r.get("wire", false) and (r.get("done", false) or not r.get("ready", false)): return "Done" if r.get("done", false) else "Away"
 	if r.get("fair", false) and fair_entered.is_valid() and fair_entered.call(r.id): return "Done"
 	if r.kind == "tool" and tools.has(r.get("tool", r.id)): return "Owned" if r.has("tool") else "Made"
-	if r.has("needs") and not tools.has(r.needs): return "File a claim first" if r.needs == "claim" else "Hire a hand first"
+	if r.has("needs") and not tools.has(r.needs): return "File a claim first" if r.needs == "claim" else ("Bring your buffalo rifle in trade" if r.needs == "rifle" else "Hire a hand first")
 	if r.get("station") != null and not (station_near.is_valid() and station_near.call(r.station)): return "Needs " + String(station_name.get(r.station, r.station))
 	if not can_afford(inventory, r.cost): return "Need more"
 	return ""

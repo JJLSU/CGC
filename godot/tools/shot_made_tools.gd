@@ -13,7 +13,7 @@ func _initialize() -> void:
 	var base: Vector3 = main.spawn + Vector3(6, 0, 9)
 	var shown := 0
 	var cases := [["axe", [], "hatchet"], ["axe", ["stoneaxe"], "axe_stone"], ["axe", ["ironaxe"], "axe_iron"], ["axe", ["steelaxe"], "axe_steel"], ["pick", ["pickaxe"], "pick_stone"],
-		["pick", ["ironpick"], "pick_iron"], ["pick", ["steelpick"], "pick_steel"], ["spear", ["spear"], "spear"], ["revolver", ["revolver"], "revolver"], ["rifle", ["rifle"], "rifle"]]
+		["pick", ["ironpick"], "pick_iron"], ["pick", ["steelpick"], "pick_steel"], ["spear", ["spear"], "spear"], ["revolver", ["revolver"], "revolver"], ["rifle", ["rifle"], "rifle"], ["rifle", ["rifle", "leverrifle"], "rifle_lever"]]
 	for c in cases:
 		main.tools = {}
 		for t in c[1]: main.tools[t] = true

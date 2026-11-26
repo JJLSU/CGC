@@ -13,6 +13,8 @@ const ROCKS := ["rock", "ore", "quartz", "silver", "geode", "amber"]
 const BOW := {"draw": 0.9, "range0": 12.0, "range1": 26.0, "spread": 0.07, "speed0": 13.0, "speed1": 15.0, "dmg": 6, "bullet": false}
 const REVOLVER := {"draw": 0.35, "range0": 18.0, "range1": 14.0, "spread": 0.05, "speed0": 70.0, "speed1": 20.0, "dmg": 5, "bullet": true}
 const RIFLE := {"draw": 1.1, "range0": 30.0, "range1": 45.0, "spread": 0.06, "speed0": 90.0, "speed1": 50.0, "dmg": 12, "bullet": true}
+## the lever-action repeater: up quicker, a lighter ball, seven in the tube (main.guns)
+const LEVER := {"draw": 0.7, "range0": 28.0, "range1": 42.0, "spread": 0.07, "speed0": 90.0, "speed1": 50.0, "dmg": 9, "bullet": true}
 ## the wild game: chest height h, width to an arrow (r, hit), how tall (top), how much it takes (hp)
 const GAME := {"deer": {"r": 0.55, "h": 0.8, "hit": 0.75, "top": 1.6, "hp": 1}, "rabbit": {"r": 0.32, "h": 0.25, "hit": 0.38, "top": 0.55, "hp": 1},
 	"bison": {"r": 1.0, "h": 1.0, "hit": 1.15, "top": 2.1, "hp": 12}, "turkey": {"r": 0.4, "h": 0.45, "hit": 0.5, "top": 0.95, "hp": 1}}
