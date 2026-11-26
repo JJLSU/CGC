@@ -73,6 +73,11 @@ func _init(model_name: String, spec := {}) -> void:
 	skeleton = sks[0] if sks.size() else null
 	hands = [_attach(["LeftHand"]), _attach(["RightHand"])]
 	head = _attach(["Head"])
+	# (a figure rigged but never animated: the standard clips lent by another of the same sex on the same skeleton)
+	if player and skeleton and not player.has_animation("idle"):
+		var donor := "cgc_woman_calico" if (model_name.begins_with("cgc_woman") or model_name.begins_with("cgc_saloon") or model_name.begins_with("cgc_girl")) else "cgc_man_elder"
+		for c in ["idle", "walk", "wave", "work", "dance", "sit", "run"]: borrow_clip(c, donor)
+		if not player.has_animation("run"): borrow_clip("run", "folk_native_warrior")
 	rate = 0.85 + randf() * 0.3
 	play("idle", 0.0)
 	if player and player.has_animation("idle"): player.seek(randf() * player.get_animation("idle").length, true)

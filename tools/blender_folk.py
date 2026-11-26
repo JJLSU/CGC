@@ -24,7 +24,10 @@ def tris(ob):
 
 def process(name):
     src = os.path.join(SRC, name, 'anims.glb')
-    if not os.path.exists(src): print(f'!! {name}: no {src} yet'); return
+    if not os.path.exists(src): # (rigged but never animated, e.g. the credits ran out: the bare rig; the game borrows its clips)
+        src = os.path.join(SRC, name, 'rigged.glb')
+        if not os.path.exists(src): print(f'!! {name}: no anims.glb or rigged.glb yet'); return
+        print(f'   {name}: no clips of its own; the rig alone (the game lends it a standard set)')
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src)
     # an idle of the figure's own (tools/meshy_idles.py), in place of the stock one everybody shares

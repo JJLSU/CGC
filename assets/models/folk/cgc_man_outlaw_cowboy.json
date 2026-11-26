@@ -1,0 +1,10 @@
+{
+  "name": "cgc_man_outlaw_cowboy",
+  "height": 1.75,
+  "tris": 20749,
+  "tris_before": 20749,
+  "clips": [
+    "Armature|clip0|baselayer"
+  ],
+  "hand": "RightHand"
+}
