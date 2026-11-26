@@ -683,7 +683,31 @@ func dress_street() -> void:
 			st.generate_normals()
 			var fm := MeshInstance3D.new(); fm.mesh = st.commit(); fm.material_override = _mat([0xb5473a, 0xefe3c4, 0x4f6f96][n]); add_child(fm); street.append(fm)
 
+## Where a lantern post's lantern hangs, in the lamp's own frame: the middle of the model's points between 52% and 76%
+## of its height that lie well off the post (the post: the middle of its points at a quarter of the height).
+static var _lantern_cache = null
+func _lantern_at(lp: Node3D, lamp: Node3D) -> Vector3:
+	if _lantern_cache != null: return _lantern_cache
+	var pts := []
+	for mi in lp.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var to_lamp := lamp.global_transform.affine_inverse() * m.global_transform if m.is_inside_tree() else Transform3D.IDENTITY
+		var arr := m.mesh.surface_get_arrays(0); var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		for i in range(0, verts.size(), 2): pts.append(to_lamp * verts[i])
+	var post := Vector3.ZERO; var np := 0
+	for q in pts: if q.y > LAMP_H * 0.2 and q.y < LAMP_H * 0.3: post += q; np += 1
+	if np: post /= np
+	var c := Vector3.ZERO; var n := 0; var lo := Vector3(INF, INF, INF); var hi := -lo
+	for q in pts:
+		if q.y > LAMP_H * 0.53 and q.y < LAMP_H * 0.68 and Vector2(q.x - post.x, q.z - post.z).length() > 0.16: c += q; n += 1; lo = lo.min(q); hi = hi.max(q) # (the lantern's body: below its arm and roof)
+	_lantern_cache = c / n if n else Vector3(-0.25, LAMP_H * 0.63, 0)
+	_lantern_cache += Vector3(0, 0.04, 0)
+	lantern_size = Vector3(0.27, 0.25, 0.27) # (just proud of its panes, so the glow shows through them)
+	return _lantern_cache
+static var lantern_size := Vector3(0.22, 0.32, 0.22)
+
 ## The six street lamps of Main Street (made once), each with its pool of warm light on the dirt.
+const LAMP_H := 3.4
 func _make_street_lamps() -> void:
 	var pool_mat := StandardMaterial3D.new(); pool_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	pool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; pool_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
@@ -700,17 +724,33 @@ func _make_street_lamps() -> void:
 	for e in entries:
 		var p: Vector3 = at + along * e[0] + toward * e[1] * (HALF - 0.5)
 		var lamp := Node3D.new(); lamp.position = Vector3(p.x, y0, p.z); add_child(lamp)
-		var post := box(0.12, 3.0, 0.12, 0x342b25); post.position.y = 1.5; lamp.add_child(post)
-		var bar := box(0.5, 0.05, 0.05, 0x342b25); bar.position.y = 2.55; lamp.add_child(bar)
-		var cone := CylinderMesh.new(); cone.top_radius = 0.0; cone.bottom_radius = 0.26; cone.height = 0.2; cone.radial_segments = 6; cone.rings = 1
-		var cap := MeshInstance3D.new(); cap.mesh = cone; cap.material_override = _mat(0x342b25); cap.position.y = 3.48; lamp.add_child(cap)
-		var cyl := CylinderMesh.new(); cyl.top_radius = 0.17; cyl.bottom_radius = 0.12; cyl.height = 0.38; cyl.radial_segments = 6; cyl.rings = 1
-		var glass := MeshInstance3D.new(); glass.mesh = cyl; glass.material_override = _glass(); glass.position.y = 3.2; lamp.add_child(glass)
+		var glass := MeshInstance3D.new()
+		var lp := model("prop_lantern_tall", LAMP_H, 1)
+		if lp: # (the player's Meshy lantern post: its lantern on the arm hung out over the street, a glowing pane inside it)
+			var out: Vector3 = -toward * float(e[1])
+			# (measured from the model, in its own units of a 1.903-tall post: the post stands at x +0.070, z +0.021; the
+			# lantern hangs at x -0.068, z +0.022, its body from 55% to 72% of the height)
+			var u := LAMP_H / 1.903
+			lamp.rotation.y = atan2(out.z, -out.x) # (the model's -x, where its lantern hangs, out over the street)
+			lp.position = Vector3(-0.070 * u, 0.0, -0.021 * u); lamp.add_child(lp)
+			var gb := BoxMesh.new(); gb.size = Vector3(0.22, 0.32, 0.22); glass.mesh = gb; glass.material_override = _glass(); glass.visible = false
+			lamp.add_child(glass); glass.position = _lantern_at(lp, lamp) # (measured off the model itself)
+			(glass.mesh as BoxMesh).size = lantern_size
+			var glow := OmniLight3D.new(); glow.light_color = Color(1.0, 0.72, 0.4); glow.omni_range = 4.5; glow.light_energy = 0.0; glow.shadow_enabled = false
+			glow.position = glass.position; lamp.add_child(glow); lamp.set_meta("glow", glow)
+		else:
+			var post := box(0.12, 3.0, 0.12, 0x342b25); post.position.y = 1.5; lamp.add_child(post)
+			var bar := box(0.5, 0.05, 0.05, 0x342b25); bar.position.y = 2.55; lamp.add_child(bar)
+			var cone := CylinderMesh.new(); cone.top_radius = 0.0; cone.bottom_radius = 0.26; cone.height = 0.2; cone.radial_segments = 6; cone.rings = 1
+			var cap := MeshInstance3D.new(); cap.mesh = cone; cap.material_override = _mat(0x342b25); cap.position.y = 3.48; lamp.add_child(cap)
+			var cyl := CylinderMesh.new(); cyl.top_radius = 0.17; cyl.bottom_radius = 0.12; cyl.height = 0.38; cyl.radial_segments = 6; cyl.rings = 1
+			glass.mesh = cyl; glass.material_override = _glass(); glass.position.y = 3.2; lamp.add_child(glass)
 		var pool := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(6.5, 6.5); qm.orientation = PlaneMesh.FACE_Y; pool.mesh = qm
 		pool.material_override = pool_mat; pool.position = Vector3(p.x, y0 + 0.05, p.z); pool.rotation.y = e[0]; pool.visible = false
 		pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; add_child(pool)
 		world.colliders.append({"x": p.x, "z": p.z, "r": 0.25})
 		street_lamps.append({"glass": glass.material_override, "pool": pool, "at": p, "side": e[1], "lit": false})
+		if lp: street_lamps[-1].pane = glass; street_lamps[-1].glow = lamp.get_meta("glow")
 
 ## Each frame: folk hidden when far off; tents glow after dark; keepers look up as you pass; lamps lit at dusk.
 func update(night: float, dt: float) -> void:
@@ -863,7 +903,10 @@ func _hello_tick(dt: float) -> void:
 ## The lamplighter: at dusk, if you're near enough to see, he comes out from the farm end of Main Street and lights
 ## the six lamps one by one, then goes in at the church door. Otherwise (late, or far off) they're simply lit.
 func _light(S: Dictionary, on: bool) -> void:
-	if S.lit != on: S.lit = on; S.glass.albedo_color = Color.hex(0xffc060ff if on else 0x5a5248ff); S.pool.visible = on
+	if S.lit != on:
+		S.lit = on; S.glass.albedo_color = Color.hex(0xffc060ff if on else 0x5a5248ff); S.pool.visible = on
+		if S.has("pane"): S.pane.visible = on # (the model lantern's own panes by day; lit, the glow shows through them)
+		if S.has("glow"): S.glow.light_energy = 1.4 if on else 0.0
 
 func _lamplighter(dt: float) -> void:
 	var dusk := clock > 0.745 or clock < 0.235
