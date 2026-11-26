@@ -240,10 +240,9 @@ func _init(w: World, home: Vector3) -> void:
 			var q: Vector3 = at + along * cs + toward * o
 			Terrain.add_flat_area(q.x, q.z, 7, 13); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
 	var mo := -38.0
-	while mo <= 38.0: # (the market row's ground, beyond the north cross street: level, and kept clear of brush and trees)
-		for ds in [-3.0, 1.5]:
-			var q: Vector3 = at + along * (MARKET_S + ds) + toward * mo
-			Terrain.add_flat_area(q.x, q.z, 6, 13); world.exclusions.append({"x": q.x, "z": q.z, "r": 4.5})
+	while mo <= 38.0: # (just the market row's own ground, by the north cross street: level and clear of brush; the land behind left be)
+		var q: Vector3 = at + along * (MARKET_S - 0.8) + toward * mo
+		Terrain.add_flat_area(q.x, q.z, 3.6, 5.2); world.exclusions.append({"x": q.x, "z": q.z, "r": 3.6})
 		mo += 5.0
 	for off in street_offs:
 		for sv in [-16, 0, 16]:
@@ -1243,7 +1242,7 @@ func _hall_life(dt: float, night: float) -> void:
 ## Along the far side of the north cross street: stalls, tents and wagons of the market, each from its own model pair.
 ## Wrecked and bare while the town is run-down; once Main Street is all mended they stand restored, stocked, a
 ## stallkeeper at each by day and baskets of food beside.
-const MARKET_S := CROSS_N + CROSS_HW + 4.2
+const MARKET_S := CROSS_N + CROSS_HW + 2.2 # (right at the street's edge: behind, the land is left as it lies, a terraced bank where there is one: the player liked it)
 const MARKET_O := [-30.0, -18.0, -6.0, 6.0, 18.0, 30.0]
 const MARKET := ["mkt_stall_green", "mkt_tent_ochre", "mkt_wagon_burgundy", "mkt_stall_red", "mkt_tent_blue", "mkt_wagon_ochre"]
 const MARKET_FOLK := ["cgc_woman_blueapron", "cgc_man_youth", "cgc_woman_greenapron", "cgc_man_suspenders", "cgc_woman_patched", "cgc_woman_calico"]
@@ -1264,12 +1263,12 @@ func market_refresh() -> void:
 		g.position = Vector3(p.x, y0, p.z); g.rotation.y = face + (0.12 if wagon else 0.0); add_child(g); market_parts.append(g)
 		world.colliders.append({"x": p.x, "z": p.z, "r": 1.8})
 		if tier:
-			var bq: Vector3 = p + toward * (2.9 if i % 2 else -2.9) - along * 1.4
+			var bq: Vector3 = p + toward * (2.9 if i % 2 else -2.9) - along * 1.2
 			var bk := model("prop_food_baskets", 1.3, 1)
 			if bk: bk.position = Vector3(bq.x, y0, bq.z); bk.rotation.y = face + i; add_child(bk); market_parts.append(bk)
 			var nm: String = MARKET_FOLK[i]
 			if ModelFigure.has_folk(nm):
 				var f := ModelFigure.new(nm, {"hue": 0.5 + i * 0.7}); f.t = i * 0.9
-				var fp: Vector3 = p - along * 2.6 + toward * 0.6
+				var fp: Vector3 = p - along * 2.1 + toward * 0.6
 				f.root.position = Vector3(fp.x, y0, fp.z); f.root.rotation.y = face; add_child(f.root) # (facing out to the street, the stall at their back)
 				folk["mkt_%d" % i] = {"fig": f, "pose": null, "face": face}
