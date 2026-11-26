@@ -54,6 +54,11 @@ func _initialize() -> void:
 	await _wait(0.2); await _e(main)
 	print("well: stamina %.0f of %.0f" % [p.stamina, p.max_stamina])
 	ok = ok and p.stamina > p.max_stamina * 0.9
+	# and with Old Blue right at your heel, the well still gets the E (not a scratch for the dog)
+	p.stamina = 10.0; main.dog.pos = p.pos + Vector3(0.5, 0, 0.3); await _wait(0.05)
+	main.input.pressed["KeyE"] = true; await process_frame; await process_frame
+	print("well with the dog at heel: stamina %.0f, prompt '%s'" % [p.stamina, main.beast_prompt])
+	ok = ok and p.stamina > p.max_stamina * 0.9
 	# the lean-to, at night
 	var l: Dictionary = placed.leanto; var lf: Array = BuildSystem.DATA.FOOT.leanto
 	main.sky.time = 0.9; var day0: int = main.sky.day

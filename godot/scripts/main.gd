@@ -2765,7 +2765,7 @@ func _pets(dt: float, active: bool) -> void:
 	if dog.stick_near(player.pos):
 		beast_prompt = "[E] Throw the stick for Old Blue"
 		if input.hit("KeyE"): dog.throw_stick(player); sound.tear()
-	elif dog.near(player.pos):
+	elif dog.near(player.pos) and build.extra_near(player.pos) == null and build.bed_near(player.pos) == null: # (at a well or coop, E is for that, not the dog at your heel)
 		beast_prompt = "[E] Give Old Blue a scratch behind the ears"
 		if input.hit("KeyE"):
 			dog.pat(); journal.record("pat")
