@@ -9,7 +9,12 @@
     "sit",
     "walk",
     "wave",
-    "work"
+    "work",
+    "x_idle_a",
+    "x_idle_b",
+    "x_look",
+    "x_shrug",
+    "x_talk"
   ],
   "hand": "RightHand"
 }

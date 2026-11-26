@@ -44,6 +44,9 @@ func _initialize() -> void:
 		main.set_process(false)
 		var cam: Camera3D = main.rig.camera
 		cam.global_position = a + T.along * -26.0 + Vector3(0, T.y0 + 9.0 - a.y, 0); cam.look_at(a + T.along * 0.0 + Vector3(0, T.y0 + 1.0 - a.y, 0), Vector3.UP); cam.fov = 50.0
+		if args.has("close"): # (in close on the store's and the herbalist's folk, from mid-street)
+			var mid: Vector3 = a + T.along * -10.0
+			cam.global_position = mid + T.along * 9.0 + Vector3(0, T.y0 + 3.2 - mid.y, 0); cam.look_at(mid + Vector3(0, T.y0 + 1.0 - mid.y, 0), Vector3.UP); cam.fov = 60.0
 		await process_frame; await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(args[0])

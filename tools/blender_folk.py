@@ -89,6 +89,7 @@ def process(name):
         for a in new:
             low = a.name.lower().replace(' ', '_')
             nm = next((n for k, n in XKEYS if k in low), None)
+            if nm == 'x_drink' and name.startswith('cgc_native_'): nm = None  # (no drinking idle for the native camps' men)
             if nm and not bpy.data.actions.get(nm): a.name = nm; a.use_fake_user = True
             else: bpy.data.actions.remove(a)
         print(f'   extras: {[a.name for a in bpy.data.actions if a.name.startswith("x_")]}')

@@ -20,7 +20,8 @@ WOMEN = {244: 'idle_a', 246: 'idle_b', 309: 'hip', 28: 'wave_big', 336: 'look'} 
 
 def who(name):
     if name.startswith(('cgc_woman_', 'cgc_saloon_')): return WOMEN
-    if name.startswith(('cgc_man_', 'cgc_native_')): return MEN
+    if name.startswith('cgc_man_'): return MEN
+    if name.startswith('cgc_native_'): return {k: v for k, v in MEN.items() if v != 'drink'}  # (no drinking idle for the camps' men)
     return None
 
 
