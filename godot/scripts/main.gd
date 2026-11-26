@@ -2574,6 +2574,7 @@ func _visitors() -> bool:
 
 func _pets(dt: float, active: bool) -> void:
 	if _drops_tick(active): return
+	if _boss_spoils(active): return
 	if jar_count and sky.night < 0.15: jar_count = 0; hud.toast("First light: you unscrew the lid and the lightning bugs drift off home.") # (the jar let go at dawn)
 	dog.day = sky.day
 	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
@@ -2921,3 +2922,26 @@ func _boss_rumour():
 	if d < 40.0: return null
 	var text: String = ("%s lies where %s fell" % [b.spec.prize.capitalize(), b.title()]) if b.beaten else BOSS_TALK.get(b.id, b.title())
 	return {"key": "boss:" + b.id, "text": text, "paces": roundi(d * 1.3 / 10.0) * 10, "dir": to / d}
+
+## A beaten boss's lair is yours to work, a go a day: Jebediah's old diggings give up gold (and now and then silver),
+## Angus's woodpile an armload of split wood, Crane's company stores a few bars of iron. E at the lair's "mouth" (the
+## mine, the chopping block, the porch).
+const SPOILS := {"jebediah": ["Work Jebediah's old diggings", {"gold": 2}], "angus": ["Take wood from Angus's pile", {"wood": 8}],
+	"crane": ["Help yourself to Crane's company stores", {"iron": 3}]}
+func _boss_spoils(active: bool) -> bool:
+	if not active or player.dead or build.active: return false
+	for b in bosses:
+		if not b.beaten or Vector2(player.pos.x - b.mouth.x, player.pos.z - b.mouth.z).length() > 4.0: continue
+		var sp: Array = SPOILS[b.id]
+		if b.spoils_day == sky.day: beast_prompt = "Nothing more here today: come back tomorrow"; return true
+		beast_prompt = "[E] %s" % sp[0]
+		if input.hit("KeyE"):
+			b.spoils_day = sky.day
+			var got: Dictionary = sp[1].duplicate()
+			if b.id == "jebediah" and randf() < 0.35: got.silver = 1
+			var bits := []
+			for k in got: inventory[k] = inventory.get(k, 0) + int(got[k]); bits.append("+%d %s" % [got[k], k])
+			sound.pick(); hud.toast("%s: %s." % [sp[0].replace("Work ", "You work ").replace("Take ", "You take ").replace("Help yourself to", "You help yourself to"), ", ".join(bits)])
+			if b.id == "jebediah": settlers.discover("gold")
+		return true
+	return false

@@ -95,6 +95,12 @@ func _initialize() -> void:
 	p.pos = Vector3(jd.x, Terrain.get_height(jd.x, jd.z), jd.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
 	print("sheriff's reward: +$%d, paid %s" % [main.inventory.get("dollars", 0) - cash1, B.bounty_paid])
 	ok = ok and B.bounty_paid and main.inventory.get("dollars", 0) - cash1 == 50
+	# his diggings are yours now: gold once a day
+	var g0: int = main.inventory.get("gold", 0); var mo: Vector3 = B.mouth + (B.at - B.mouth).normalized() * 2.0
+	p.pos = Vector3(mo.x, Terrain.get_height(mo.x, mo.z), mo.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
+	var g1: int = main.inventory.get("gold", 0); main.input.pressed["KeyE"] = true; await _wait(0.3)
+	print("Jebediah's old diggings: +%d gold, then +%d the same day" % [g1 - g0, main.inventory.get("gold", 0) - g1])
+	ok = ok and g1 - g0 == 2 and main.inventory.get("gold", 0) == g1
 	var sv: Dictionary = B.save()
 	ok = ok and sv.beaten and sv.delivered
 	# Big Angus: Second Street mended holds Third Street back till his timber rights are in

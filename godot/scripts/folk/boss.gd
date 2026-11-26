@@ -57,6 +57,7 @@ var hp := 54
 var beaten := false
 var delivered := false     ## what he held is back at the assay office
 var bounty_paid := false   ## the sheriff's reward for him, claimed at the jail
+var spoils_day := -1       ## the day you last worked his lair, once it's yours (one go a day)
 var dead := 0.0
 var state := "idle"         ## idle, fight, home
 var cool := 1.5
@@ -100,10 +101,10 @@ func setup(town_at: Vector3, avoid: Array, world: World = null) -> void:
 	mouth = at + back * 9.0; mouth.y = Terrain.get_height(mouth.x, mouth.z)
 	if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 24.0})
 
-func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered, "bountyPaid": bounty_paid}
+func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered, "bountyPaid": bounty_paid, "spoilsDay": spoils_day}
 func load_state(d) -> void:
 	if d == null or not d is Dictionary: return
-	beaten = bool(d.get("beaten", false)); delivered = bool(d.get("delivered", false)); bounty_paid = bool(d.get("bountyPaid", false))
+	beaten = bool(d.get("beaten", false)); delivered = bool(d.get("delivered", false)); bounty_paid = bool(d.get("bountyPaid", false)); spoils_day = int(d.get("spoilsDay", -1))
 
 func alive() -> bool: return built and fig != null and not beaten and dead == 0.0
 func fighting() -> bool: return alive() and state == "fight"

@@ -9,6 +9,14 @@ func _initialize() -> void:
 	main.force_active = true; main.sky.time = 0.42; main.weather.rain = 0.0
 	var B: Boss = main.bosses[2] if args.has("crane") else (main.bosses[1] if args.has("angus") else main.boss); var p: Player = main.player
 	var dir: Vector3 = (main.town.at - B.at).normalized()
+	if args.has("spoils"): # (beaten: stand at his mine mouth for the day's go at it)
+		B.beaten = true; var mo: Vector3 = B.mouth + (B.at - B.mouth).normalized() * 2.0
+		var t1 := Time.get_ticks_msec()
+		while Time.get_ticks_msec() - t1 < 5000:
+			main.player.pos = Vector3(mo.x, Terrain.get_height(mo.x, mo.z), mo.z); main.rig.yaw = atan2(dir.x, dir.z) + 0.3; main.rig.pitch = 0.3; main.rig.dist = 11.0
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out); quit(); return
 	var off: Vector3 = B.at + dir * 16.0
 	var t0 := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 9000:

@@ -1622,3 +1622,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
   (28.5), Main Street 13.3 (12.1), woods 14.8 (28.1), wilds 15.1 (32.1), farm at night 17.1 (23.3) ms; no spike over
   20 ms; averages unchanged. test_place_sliced 40/40 the same: PASS; smoke clean but one headless-renderer line
   (texture_2d_initialize in the dummy storage) not seen again in four plain starts with or without the change.
+- A beaten boss's lair is yours to work once a day (main._boss_spoils, Boss.spoils_day saved): E at Jebediah's mine mouth for 2 gold (a 35% chance of a silver too), at Angus's chopping block for 8 wood, at Crane's porch for 3 iron. test_boss: +2 gold, then nothing more that day: PASS; looked at the prompt (tools/shot_boss.gd ... spoils).
