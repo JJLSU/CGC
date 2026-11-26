@@ -20,4 +20,13 @@ func _initialize() -> void:
 		print("men at the fort: %d" % f.men.size())
 		await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", k[0] + ".png"))
+	# the officer, up close, his prompt showing (<out>_officer)
+	var off = f.men.filter(func(q): return q.role == "officer")[0]
+	var t1 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t1 < 2500:
+		var op: Vector3 = off.fig.root.position + fz * 2.2
+		main.player.pos = Vector3(op.x, Terrain.get_height(op.x, op.z), op.z); main.rig.yaw = f.face + 0.6; main.rig.pitch = 0.2; main.rig.dist = 6.0
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_officer.png"))
 	quit()
