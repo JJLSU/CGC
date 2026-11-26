@@ -9,6 +9,16 @@ func _initialize() -> void:
 	main.force_active = true; main.sky.time = 0.42; main.weather.rain = 0.0
 	var B: Boss = main.bosses[2] if args.has("crane") else (main.bosses[1] if args.has("angus") else main.boss); var p: Player = main.player
 	var dir: Vector3 = (main.town.at - B.at).normalized()
+	if args.has("lair"): # (the camp from above and well back, the boss beaten and gone: just the layout)
+		B.beaten = true
+		var t2 := Time.get_ticks_msec()
+		while Time.get_ticks_msec() - t2 < 5000:
+			var st: Vector3 = B.at + dir * 2.0
+			main.player.pos = Vector3(st.x, Terrain.get_height(st.x, st.z), st.z); main.rig.yaw = atan2(dir.x, dir.z); main.rig.pitch = 0.9; main.rig.dist = 42.0
+			await process_frame
+		main.player.avatar.root.visible = false
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out); quit(); return
 	if args.has("spoils"): # (beaten: stand at his mine mouth for the day's go at it)
 		B.beaten = true; var mo: Vector3 = B.mouth + (B.at - B.mouth).normalized() * 2.0
 		var t1 := Time.get_ticks_msec()

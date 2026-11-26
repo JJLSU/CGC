@@ -326,9 +326,9 @@ func _build_mansion(place: Callable, rng: PNoise.Mulberry32, face: float, side: 
 	place.call("prop_barrel", 0.9, mouth - side * 4.6 + outw * 1.2, 0.0)
 	place.call("prop_lamppost_tall", 3.6, at + side * 3.0 - outw * 2.0, face)
 	place.call("prop_cookfire", 1.1, at - side * 2.0 + outw * 0.5, 0.0)
-	for i in 10: # a white paling fence round the yard, open toward the town
-		var a := face + PI * 0.35 + i * (PI * 1.3 / 9.0); var q := at + Vector3(sin(a), 0, cos(a)) * 15.0
-		place.call("prop_fence_gate", 3.0, q, a + PI / 2.0)
+	for i in 20: # a paling fence round the yard, end to end (each 3.1 m on a 15 m ring), open toward the town
+		var a := face + PI * 0.35 + (i + 0.5) * (PI * 1.3 / 20.0); var q := at + Vector3(sin(a), 0, cos(a)) * 15.0
+		place.call("prop_fence_gate", 3.4, q, a) # (along the ring)
 	# his powder: open sticks laid on the crates
 	for i in 3:
 		var dy := _weapon(1.2); var q := mouth + side * (3.0 + i * 0.5) + outw * 1.0
