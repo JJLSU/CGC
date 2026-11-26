@@ -38,6 +38,19 @@ const SPECS := {
 		"prize": "the town's mortgage", "prize_key": "mortgage", "reward": 150, "bounty": 100},
 }
 const ORDER := ["jebediah", "angus", "crane"]
+## What each says in a fight, now and then, on a card over his head: when he sees you, as he throws, once riled.
+const TAUNTS := {
+	"jebediah": {"spot": ["Claim jumper! This here's MY mountain!", "Git off my diggin's!", "Heh heh... fresh meat for the mine!"],
+		"fight": ["Duck, ya varmint!", "Got a pick with yer name on it!", "Gold's mine! All of it!", "Hold still, consarn ya!"],
+		"riled": ["NOW yer in fer it!", "I'll bury ya with the tailings!", "Thirty years I dug this hole!"]},
+	"angus": {"spot": ["You're a long way from town, little fella.", "Every tree in this county's mine!", "Timber!"],
+		"fight": ["Mind your head!", "Haw! Too slow!", "I've felled bigger than you before breakfast!"],
+		"riled": ["Now you've riled Big Angus!", "I'll split you like kindling!", "TIMBERRR!"]},
+	"crane": {"spot": ["Trespassing on company land, are we?", "Every man has his price. What's yours?", "Ah. The farmer."],
+		"fight": ["Mind the fuse!", "Business is business.", "I own this county, and everyone in it!"],
+		"riled": ["Do you know who I AM?", "I'll have you for this!", "Blast it! BLAST IT ALL!"]},
+}
+const SAY_EVERY := 6.5      ## seconds at least between his lines
 
 var id := "jebediah"
 var spec: Dictionary = SPECS.jebediah
@@ -67,6 +80,10 @@ var ring: MeshInstance3D
 var picks: Array = []       ## [{node, mark, from, to, t, dur, landed}]
 var told := false
 var throws := 0             ## throws so far this fight (every third, once riled, is his special)
+var say_card: Label3D
+var say_t := 0.0          ## the card's time left up
+var say_cool := 0.0       ## time till he may speak again
+var was_riled := false
 var last_p := Vector3.ZERO
 var vel := Vector3.ZERO
 var speed := 0.0
@@ -136,6 +153,24 @@ func damage(n: int, hooks: Dictionary) -> bool:
 
 func _spotted(hooks: Dictionary) -> void:
 	if not told: told = true; if hooks.has("on_spotted"): hooks.on_spotted.call()
+	say("spot", true)
+
+## A line of his on the card over his head (kind: spot, fight, riled); force: even if he spoke a moment ago.
+func say(kind: String, force := false) -> void:
+	if say_card == null or (say_cool > 0.0 and not force): return
+	var lines: Array = TAUNTS[id][kind]
+	say_card.text = lines[randi() % lines.size()]
+	say_t = 2.8; say_cool = SAY_EVERY + randf() * 3.0
+
+func _say_tick(dt: float) -> void:
+	if say_card == null: return
+	say_cool = maxf(0.0, say_cool - dt); say_t -= dt
+	var on := say_t > 0.0 and dead == 0.0
+	say_card.visible = on
+	if on:
+		say_card.position = fig.root.position + Vector3(0, 2.0 * float(spec.scale) + 0.9, 0)
+		var k := minf(1.0, (2.8 - say_t) / 0.15); var out := minf(1.0, say_t / 0.3) # (springs up, fades away)
+		say_card.scale = Vector3.ONE * (0.6 + 0.4 * minf(k, out)) # (springs up and settles; no fade: the paper post pass drops see-through cards)
 
 ## hooks: on_hit(damage), on_throw(), on_land(at), on_slam(), on_fall(at), on_spotted()
 func update(dt: float, player: Player, hooks: Dictionary) -> void:
@@ -154,6 +189,8 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		dead += dt; r.rotation.x = -minf(1.0, dead / 0.9) * PI / 2.0 * 0.95; fig.update(dt, 0.0, null)
 		return
 	cool = maxf(0.0, cool - dt); hurt_t = maxf(0.0, hurt_t - dt)
+	_say_tick(dt)
+	if state == "fight" and not was_riled and hp * 2 < int(spec.hp): was_riled = true; say("riled", true)
 	var me := r.position
 	var to_p := Vector3(p.x - me.x, 0, p.z - me.z); var dp := to_p.length()
 	var from_home := Vector2(p.x - at.x, p.z - at.z).length()
@@ -184,6 +221,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 						var n := 2 if enraged else 1
 						for i in n: _throw(me, p, vel, dp, (i - (n - 1) / 2.0) * 2.6)
 					cool = (spec.cool * 0.76 if enraged else spec.cool) + randf() * 0.6; pose = "swing"; _act("throw", 0.9)
+					if randf() < 0.45: say("riled" if enraged else "fight")
 					if hooks.has("on_throw"): hooks.on_throw.call()
 		r.rotation.y = _turn(r.rotation.y, atan2(to_p.x, to_p.z), dt * 6.0)
 	else:
@@ -192,7 +230,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		var tg := Vector3(goal.x - me.x, 0, goal.z - me.z)
 		if tg.length() > 0.6: want = tg.normalized(); spd = spec.speed * 0.7
 		else:
-			if state == "home": state = "idle"; hp = spec.hp
+			if state == "home": state = "idle"; hp = spec.hp; was_riled = false
 			r.rotation.y = _turn(r.rotation.y, atan2(mouth.x - me.x, mouth.z - me.z), dt * 2.0)
 			pose = "work" if fmod(t, 7.0) < 3.0 else null
 		if want != Vector3.ZERO: r.rotation.y = _turn(r.rotation.y, atan2(want.x, want.z), dt * 4.0)
@@ -294,6 +332,15 @@ func _build() -> void:
 	var home := mouth + outw * 2.5
 	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z); fig.root.rotation.y = atan2(mouth.x - home.x, mouth.z - home.z)
 	add_child(fig.root)
+	# his line on a torn paper card over his head (the text in ink on cream, the card a billboard behind it)
+	say_card = Label3D.new(); say_card.billboard = BaseMaterial3D.BILLBOARD_ENABLED; say_card.font_size = 72; say_card.pixel_size = 0.0075
+	say_card.modulate = Color("3a2f25"); say_card.outline_size = 0; say_card.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS; say_card.render_priority = 10
+	say_card.width = 560.0; say_card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; say_card.visible = false
+	var sf := SystemFont.new(); sf.font_names = PackedStringArray(["Patrick Hand", "Segoe Print", "Comic Sans MS"]); say_card.font = sf
+	var back := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(4.6, 1.5); back.mesh = qm; back.position.z = -0.02
+	var bm := StandardMaterial3D.new(); bm.albedo_color = Color("f4ecd8"); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.render_priority = 9
+	back.material_override = bm; back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; say_card.add_child(back)
+	add_child(say_card); nodes.append(say_card)
 	hp = spec.hp; state = "idle"; dead = 0.0
 
 ## Mad Jebediah's diggings: a mine mouth, windlass, tool rack and ore cart, his tent and fire, boulders, a heap of picks.
@@ -368,6 +415,7 @@ func _unbuild() -> void:
 	for k in picks: (k.node as Node).queue_free(); if is_instance_valid(k.mark): (k.mark as Node).queue_free()
 	nodes = []; picks = []; ring = null
 	if fig: fig.root.queue_free(); fig = null; hand_pick = null
+	say_card = null
 
 func _weapon(length: float) -> Node3D:
 	match spec.weapon:
