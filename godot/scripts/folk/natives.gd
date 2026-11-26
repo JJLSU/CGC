@@ -15,6 +15,14 @@ static var camp_abed := false
 static var camp_day := 0
 static var player_armed := true ## a bow, six-shooter or rifle to hand: no raid comes on the town till then (main.gd; the player's ask)
 static var lodge_mats: Array = []
+## A blow or an arrow lands at most this often from all the warriors together (the player found nine of them at a
+## quarter of your health a hit killed too quickly): each hit still a quarter, but spaced out so you can fight or run.
+const HIT_GAP_MS := 3500
+static var _next_hit_ms := 0
+static func land_hit(hooks: Dictionary) -> void:
+	var now := Time.get_ticks_msec()
+	if now < _next_hit_ms or not hooks.has("on_hit"): return
+	_next_hit_ms = now + HIT_GAP_MS; hooks.on_hit.call(HIT)
 
 var list: Array = []   ## the camps: [Camp]
 var raid: Raid
@@ -369,18 +377,18 @@ class Camp extends Node3D:
 				face = atan2(dx, dz)
 				if dP > 14.0: speed = 8.0
 				else: speed = 5.0; face += PI / 2.4
-				if dP < 22.0 and w.cool <= 0.0: w.cool = 2.0; act = "Archery_Shot"; shoot(pos, p, randf() < 0.5, hooks)
+				if dP < 22.0 and w.cool <= 0.0: w.cool = 2.6; act = "Archery_Shot"; shoot(pos, p, randf() < 0.35, hooks)
 			elif alarm == "fight":
 				face = atan2(dx, dz)
 				if (dP > 2.4) if w.arm == "club" else (dP > 16.0): speed = 4.6
 				elif dP > 2.6:
 					act = "Archery_Shot"
-					if w.cool <= 0.0: w.cool = 2.3; shoot(pos, p, randf() < 0.6, hooks)
+					if w.cool <= 0.0: w.cool = 3.0; shoot(pos, p, randf() < 0.4, hooks)
 				else:
 					act = "Attack"
 					if w.cool <= 0.0:
-						w.cool = 1.5
-						if hooks.has("on_hit"): hooks.on_hit.call(HIT)
+						w.cool = 2.2
+						NativeCamps.land_hit(hooks)
 			elif w == warner:
 				# out to meet you, stopping a stone's throw off; a signal to turn back, then an arrow at your feet
 				face = atan2(dx, dz)
@@ -480,7 +488,7 @@ class Camp extends Node3D:
 			if k >= 1.0 and not a.landed:
 				a.landed = true
 				if a.hit:
-					if hooks.has("on_hit"): hooks.on_hit.call(HIT)
+					NativeCamps.land_hit(hooks)
 					m.queue_free(); arrows.remove_at(i); continue
 			if a.t > a.dur + 6.0: m.queue_free(); arrows.remove_at(i)
 
@@ -624,7 +632,7 @@ class Raid extends Node3D:
 			if k >= 1.0 and not a.landed:
 				a.landed = true
 				if a.hit:
-					if hooks.has("on_hit"): hooks.on_hit.call(HIT)
+					NativeCamps.land_hit(hooks)
 					m.queue_free(); arrows.remove_at(i); continue
 			if a.t > a.dur + 6.0: m.queue_free(); arrows.remove_at(i)
 		if gone >= riders.size() or t > 240.0: end()
