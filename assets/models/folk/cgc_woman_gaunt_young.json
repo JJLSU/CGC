@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_gaunt_young",
+  "height": 1.68,
+  "tris": 19930,
+  "tris_before": 19930,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

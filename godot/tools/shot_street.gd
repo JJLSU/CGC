@@ -44,6 +44,8 @@ func _initialize() -> void:
 		var d: Vector3 = T.doors[b.id]; var g: Node3D = T.parts[b.id]; var gp := g.global_position
 		var o2 := Vector3(d.x - gp.x, 0, d.z - gp.z).normalized()
 		cam.global_position = d + o2 * 11.0 + Vector3(0, T.y0 + 4.0 - d.y, 0); cam.look_at(gp + Vector3(0, T.y0 + 2.5 - gp.y, 0), Vector3.UP); cam.fov = 55.0
+		if OS.get_environment("FEET") != "": # (down at their feet, close)
+			cam.global_position = d + o2 * 5.0 + Vector3(0, T.y0 + 0.7 - d.y, 0); cam.look_at(d + Vector3(0, T.y0 + 0.3 - d.y, 0), Vector3.UP); cam.fov = 60.0
 		await process_frame; await process_frame; await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_%s.png" % b.id))
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

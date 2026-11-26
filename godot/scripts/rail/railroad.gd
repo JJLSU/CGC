@@ -27,6 +27,7 @@ var crates: Array = []
 ## other way (tail: track the trains don't use, so it reads as a through line). Across the track, the storage yard.
 const TRACK_O := 74.0
 var tail: Array = []
+var depot_i := 0      ## the depot's tie along the line (the train's home)
 var yard := Vector3.ZERO
 var far := 1.0        ## which side of Main Street the station is on (toward x far)
 var town_ref: Town
@@ -44,7 +45,7 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	var dout := along if far < 0.0 else -along # (the way out of the depot: the town on its left, the depot's side)
 	depot = A + along * Town.CROSS_N + toward * far * TRACK_O + dout * 14.0 # (a little down the line from where the cross street meets it: the street comes out by the platform's end, not into the house)
 	var start := depot + dout * 110.0
-	for i in 100: tail.append(depot - dout * (i + 1) * TIE) # (the line on past the depot, the other way)
+	for i in 60: tail.append(depot - dout * (i + 1) * TIE) # (the line on past the depot, the other way)
 	yard = A + along * (Town.CROSS_N - 4.0) + toward * far * (TRACK_O + 15.0)
 	# the right-of-way and the depot's ground level and clear; the yard's too; the cross street's last stretch out to it
 	for i in range(0, 260, 8):
@@ -55,27 +56,6 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	while o < TRACK_O:
 		var q: Vector3 = A + along * Town.CROSS_N + toward * far * o
 		Terrain.add_flat_area(q.x, q.z, 9, 9); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
-	# a whistle-stop in each wild land: its nearest good stretch, visited in turn, nearest first
-	var found := {}
-	var r := 80.0
-	while r < 760.0 and found.size() < 5:
-		var a := 0.0
-		while a < TAU:
-			var x := depot.x + cos(a) * r; var z := depot.z + sin(a) * r
-			Terrain.land_at(x, z)
-			for k in LAND_KEYS:
-				if not found.has(k) and Terrain.L_w[k] > 0.9 and not Terrain.is_water(x, z) and _open_ground(x, z): found[k] = Vector3(x, 0, z)
-			a += 0.08
-		r += 25.0
-	var at := start
-	var left := found.keys()
-	while left.size():
-		left.sort_custom(func(p, q): return found[p].distance_to(at) < found[q].distance_to(at))
-		var k: String = left.pop_front()
-		stops.append({"land": k, "name": NAMES[k], "at": found[k]}); at = found[k]
-	# the route: the depot, a straight run out past the church, then stop to stop, swinging wide of the town and home,
-	# and (the port's own: the web runs straight) round the mountains, never up them
-	var pts := [depot, start]
 	# (wide of the whole town, streets and all, and of the farm)
 	var omin := 0.0; var omax := 0.0
 	for so in town.street_offs: omin = minf(omin, so); omax = maxf(omax, so)
@@ -83,60 +63,76 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	var tc: Vector3 = A + toward * ((omin + omax) / 2.0)
 	var tr := minf((omax - omin) / 2.0 + 8.0, absf(far * TRACK_O - (omin + omax) / 2.0) - 9.0) # (never so wide it takes in the line past the depot)
 	var avoid := [[tc - along * 38.0, tr], [tc, tr], [tc + along * 38.0, tr], [home, 48.0]] # (three, down its length: a town is long, not round)
-	for s in stops:
-		var from: Vector3 = pts[-1]
-		var leg := _route(from, s.at, avoid)
-		if leg.is_empty():
-			for av in avoid:
-				var c: Vector3 = av[0]; var rr: float = av[1]
-				var d: Vector3 = s.at - from; var len := d.length(); var u := d / len
-				var t := clampf((c - from).dot(u), 0.0, len); var close := from + u * t
-				if close.distance_to(c) < rr and t > 1.0 and t < len - 1.0:
-					var side := Vector3(-u.z, 0, u.x)
-					if side.dot(close - c) < 0.0: side = -side
-					pts.append(c + side * (rr + 10.0)) # (around it)
-		else: pts.append_array(leg)
-		pts.append(s.at)
+	var clear_of_town := func(q: Vector3) -> bool:
+		for av in avoid: if Vector2(q.x - av[0].x, q.z - av[0].z).length() < float(av[1]) + 28.0: return false
+		return true
+	# the line (the player: it needn't go anywhere useful; one long track through the whole map, one stop, at town): from
+	# far out one way, the straight run past the depot beside the town, and far out the other way, round the mountains
+	var fwd_run := start; var back_run := depot - dout * 70.0
+	var fwd_end := _open_end(depot, dout, 680.0, clear_of_town); var back_end := _open_end(depot, -dout, 680.0, clear_of_town)
+	var fwd := [fwd_run] + _route(fwd_run, fwd_end, avoid, [depot, back_run]) + [fwd_end]
+	var laid: Array = [depot, back_run]
+	for i in fwd.size() - 1:
+		var n := maxi(1, ceili((fwd[i] as Vector3).distance_to(fwd[i + 1]) / 6.0))
+		for j in n: laid.append((fwd[i] as Vector3).lerp(fwd[i + 1], float(j) / n))
+	var back := [back_run] + _route(back_run, back_end, avoid, laid) + [back_end]
+	back.reverse()
+	var pts: Array = back + [depot] + fwd
+	tail = []
 	# sampled every TIE metres
 	for i in pts.size() - 1:
 		var a: Vector3 = pts[i]; var b: Vector3 = pts[i + 1]; var n := maxi(1, roundi(a.distance_to(b) / TIE))
 		for j in n: path.append(a.lerp(b, float(j) / n))
 	path.append(pts[-1])
 	length = path.size() * TIE
+	for j in path.size(): if path[j].distance_to(depot) < path[depot_i].distance_to(depot): depot_i = j
 	_grade()
 	# the right-of-way: nothing grows on it
 	for i in range(0, path.size(), 5): world.exclusions.append({"x": path[i].x, "z": path[i].z, "r": 3.4})
-	for i in range(0, tail.size(), 5): world.exclusions.append({"x": tail[i].x, "z": tail[i].z, "r": 3.4})
 	world.exclusions.append({"x": depot.x, "z": depot.z, "r": 9.0})
-	for s in stops: world.exclusions.append({"x": s.at.x, "z": s.at.z, "r": 6.0})
-	# each stop's layout: the platform a few ties back along the incoming track on the outside of the bend, the post behind
-	for s in stops:
+	# a trading post in each wild land (no longer a stop on the line: the train calls only at town): its nearest good
+	# stretch out in the county, never in the town or by the farm, and well off the track
+	var off_line := func(q: Vector3) -> bool:
+		for j in range(0, path.size(), 8): if Vector2(path[j].x - q.x, path[j].z - q.z).length() < 30.0: return false
+		return true
+	var found := {}
+	var r := 110.0
+	while r < 780.0 and found.size() < 5:
+		var a := 0.0
+		while a < TAU:
+			var x := tc.x + cos(a) * r; var z := tc.z + sin(a) * r
+			Terrain.land_at(x, z)
+			for k in LAND_KEYS:
+				if not found.has(k) and Terrain.L_w[k] > 0.9 and not Terrain.is_water(x, z) and _open_ground(x, z) and clear_of_town.call(Vector3(x, 0, z)) and off_line.call(Vector3(x, 0, z)): found[k] = Vector3(x, 0, z)
+			a += 0.06
+		r += 25.0
+	for k in LAND_KEYS: if found.has(k): stops.append({"land": k, "name": NAMES[k], "at": found[k]})
+	for st in stops:
 		var k := 0
-		for j in path.size(): if path[j].distance_to(s.at) < path[k].distance_to(s.at): k = j
-		var i := maxi(2, k - 6)
-		var a: Vector3 = path[maxi(0, i - 2)]; var b: Vector3 = path[mini(path.size() - 1, i + 2)]; var yaw := atan2(b.x - a.x, b.z - a.z)
-		var side := Vector3(cos(yaw), 0, -sin(yaw))
-		var out: Vector3 = path[mini(path.size() - 1, k + 8)] - path[k]
-		if out.dot(side) > 0.0: side = -side
-		var alg := Vector3(sin(yaw), 0, cos(yaw))
-		# (the post must stand clear of the whole line, not just this stretch: where the line leaves the stop it can swing
-		# round past the side the post is on and run into it, the player saw: so try that side, then the other, then
-		# further back along the platform, and take the first spot the track stays 7 m clear of)
-		var clear_of_line := func(q: Vector3) -> bool:
-			for j in range(0, path.size(), 2): if Vector2(path[j].x - q.x, path[j].z - q.z).length() < 7.0: return false
-			return true
-		for tryi in [i, maxi(2, i - 8), maxi(2, i - 16), mini(path.size() - 3, i + 6)]:
-			var a2: Vector3 = path[maxi(0, tryi - 2)]; var b2: Vector3 = path[mini(path.size() - 1, tryi + 2)]; var yaw2 := atan2(b2.x - a2.x, b2.z - a2.z)
-			var sd := Vector3(cos(yaw2), 0, -sin(yaw2)); var al := Vector3(sin(yaw2), 0, cos(yaw2))
-			var placed := false
-			for sg in [side.dot(sd), -side.dot(sd)]:
-				var sdd: Vector3 = sd * signf(sg if sg != 0.0 else 1.0)
-				if clear_of_line.call(path[tryi] + sdd * 8.6 - al * 1.5): i = tryi; side = sdd; alg = al; placed = true; break
-			if placed: break
-		s.geo = {"i": i, "side": side, "along": alg, "plat": path[i] + side * 2.4, "post": path[i] + side * 8.6 - alg * 1.5}
-		world.exclusions.append({"x": s.geo.post.x, "z": s.geo.post.z, "r": 6.5})
-		if s.land == "breaks": # (your gold claim, if you file one: claim.js)
-			s.geo.claim = path[i] + side * 11.0 - alg * 17.0; world.exclusions.append({"x": s.geo.claim.x, "z": s.geo.claim.z, "r": 9.5})
+		for j in range(0, path.size(), 4): if path[j].distance_to(st.at) < path[k].distance_to(st.at): k = j
+		var side: Vector3 = Vector3(st.at.x - path[k].x, 0, st.at.z - path[k].z).normalized() # (its front toward the line)
+		var alg := Vector3(-side.z, 0, side.x)
+		st.geo = {"i": k, "side": side, "along": alg, "plat": st.at, "post": st.at}
+		world.exclusions.append({"x": st.at.x, "z": st.at.z, "r": 7.5})
+		if st.land == "breaks": # (your gold claim, if you file one: claim.js)
+			st.geo.claim = st.at + side * 6.0 - alg * 17.0; world.exclusions.append({"x": st.geo.claim.x, "z": st.geo.claim.z, "r": 9.5})
+
+## Where the line ends, out along dir: as far as reach on open, dry, low ground, clear of the town (a little either side
+## of dir, then nearer, till one is found).
+static func _open_end(from: Vector3, dir: Vector3, reach: float, ok: Callable) -> Vector3:
+	for d in [reach, reach * 0.85, reach * 0.7, reach * 0.55, reach * 0.4]:
+		for ang in [0.0, 0.25, -0.25, 0.5, -0.5]:
+			var u := dir.rotated(Vector3.UP, ang); var q: Vector3 = from + u * d
+			if not Terrain.is_water(q.x, q.z) and Terrain.range_at(q.x, q.z) < 0.03 and ok.call(q): return Vector3(q.x, 0, q.z)
+	return from + dir * 200.0
+
+static func _perms(a: Array) -> Array:
+	if a.size() <= 1: return [a.duplicate()]
+	var out := []
+	for i in a.size():
+		var rest := a.duplicate(); var x = rest.pop_at(i)
+		for p in _perms(rest): out.append([x] + p)
+	return out
 
 ## A stop's ground: open country, no mountain within a stone's throw.
 static func _open_ground(x: float, z: float) -> bool:
@@ -171,9 +167,17 @@ func _grade() -> void:
 	for q in tail: pts.append(Vector3(q.x, maxf(0.5, g[0]), q.z)) # (the line on past the depot, level with it)
 	Terrain.set_railbed(pts)
 
-static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
-	var x0 := minf(a.x, b.x) - 240.0; var z0 := minf(a.z, b.z) - 240.0
-	var w := int((absf(a.x - b.x) + 480.0) / CELL) + 1; var h := int((absf(a.z - b.z) + 480.0) / CELL) + 1
+static var fallbacks := 0  ## (legs that found no way round and were laid straight: the layout test counts them)
+## A leg round everything: tried in a 240 m margin, then 480 m, then (last) without keeping off the line already laid.
+static func _route(a: Vector3, b: Vector3, avoid: Array, laid: Array = []) -> Array:
+	for t in [[240.0, false], [480.0, false], [480.0, true]]:
+		var r := _route_in(a, b, avoid, laid, t[0], t[1])
+		if not r.is_empty(): return r
+	fallbacks += 1
+	return []
+static func _route_in(a: Vector3, b: Vector3, avoid: Array, laid: Array, margin: float, soft := false) -> Array:
+	var x0 := minf(a.x, b.x) - margin; var z0 := minf(a.z, b.z) - margin
+	var w := int((absf(a.x - b.x) + margin * 2.0) / CELL) + 1; var h := int((absf(a.z - b.z) + margin * 2.0) / CELL) + 1
 	var g := AStarGrid2D.new(); g.region = Rect2i(0, 0, w, h); g.cell_size = Vector2(CELL, CELL)
 	g.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES; g.update()
 	var cell := func(p: Vector3) -> Vector2i: return Vector2i(clampi(int((p.x - x0) / CELL), 0, w - 1), clampi(int((p.z - z0) / CELL), 0, h - 1))
@@ -187,6 +191,19 @@ static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
 			for av in avoid: if Vector2(x - av[0].x, z - av[0].z).length() < av[1]: blocked = true
 			if blocked: g.set_point_solid(c, true)
 			elif Terrain.is_water(x, z): g.set_point_weight_scale(c, 3.0)
+	# the line already laid: 14 m either side of it is out of bounds (no crossing, no running alongside), save
+	# where this leg sets off from it
+	for q in laid:
+		if Vector2(q.x - a.x, q.z - a.z).length() < 8.0: continue
+		var cq: Vector2i = cell.call(q)
+		for dj in range(-1, 2):
+			for di in range(-1, 2):
+				var c := Vector2i(cq.x + di, cq.y + dj)
+				if c.x < 0 or c.y < 0 or c.x >= w or c.y >= h or c == ca or c == cb: continue
+				var cx := x0 + (c.x + 0.5) * CELL; var cz := z0 + (c.y + 0.5) * CELL
+				if Vector2(cx - q.x, cz - q.z).length() < 14.0:
+					if soft: g.set_point_weight_scale(c, 40.0) # (last try: across it only where there's no other way)
+					else: g.set_point_solid(c, true)
 	var ids := g.get_id_path(ca, cb)
 	if ids.size() < 2: return []
 	var pts := []
@@ -354,20 +371,14 @@ func _make_depot() -> void:
 		house.scale = Vector3.ONE * (7.0 / maxf(bb.size.x, bb.size.z)); house.position = Vector3(0, 0, -1.4); g.add_child(house)
 	var sign := Town.card([[-2.1, 0], [2.1, 0.02], [2.15, 0.62], [-2.1, 0.6]], "res://assets/baked/rail/depot_sign", 0.04); sign.position = Vector3(5.2, 2.1, 4.6); g.add_child(sign)
 	for x in [3.3, 7.1]: g.add_child(_box(0.14, 2.6, 0.14, Vector3(x, 1.3, 4.6), wood()))
-	var a: Vector3 = path[0]; var b: Vector3 = path[6]; var yaw := atan2(b.x - a.x, b.z - a.z); var side := Vector3(cos(yaw), 0, -sin(yaw))
+	var a: Vector3 = path[depot_i]; var b: Vector3 = path[depot_i + 6]; var yaw := atan2(b.x - a.x, b.z - a.z); var side := Vector3(cos(yaw), 0, -sin(yaw))
 	g.rotation.y = yaw + PI / 2.0 # (its front and platform toward the track)
-	var p: Vector3 = path[3] - side * 5.4; g.position = Vector3(p.x, y, p.z)
+	var p: Vector3 = path[depot_i + 3] - side * 5.4; g.position = Vector3(p.x, y, p.z)
 	add_child(g); depot_group = g
 
 ## A whistle-stop: a short plank platform beside the line and a name board on two posts; and its trading post.
 func _make_stop(s: Dictionary) -> void:
-	var side: Vector3 = s.geo.side; var p: Vector3 = s.geo.plat; var y := Terrain.get_height(p.x, p.z)
-	var g := Node3D.new()
-	g.add_child(_box(2.4, 0.25, 6, Vector3(0, 0.12, 0), wood()))
-	for z in [-2.2, 2.2]: g.add_child(_box(0.12, 2.2, 0.12, Vector3(0.9, 1.1, z * 0.45), wood()))
-	var board := Town.card([[-1.2, 0], [1.2, 0.02], [1.22, 0.42], [-1.2, 0.4]], "res://assets/baked/rail/stop_" + s.land, 0.04); board.position = Vector3(0.9, 2.0, 0); board.rotation.y = -PI / 2.0; g.add_child(board) # (read from the track)
-	g.position = Vector3(p.x, y, p.z); g.rotation.y = atan2(side.x, side.z) - PI / 2.0 # (lookAt the outside, then a quarter turn: deck along the track, the board facing it)
-	add_child(g); s.platform = p; s.stand = path[s.geo.i]
+	s.platform = s.geo.post; s.stand = path[s.geo.i] # (no platform now: the train calls only at town)
 	_make_post(s)
 
 ## The trading post behind a whistle-stop: a little cottage store facing the track, a barrel and crates, a plank walk

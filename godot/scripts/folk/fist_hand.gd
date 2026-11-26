@@ -6,7 +6,7 @@ extends SkeletonModifier3D
 
 var bone := -1
 var on := false
-var k := 0.45
+var k := 0.6
 var _was := false
 
 func _process_modification_with_delta(_delta: float) -> void: _fist()

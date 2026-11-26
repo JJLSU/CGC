@@ -39,6 +39,7 @@ func update(dt: float, speed: float, air: bool, swim: bool) -> bool:
 	swinging = swing >= 0.0
 	casting = maxf(0.0, casting - dt)
 	var pose = "sit" if (riding or seated) else ("cast" if casting > 0.0 else ("swing" if swing >= 0.0 else null))
+	fig.ground_feet = not (riding or seated or swim) # (a rider's or swimmer's feet hang below him)
 	fig.update(dt, 0.0 if (riding or seated) else speed, pose)
 	_show_tools(swim)
 	if floori(fig.phase / PI) != prev_step and speed > 0.8 and not air and not swim: stepped = true
@@ -53,7 +54,7 @@ func update(dt: float, speed: float, air: bool, swim: bool) -> bool:
 # ------------------------------------------------------------------ the tools in his fist (avatar.js)
 var tools_by := {}        ## id -> Node3D (axe, pick, hammer, spear, rod, bow, revolver, rifle)
 var grip := Node3D.new()
-var grip_along := 0.075  ## the haft crosses the hand this far down the hand bone from the wrist (mid-palm; the rigs have no fingers to curl)
+var grip_along := 0.05   ## the haft crosses the hand this far down the hand bone from the wrist (mid-palm of the shortened hand)
 var fist_mod: FistHand   ## shortens the open fingers under the made fist while he holds a tool
 var blade_flip := true   ## the made axes' blades leading (the player: they were on backwards)
 var grip_palm := -0.035  ## and this far across it, into the palm (the hand's -z: +0.035 had it lying on the back of his hand)
@@ -122,13 +123,8 @@ func _build_tools() -> void:
 	# his fist closed round the haft, in his skin tone: the four fingers' block wrapped round it (the haft through its
 	# middle, along z), the knuckles a step proud, and the thumb across the front
 	fist = Node3D.new(); grip.add_child(fist)
-	# his fingers closed round the haft: a rounded wrap of the hand's own skin tone over the (shortened) open fingers,
-	# the knuckles a ridge on top, the thumb across the front
-	var skin := 0xe9b49a
-	var wrap := MeshInstance3D.new(); var cap := CapsuleMesh.new(); cap.radius = 0.05; cap.height = 0.14; cap.radial_segments = 8; cap.rings = 2
-	wrap.mesh = cap; wrap.material_override = _mat(skin); wrap.rotation.x = PI / 2.0; fist.add_child(wrap) # (along the haft: the four fingers side by side)
-	fist.add_child(_piece(_box(0.02, 0.03, 0.1), Transform3D(Basis(), Vector3(0.0, 0.035, 0.0)), 0xd8a088))
-	fist.add_child(_piece(_cyl(0.014, 0.016, 0.06, 6), Transform3D(Basis(Vector3.BACK, 0.9) * _rx(0.2), Vector3(-0.03, -0.02, 0.05)), skin))
+	# (nothing drawn for the fist: his own hand holds it, its open fingers drawn in short round the haft by fist_mod; a
+	# made fist of skin-coloured card read as a lump stuck to his wrist, the player saw)
 	# the quiver across his back once he has a bow: a stitched leather tube with three arrows' fletchings peeping out
 	var tube := _cyl(0.08, 0.068, 0.62, 10); tube.cap_top = false
 	quiver.add_child(_piece(tube, Transform3D.IDENTITY, 0x7a4a26))
@@ -188,17 +184,17 @@ func _wear_quiver() -> void:
 func _aim_guns() -> void:
 	var gun: Node3D = tools_by.revolver if tools_by.revolver.visible else (tools_by.rifle if tools_by.rifle.visible else null)
 	if gun == null and _made_on != null and _made_on.get_parent() == root: gun = _made_on
-	if gun == null or _hand_i < 0: fist.transform = Transform3D.IDENTITY; return
-	var gp := _bone_xf(_hand_i).origin
-	if _fore_i >= 0: gp += (gp - _bone_xf(_fore_i).origin).normalized() * (0.04 if aiming else 0.045) # (the grip in his palm, not out past the fingers)
+	if gun == null or _hand_i < 0: return
+	var hx := _bone_xf(_hand_i); var hq := hx.basis.orthonormalized()
+	var palm: Vector3 = hx.origin + hq.y * grip_along + hq.z * grip_palm # (the middle of his palm, as for a haft)
 	# carried: the six-shooter pointing a little down; the rifle upright (the player: held vertical till he's ready to
 	# shoot), its stock down by his hip; raised level to aim
 	var rifle_like: bool = gun == tools_by.rifle or (gun == _made_on and made.get("rifle") == _made_on)
-	gun.position = root.to_local(gp); gun.rotation = Vector3(-0.05 if aiming else (-1.4 if rifle_like else 0.35), 0, 0) # (the rifle stood upright in his fist, muzzle skyward, till he aims: the player's ask)
-	# his fist round the gun's own grip (the player: the gun sat above his hand), angled down the grip, not across it
+	gun.rotation = Vector3(-0.05 if aiming else (-1.4 if rifle_like else 0.35), 0, 0) # (the rifle stood upright in his fist, muzzle skyward, till he aims: the player's ask)
+	# the gun's own grip set in his palm (the player: it rode at his wrist, the hand hanging open below it)
 	var made_gun: bool = gun == _made_on
 	var at := Vector3(0, -0.012, -0.035) if made_gun else (Vector3(0, -0.04, -0.12) if rifle_like else Vector3(0, -0.06, -0.01))
-	fist.global_transform = gun.global_transform * Transform3D(Basis(Vector3.RIGHT, 1.9), at)
+	gun.global_position = palm - gun.global_basis * at
 
 # ------------------------------------------------------------------ the made tools (the player's tools-and-weapons set, through Meshy)
 ## The stone, iron and steel axes and pickaxes, the spear and the guns as their own models (assets/models/props/prop_tool_*,

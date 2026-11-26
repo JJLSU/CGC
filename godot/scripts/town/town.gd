@@ -291,18 +291,19 @@ func _init(w: World, home: Vector3) -> void:
 ## The cross streets (the player: cross streets at each end): at CROSS_N beyond the church's back and CROSS_S
 ## before Squatters' Row, run across the town; each new street adds its stretch out from its neighbour, and the
 ## railroad the last stretch out to the depot. Torn ochre sheets like the streets, in pieces of at most 40 m.
-const CROSS_N := 31.0
+const CROSS_N := 36.0 # (behind the church's back: at 31 the player found the church standing in it)
 const CROSS_S := -29.0
+const CROSS_HW := 4.6 ## (half its width; its sides straight, where the streets end flush against them)
 func cross_sheet(o0: float, o1: float, cs: float) -> void:
 	var a := minf(o0, o1); var b := maxf(o0, o1)
 	var n := maxi(1, ceili((b - a) / 40.0)); var L := (b - a) / n
 	for i in n:
 		var mid := a + L * (i + 0.5)
-		var hl := L / 2.0 + 0.6
-		var sheet := card([[-4.4, -hl], [4.5, -hl], [4.8, -hl / 3.0], [4.3, hl / 3.0], [4.7, hl], [-4.5, hl], [-4.1, hl / 3.0], [-4.8, -hl / 3.0]], "street_new", 0.03, 0.45)
+		var hl := L / 2.0 # (pieces end to end, flush; straight sides at the streets' ends)
+		var sheet := card([[-CROSS_HW, -hl], [CROSS_HW, -hl], [CROSS_HW, hl], [-CROSS_HW, hl]], "street_new", 0.03, 0.45)
 		sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0
 		var holder := Node3D.new(); holder.add_child(sheet); holder.rotation.y = atan2(toward.x, toward.z)
-		var p: Vector3 = at + along * cs + toward * mid; holder.position = Vector3(p.x, y0 + 0.025, p.z); add_child(holder)
+		var p: Vector3 = at + along * cs + toward * mid; holder.position = Vector3(p.x, y0 + 0.03, p.z); add_child(holder) # (level with the streets)
 
 ## Place obj at s along the street, side ±1, facing the street's centre line (street: its offset across from Main).
 func place(obj: Node3D, s: float, side: int, offset := 0.0, street_off := 0.0) -> Vector3:
@@ -322,7 +323,9 @@ func _colliders(b: Dictionary, off: float, two: bool) -> void:
 		if two: world.colliders.append({"x": c.x + toward.x * b.side * b.d * 0.3, "z": c.z + toward.z * b.side * b.d * 0.3, "r": r})
 
 func street_sheet(tex: String) -> Node3D:
-	var sheet := card([[-4.6, -27], [4.6, -27], [5.2, -10], [4.4, 8], [5.0, 27], [-4.8, 27], [-4.2, 10], [-5.0, -9]], tex, 0.03, 0.45)
+	# (it ends square at the cross streets' near edges, flush with them: no overlap to flicker, the player saw)
+	var e0 := -(CROSS_N - CROSS_HW); var e1 := -(CROSS_S + CROSS_HW) # (the card's +y runs down -along once laid flat and turned)
+	var sheet := card([[-4.6, e0], [4.6, e0], [5.2, -10], [4.4, 8], [4.6, e1], [-4.6, e1], [-4.2, 10], [-5.0, -9]], tex, 0.03, 0.45)
 	sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0
 	var holder := Node3D.new(); holder.add_child(sheet); holder.rotation.y = atan2(along.x, along.z)
 	return holder

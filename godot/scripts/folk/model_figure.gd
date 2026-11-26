@@ -105,6 +105,34 @@ func update(dt: float, speed := 0.0, pose = null) -> void:
 	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0)); _ex_left = 0.0
 	else: _idle_life(dt)
 	_work_tool_show() # (after the clip's chosen: shown for the swing, put away the moment it ends)
+	_keep_feet(dt, pose)
+
+## Feet on the ground (the player: some folks' feet were in it): a few of the clips drop the hips, sinking the soles
+## through the floor in a wide stance; each frame the lowest toe is measured and the body lifted just enough that the
+## soles rest on the ground under the figure. Never pulled down; not while sitting (or, for the farmer, riding, swimming).
+var ground_feet := true
+var _toes: Array = []
+var _lift := 0.0
+func _keep_feet(dt: float, pose) -> void:
+	if skeleton == null or not root.is_inside_tree(): return
+	if _toes.is_empty():
+		for b in ["LeftToeBase", "RightToeBase", "LeftFoot", "RightFoot"]:
+			var i := skeleton.find_bone(b)
+			if i >= 0: _toes.append([i, 0.035 if b.ends_with("ToeBase") else 0.085]) # (the bone's point above the sole)
+		if _toes.is_empty(): _toes = [[-1, 0.0]]
+	if _toes[0][0] < 0: return
+	var want := 0.0
+	if ground_feet and pose != "sit":
+		var k := root.global_transform.basis.get_scale().y
+		# (each toe against whichever is higher under it: the figure's own footing, or the ground itself, so the uphill
+		# foot on a slope doesn't sink either)
+		for tb in _toes:
+			var q: Vector3 = (skeleton.global_transform * skeleton.get_bone_global_pose(tb[0])).origin
+			var floor_y := maxf(root.global_position.y, Terrain.get_height(q.x, q.z))
+			want = maxf(want, floor_y - (q.y - float(tb[1]) * k - _lift)) # (what it'd sink by, unlifted)
+		want = minf(want, 0.35 * k) # (a sane bound)
+	_lift = lerpf(_lift, want, minf(1.0, dt * 12.0))
+	body.position.y = _lift
 
 ## Things held in the hands at the figure's own size: Meshy's skeletons are in centimetres, so a hand holder on a
 ## bone sits at a world scale of 0.01 and a rifle or spear put in it shrank to nothing. Each frame the holders undo

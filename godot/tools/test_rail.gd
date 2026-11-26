@@ -37,15 +37,21 @@ func _initialize() -> void:
 	main.input.pressed["KeyE"] = true
 	for i in 3: await process_frame
 	var aboard: bool = TR.passenger and TR.state == "run" and R.freight == 0
+	# (one long line, one stop at town: she runs out to the far end and waits, back through town to the other end, and
+	# home. Skipped along: put near the far end, then near home on the last leg)
+	TR.s = TR.end - 6.0
 	t0 = Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < 120000 and TR.state != "dwell": await process_frame
-	var reached: bool = TR.state == "dwell"
+	while Time.get_ticks_msec() - t0 < 20000 and TR.state != "dwell": await process_frame
+	var reached: bool = TR.state == "dwell" and absf(TR.s - TR.end) < 0.5 and TR.passenger
+	TR.state = "run"; TR.leg = 2; TR.dir = 1; TR.s = TR.home_s() - 8.0
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 20000 and TR.state != "home": await process_frame
 	var stop = TR.stopped_at()
 	main.input.pressed["KeyE"] = true
 	for i in 3: await process_frame
 	var off: bool = not TR.passenger and stop != null and Vector2(p.pos.x - stop.platform.x, p.pos.z - stop.platform.z).length() < 2.0
 	# the trading post there
-	var st: Dictionary = R.stops[TR.at_stop] if TR.at_stop >= 0 else R.stops[0]
+	var st: Dictionary = R.stops[0] # (the trading posts stand out in the lands, off the line)
 	p.pos = st.door; p.pos.y = Terrain.get_height(st.door.x, st.door.z)
 	for i in 3: await process_frame
 	var post_prompt: String = main.beast_prompt
@@ -63,7 +69,7 @@ func _initialize() -> void:
 	main.sky.time = 0.4
 	for i in 3: await process_frame
 	var order = main.crafting.order_state()
-	print("built %s  board prompt [%s]  aboard %s  reached a stop %s  off at %s %s  post [%s] panel %s  rush order %s" % [built, prompt, aboard, reached, stop.name if stop else "-", off, post_prompt, traded, order])
+	print("built %s  board prompt [%s]  aboard %s  out to the end of the line and waiting %s  off at %s %s  post [%s] panel %s  rush order %s" % [built, prompt, aboard, reached, stop.name if stop else "-", off, post_prompt, traded, order])
 	var ok: bool = built and aboard and reached and off and traded and order != null
 	print("RAIL TEST ", "PASS" if ok else "FAIL")
 	quit()

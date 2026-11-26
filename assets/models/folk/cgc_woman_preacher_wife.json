@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_preacher_wife",
+  "height": 1.68,
+  "tris": 20096,
+  "tris_before": 20096,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

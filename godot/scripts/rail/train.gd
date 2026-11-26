@@ -22,6 +22,8 @@ var dir := 1
 var state := "home"
 var wait := 0.0
 var at_stop := -1
+var leg := 0          ## 0 out to the far end, 1 back through town to the near end, 2 home to the depot
+func home_s() -> float: return rr.depot_i * TIE
 var ran := -1
 var passenger := false
 var puffs := MultiMesh.new()
@@ -42,6 +44,7 @@ func _init(railroad: Railroad) -> void:
 	visible = false
 	# where along the line (metres) each whistle-stop's platform lies (worked out once the line is built)
 	end = (rr.path.size() - 1) * TIE
+	s = rr.depot_i * TIE # (she waits at the depot, beside the town)
 	# smoke from the stack: soft cream paper puffs
 	var pts := PackedVector2Array()
 	for i in 18:
@@ -53,7 +56,8 @@ func _init(railroad: Railroad) -> void:
 	for i in 24: pp.append({"age": 9.0, "pos": Vector3.ZERO, "s": 1.0})
 
 func _stops_s() -> void:
-	stop_s = []
+	stop_s = [-1.0] # (none: she calls only at the depot; the -1 just marks it worked out)
+	return
 	for st in rr.stops:
 		var target: Vector3 = st.get("stand", st.at); var k := 0
 		for j in rr.path.size(): if rr.path[j].distance_to(target) < rr.path[k].distance_to(target): k = j
@@ -75,13 +79,7 @@ func stopped_at():
 ## The coach's back platform, where a passenger stands to ride.
 func ride_point() -> Vector3: return (cars[3] as Node3D).to_global(Vector3(0.35, 0.83, -3.35))
 ## The next stop she'll draw up at, by name.
-func next_stop_name() -> String:
-	var best = null
-	for i in stop_s.size():
-		var sv: float = stop_s[i]
-		if (sv > s + 0.05) if dir > 0 else (sv < s - 0.05):
-			if best == null or ((sv < stop_s[best]) if dir > 0 else (sv > stop_s[best])): best = i
-	return rr.stops[best].name if best != null else "Cold Glitter Creek"
+func next_stop_name() -> String: return "Cold Glitter Creek" # (her only stop)
 ## All aboard from the depot: she leaves straight away.
 func depart() -> void:
 	if state == "home":
@@ -104,20 +102,14 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 		if run < 0: ran = -1
 	var moving := false
 	if state == "run":
-		var next = null # (the stop she has just left drops out; the one ahead stays till she reaches it)
-		for i in stop_s.size():
-			var sv: float = stop_s[i]
-			if (sv > s + 0.05) if dir > 0 else (sv < s - 0.05):
-				if next == null or ((sv < stop_s[next]) if dir > 0 else (sv > stop_s[next])): next = i
-		var target: float = stop_s[next] if next != null else (end if dir > 0 else 0.0)
-		var d := absf(target - s); var v := minf(SPEED, 0.6 + d * 0.5) # (easing into each stop)
+		# (one long line through the county, one stop, at town: out to one end, back through town to the other end, and
+		# home to the depot; a while at each end of the line)
+		var target: float = [end, 0.0, home_s()][leg]
+		var d := absf(target - s); var v := minf(SPEED, 0.6 + d * 0.5) # (easing in)
 		if d < 0.3:
 			s = target
-			if next == null and dir < 0: state = "home"
-			elif next == null: dir = -1; state = "dwell"; wait = DWELL
-			else:
-				state = "dwell"; wait = DWELL; at_stop = next
-				if dir > 0 and target >= end - 0.5: dir = -1
+			if leg == 2: state = "home"; leg = 0; dir = 1
+			else: state = "dwell"; wait = DWELL; leg += 1; dir = -1 if leg == 1 else 1
 		else: s += signf(target - s) * v * dt; moving = true
 	elif state == "dwell":
 		wait -= dt

@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_gaunt_old",
+  "height": 1.75,
+  "tris": 20518,
+  "tris_before": 20518,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_gaunt_redhead",
+  "height": 1.68,
+  "tris": 20408,
+  "tris_before": 20408,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

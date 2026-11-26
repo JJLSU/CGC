@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_preacher",
+  "height": 1.75,
+  "tris": 20489,
+  "tris_before": 20489,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

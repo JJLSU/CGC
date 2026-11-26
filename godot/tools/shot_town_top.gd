@@ -30,6 +30,15 @@ func _initialize() -> void:
 		cam.global_position = c - T.along * 70.0 + Vector3(0, T.y0 + 30.0 - c.y, 0); cam.look_at(c + Vector3(0, T.y0 - c.y, 0), Vector3.UP); cam.fov = 55.0
 		await process_frame; await process_frame; await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_low.png"))
+	if args.has("county"): # (the whole line from high up)
+		cam.global_position = c + Vector3(0, 900, 0) + T.toward * 0.01; cam.look_at(c, T.along); cam.fov = 70.0; cam.far = 3000.0
+		await process_frame; await process_frame; await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_county.png"))
+	if args.has("road"): # (a crossing up close: Main Street's north end)
+		var q: Vector3 = T.at + T.along * Town.CROSS_N
+		cam.global_position = q + T.toward * 9.0 - T.along * 10.0 + Vector3(0, T.y0 + 9.0 - q.y, 0); cam.look_at(q + Vector3(0, T.y0 - q.y, 0), Vector3.UP); cam.fov = 60.0
+		await process_frame; await process_frame; await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_road.png"))
 	if args.has("depot"): # (the depot and the yard across the track, from the town side and from above the yard)
 		var rr: Railroad = main.railroad; var dp: Vector3 = rr.depot; var yd: Vector3 = rr.yard
 		var tw := (yd - dp).normalized()

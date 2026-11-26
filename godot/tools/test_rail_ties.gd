@@ -27,9 +27,10 @@ func _initialize() -> void:
 	print("ties: worst |cos| between a tie and the track %.3f (0 = square across)" % worst)
 	var ok := worst < 0.05
 	# the cars on the move: tilt against the grade under them
-	TR.state = "run"; TR.dir = 1; TR.ran = -2; TR.s = 160.0 # (past the level run beside the town and its depot)
+	TR.state = "run"; TR.dir = 1; TR.ran = -2; TR.s = TR.home_s() + 220.0; TR.leg = 0 # (past the level run beside the town and its depot)
 	var max_tilt := 0.0; var worst_err := 0.0
 	for f in 600:
+		main.player.pos = TR.at(TR.s).pos + Vector3(6, 0, 6) # (the cars are only posed while you're near)
 		await process_frame
 		for c in TR.cars:
 			var fwd: Vector3 = (c as Node3D).basis.z.normalized()
