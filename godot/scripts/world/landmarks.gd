@@ -17,6 +17,7 @@ const CLIMB := {
 			{"foot": [3.3, 1.477, -0.9], "top": [2.75, 3.0075, -0.9], "land": [2.4, -1.0], "name": "the Belle's hurricane deck"}]},
 }
 
+const SCHOONER := "veh_conestoga_wreck_hoops"
 var info := {}
 var models := {}     ## kind -> {scene, json}
 var live := {}       ## site key -> {site, group, figure?, puppet?}
@@ -40,6 +41,12 @@ func _build(kind: String) -> Node3D:
 	Homestead.bake_materials(inst)
 	g.add_child(inst)
 	for m in M.json.models: # the reference-art models (the broken wagon, Asa's lean-to), placed as the web did
+		if kind == "schooner" and m.model == "veh_broken_wagon" and ResourceLoader.exists("res://assets/models/props/%s.glb" % SCHOONER):
+			# the lost schooner as the player's wrecked Conestoga (bare hoops, collapsed running gear), where the old one lay
+			var xf := Homestead._m(m.m)
+			var w := PaperMats.seated_axis(load("res://assets/models/props/%s.glb" % SCHOONER), 6.2, 0, false)
+			var hold := Node3D.new(); hold.transform = Transform3D(xf.basis.orthonormalized(), Vector3(xf.origin.x, 0.0, xf.origin.z)); hold.add_child(w); g.add_child(hold)
+			continue
 		var scene: PackedScene = load("res://assets/models/props/%s.glb" % m.model)
 		if scene == null: continue
 		var src := scene.instantiate(); PaperMats.paperize(src, false)
