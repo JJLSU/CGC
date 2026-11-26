@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_stripe",
+  "height": 1.68,
+  "tris": 20590,
+  "tris_before": 20590,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
