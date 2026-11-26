@@ -221,6 +221,7 @@ var saved_fullness = null
 
 func _ready() -> void:
 	get_tree().auto_accept_quit = false # (closing the window goes through _quit_game: saved, and the model loads finished first)
+	if OS.get_environment("CGC_SHOT") != "": _shot_hook.call_deferred(OS.get_environment("CGC_SHOT")) # (a check of the built game: see _shot_hook)
 	if OS.get_environment("CGC_QUIT_AT_MS") != "": get_tree().create_timer(float(OS.get_environment("CGC_QUIT_AT_MS")) / 1000.0).timeout.connect(_quit_game) # (a check: quit as the Quit button does, mid-load)
 	saved = _read_save() if saving else null
 	if saved == null and saving: world_seed = randi() & 0x7fffffff; world_ring = Vector2(60, 115) # (a new game: a county of its own, wild lands close by)
@@ -2633,7 +2634,7 @@ func _pets(dt: float, active: bool) -> void:
 	if _fort_officer(active): return
 	if jar_count and sky.night < 0.15: jar_count = 0; hud.toast("First light: you unscrew the lid and the lightning bugs drift off home.") # (the jar let go at dawn)
 	dog.day = sky.day
-	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
+	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": _danger_near() or enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
 	cat.update(dt, player, rig.camera, dog, sky.night, world.colliders)
 	var calf_r := calf.update(dt, sky.day, sky.time, player, rig.camera, world.colliders)
 	if calf_r.has("lost"): hud.toast("Daisy's calf slipped through the pasture rails in the night! Folks saw it heading off to the %s. Listen for it bawling." % calf_r.lost)
@@ -3228,3 +3229,47 @@ func _escort_update(dt: float) -> void:
 				if randf() < 0.75: hunting.on_target.call(best, {"dmg": 6})
 		elif spd > 0.3: r.rotation.y = lerp_angle(r.rotation.y, atan2(to.x, to.z), minf(1.0, dt * 6.0))
 		fig.update(dt, m.speed, null)
+
+## Old Blue's nose (his "danger" bark was ported but never fed): something hostile coming for you within 30 m: a
+## guardian or night prowler, a claim jumper on the chase, a riled fort, a boss in his fight, raiders, an angry camp.
+## The first time each day he gives the alarm, a word says so.
+var danger_told_day := -1
+var _danger_t := 0.0
+var _danger := false
+func _danger_near() -> bool:
+	_danger_t -= get_process_delta_time()
+	if _danger_t > 0.0: return _danger
+	_danger_t = 0.4
+	var p := player.pos
+	var near := func(q: Vector3) -> bool: return Vector2(q.x - p.x, q.z - p.z).length() < 30.0
+	var d := false
+	for e in enemies.list: if not e.dying and near.call(Enemies.pos(e)): d = true; break
+	if not d: for c in jumpers.camps: for m in c.men: if not m.dead and m.state == "chase" and near.call(m.fig.root.position): d = true; break
+	if not d: for b in bosses: if b.fighting(): d = true; break
+	if not d: for f in forts.forts: if f.angry and near.call(f.at): d = true; break
+	if not d: for c in camp.list: if c.alarm == "fight": d = true; break
+	if d and not _danger and danger_told_day != sky.day and not player.dead:
+		danger_told_day = sky.day; hud.toast("Old Blue's hackles go up and he barks: trouble's coming!")
+	_danger = d
+	return d
+
+## A check of the exported game itself (tests can't run there): CGC_SHOT="<file.png>|<ms>|<where>" stands the farmer at
+## <where> (a wayfarer's id, "church" with the town mended, or "home"), waits, saves a screenshot and quits. Only
+## with a throwaway CGC_SAVE_PATH.
+func _shot_hook(spec: String) -> void:
+	var a := spec.split("|"); var out := a[0]; var ms := int(a[1]) if a.size() > 1 else 6000; var where := a[2] if a.size() > 2 else "home"
+	if OS.get_environment("CGC_SAVE_PATH") == "" or OS.get_environment("CGC_SAVE_PATH").contains("paperfjord.builds"): return
+	force_active = true; sky.time = 0.45; weather.rain = 0.0
+	var spot: Vector3 = homestead.spawn; var look := 0.0
+	if where == "church":
+		for b in Town.BUILDINGS: town.mend(b.id)
+		town.mend("church"); spot = town.doors.church + town.along * 5.0
+	else:
+		for w in wayfarers.camps: if w.kind.id == where: spot = w.at + Vector3(4.5, 0, 4.5); look = 0.8
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < ms:
+		player.pos = Vector3(spot.x, Terrain.get_height(spot.x, spot.z), spot.z); rig.yaw = look; rig.pitch = 0.25; rig.dist = 10.0
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	get_viewport().get_texture().get_image().save_png(out)
+	Shutdown.quit(get_tree())
