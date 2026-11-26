@@ -72,7 +72,7 @@ const TOWNSFOLK := {
 	"cn_boarding": {"new": "cgc_woman_cn_sultry", "model": "trades_2", "hue": 1.4, "with": [{"new": "cgc_man_cn_olive", "model": "prospectors_1", "at": -2.5, "out": 0.6, "turn": 0.35},
 		{"new": "cgc_girl_cn", "model": "townsfolk_4", "at": 3.2, "out": 0.5, "turn": -0.4}]},
 	"bakery": {"new": "cgc_woman_stripe", "model": "trades_6"},
-	"church": {"at": 2.2, "pose": "clipboard", "model": "trades_1", "with": [{"model": "trades_2", "at": -3.3, "out": 0.6, "turn": -0.3}]},
+	"church": {"at": 2.2, "new": "cgc_man_preacher", "model": "trades_1", "with": [{"new": "cgc_woman_preacher_wife", "model": "trades_2", "at": -3.3, "out": 0.6, "turn": -0.3}]}, # (the player's frontier preacher and his prim wife)
 }
 const MEND_TEXT := {
 	"store": "Planks off the windows, a fresh coat of buff paint, a new sign: GENERAL MDSE. The storekeeper sweeps the boardwalk and sets out a barrel of crackers.",
@@ -278,6 +278,19 @@ func _init(w: World, home: Vector3) -> void:
 			var hut := tent(rng); var p := place(hut, s, side, -0.8); hut.rotation.y += (rng.next() - 0.5) * 0.35
 			squat.append(p - toward * side * 1.5) # (a spot out front, by the cookfire)
 			world.colliders.append({"x": p.x + toward.x * side * 1.2, "z": p.z + toward.z * side * 1.2, "r": 1.5})
+	# the Row's own people (the player's gaunt townsfolk in rags): about the cookfires from the start, beside the spots
+	# where settlers who come to live here will stand
+	var rag := ["cgc_man_gaunt_old", "cgc_woman_gaunt_elder", "cgc_man_gaunt_young", "cgc_woman_gaunt_young", "cgc_woman_gaunt_redhead"]
+	var ri := 0
+	for nm in rag:
+		if ri >= squat.size() or not ModelFigure.has_folk(nm): continue
+		var q: Vector3 = squat[ri * 2 % squat.size()] + along * 1.7
+		var side := 1.0 if (q - at).dot(toward) > 0.0 else -1.0
+		var f := ModelFigure.new(nm); f.t = ri * 1.3
+		var rface := atan2(-toward.x * side, -toward.z * side) + (rng.next() - 0.5) * 0.8 # (toward the lane, give or take)
+		f.root.position = Vector3(q.x, y0, q.z); f.root.rotation.y = rface; add_child(f.root)
+		folk["row_%d" % ri] = {"fig": f, "pose": null, "face": rface}
+		ri += 1
 	var sp: Vector3 = at + along * -31.0 + toward * -3.6
 	var sg := Node3D.new(); var rs := card([[-1.0, 0], [1.05, 0.05], [1.0, 0.5], [-1.05, 0.48]], "rowsign"); rs.position.y = 1.1; rs.rotation.z = -0.06; sg.add_child(rs); sg.add_child(posts([0.0]))
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
