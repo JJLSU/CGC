@@ -12,7 +12,8 @@ func _initialize() -> void:
 	main.force_active = true; main.sky.time = 0.45; main.weather.rain = 0.0
 	for i in 20: await process_frame
 	var E: Enemies = main.enemies; var p: Player = main.player
-	var base: Vector3 = main.spawn + Vector3(30, 0, -30)
+	var base: Vector3 = main.spawn - (main.town.at - main.spawn).normalized() * 45.0 # (away from town)
+	base.y = 0
 	var ok := true
 	var args := OS.get_cmdline_user_args()
 	var spawned := []

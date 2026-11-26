@@ -6,6 +6,7 @@ var rig: CameraRig
 var sky: DaySky
 var weather: Weather
 var storm: Storm
+var rattlers: Rattlers
 var night_sky: NightSky
 var ice := 0.0
 var mist: Mist
@@ -369,6 +370,14 @@ func _ready() -> void:
 	ducks = Ducks.new(); add_child(ducks) # (a mallard and her ducklings on the nearest pond)
 	ducks.on_quack = func(d: float) -> void: if d < 40.0: sound.quack(maxf(0.15, 1.0 - d / 40.0))
 	ducks.on_ring = func(x: float, z: float, sz: float) -> void: wade_rings.ring(x, z, sz)
+	rattlers = Rattlers.new(); add_child(rattlers) # (rattlesnakes coiled about the Redrock Breaks)
+	rattlers.on_rattle = func(_p) -> void:
+		for i in 4: sound.play("click", 0.6, i * 0.07)
+		if not met_keepers.has("rattler"): met_keepers["rattler"] = true; hud.toast("A dry rattle in the rocks: a RATTLESNAKE, coiled and buzzing. Back off, or kill it with a blow before it strikes.")
+	rattlers.on_strike = func(_p) -> void:
+		var out := player.hurt(10, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.bite()
+		hud.toast("The rattler strikes! A snakebite, and it slithers off into the rocks.")
+		if out: death_timer = 3.0
 	tumbleweeds = Tumbleweeds.new(); add_child(tumbleweeds) # (dry brush bowling down the wind in town and the Breaks)
 	frogs = Frogs.new(); add_child(frogs) # (on the lily pads)
 	frogs.on_croak = func(v: float) -> void: sound.croak(v)
@@ -671,6 +680,7 @@ func _process(dt: float) -> void:
 	_pm("wade_rings.update")
 	ducks.update(dt, player, rig.camera, sky.night < 0.4 and weather.rain < 0.5, dog.pos)
 	_pm("ducks.update")
+	rattlers.update(dt, player, sky.day)
 	tumbleweeds.update(dt, player, weather.rain < 0.1 and sky.night < 0.4 and (Vector2(player.pos.x - town.at.x, player.pos.z - town.at.z).length() < 75.0 or Tumbleweeds.dry_at(player.pos.x, player.pos.z)), world.colliders) # (in the dry country, and down Main Street)
 	_pm("tumbleweeds.update")
 	frogs.update(dt, world, player, rig.camera, sky.night, weather.snow)
@@ -1660,6 +1670,9 @@ func _gather(active: bool, connected: bool) -> void:
 	elif connected and camp_t != null:
 		blow(); sound.chop(); camp.damage(camp_t, maxi(2, edge("enemy")), camp_hooks, raid_hooks)
 		confetti.burst(NativeCamps.Camp.wpos(camp_t) + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
+	elif connected and target == null and rattlers.hit(player.pos, player.forward(), Player.REACH + (0.9 if held == "spear" else 0.0)):
+		blow(); sound.chop(); inventory.pelt = inventory.get("pelt", 0) + 1
+		hud.toast("You kill the rattlesnake before it can strike, and take its skin (a pelt).")
 	elif connected and piece_t != null and target == null:
 		var pc: Dictionary = piece_t.piece; var stone: bool = pc.type in STONE_PIECES
 		var pr := build.damage(pc, maxi(1, edge("stonepiece" if stone else "tree")), inventory)
