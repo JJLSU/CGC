@@ -32,7 +32,10 @@ ACTIONS = {
 # the warriors also shoot, fight and run (on top of everything the folk do), and ride with the sit clip
 WARRIOR_ACTIONS = {'shoot': 224, 'attack': 4, 'run': 14}  # Archery Shot, Attack, Run 2
 WARRIORS = {'folk_native_warrior', 'folk_native_archer', 'folk_native_hunter'}
-CHILDREN = {'folk_native_girl': 1.25, 'townsfolk_4': 1.25, 'trades_4': 1.3, 'folk_jim': 1.95, 'folk_amos': 1.95}  # height in metres where it isn't an adult's 1.75 (children; the big men)
+# the bosses (Cold Glitter Creek's boss battles) fight too: an attack, a run, and the heavy swing doubles as a slam
+BOSSES = {'boss_jebediah', 'boss_lumberjack', 'boss_tycoon', 'boss_spirit'}
+BOSS_ACTIONS = {'attack': 4, 'run': 14}
+CHILDREN = {'boss_jebediah': 2.0, 'boss_lumberjack': 2.0, 'boss_tycoon': 1.9, 'boss_spirit': 2.1, 'folk_native_girl': 1.25, 'townsfolk_4': 1.25, 'trades_4': 1.3, 'folk_jim': 1.95, 'folk_amos': 1.95}  # height in metres where it isn't an adult's 1.75 (children; the big men)
 # four-legged animals get Meshy's quadruped rig (walk and run); props, plants, rocks, birds and frogs are static models
 QUADRUPEDS = {'animal_bison', 'animal_horse', 'animal_donkey', 'animal_dog', 'animal_cat', 'animal_coyote', 'animal_fox', 'animal_rabbit',
               'animal_cow', 'animal_calf', 'animal_ox', 'animal_sheep', 'animal_deer', 'animal_boar', 'animal_beaver', 'animal_hodag', 'animal_wampus', 'animal_babe', 'animal_gouger'}
@@ -108,7 +111,7 @@ def run(name):
         st['rig'] = call('POST', '/rigging', {'input_task_id': st['model'], 'height_meters': CHILDREN.get(name, 1.75)})['result']; save()
     t = wait(f'/rigging/{st["rig"]}', 'rig')
     if not os.path.exists(os.path.join(d, 'rigged.glb')): download(t['result']['rigged_character_glb_url'], os.path.join(d, 'rigged.glb'))
-    acts = {**ACTIONS, **(WARRIOR_ACTIONS if name in WARRIORS else {})}
+    acts = {**ACTIONS, **(WARRIOR_ACTIONS if name in WARRIORS else {}), **(BOSS_ACTIONS if name in BOSSES else {})}
     if 'anim' not in st:
         st['anim'] = call('POST', '/animations', {'rig_task_id': st['rig'], 'action_ids': list(acts.values())})['result']; save()
     t = wait(f'/animations/{st["anim"]}', 'animations')
