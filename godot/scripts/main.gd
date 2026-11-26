@@ -3227,8 +3227,7 @@ func _hire_escort(f: Dictionary) -> void:
 		var nm: String = ArmyForts.SOLDIERS[(i + 2) % ArmyForts.SOLDIERS.size()]
 		if not ModelFigure.has_folk(nm): nm = ArmyForts.STAND_INS[i]
 		var fig := ModelFigure.new(nm); fig.borrow_clip("run", "folk_native_warrior")
-		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
-		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); fig.hands[1].add_child(rifle)
+		var rifle := ArmyForts.rifle(); fig.hands[1].add_child(rifle)
 		var p0: Vector3 = player.pos + Vector3((i - 0.5) * 2.0, 0, 2.0); p0.y = Terrain.get_height(p0.x, p0.z)
 		fig.root.position = p0; add_child(fig.root)
 		escort.append({"fig": fig, "cool": 1.0 + i * 0.8, "speed": 0.0, "side": (i - 0.5) * 2.4})

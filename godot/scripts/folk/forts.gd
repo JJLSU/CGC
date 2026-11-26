@@ -61,6 +61,20 @@ func setup(home: Vector3, avoid: Array, world: World = null) -> void:
 					if side == 0 and absf(u) < 3.2: continue # (the gate)
 					world.colliders.append({"x": q.x, "z": q.z, "r": 0.75})
 
+## A trooper's rifle in his fist, held at his side muzzle up: the player's Meshy single-shot rifle (as the farmer's),
+## else a plain stick of a rifle.
+static var _rifle_scene: PackedScene = null
+static func rifle() -> Node3D:
+	if _rifle_scene == null and ResourceLoader.exists("res://assets/models/props/prop_gun_rifle_single.glb"): _rifle_scene = load("res://assets/models/props/prop_gun_rifle_single.glb")
+	if _rifle_scene:
+		var m := _rifle_scene.instantiate() as Node3D; PaperMats.paperize(m, false)
+		var k := 1.15 / 1.9 # (the models come 1.9 m long; it lies along x, muzzle at -x)
+		m.transform = Transform3D(Basis(Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)) * k, Vector3(0, -0.28 * k, 0.04)) # (its length up the hand's line, muzzle up, the stock's wrist in the fist)
+		var g := Node3D.new(); g.add_child(m); return g
+	var r := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); r.mesh = rm
+	r.material_override = PaperMats.paper(Color("4a3a2c")); r.rotation.x = PI / 2.0; r.position = Vector3(0, 0.05, 0.1)
+	return r
+
 ## A point on the stockade: side 0 faces the gate's way (toward home), then round; u along it from -SIDE/2.
 static func _wall_point(at: Vector3, fx: Vector3, fz: Vector3, side: int, u: float) -> Vector3:
 	var h := SIDE / 2.0
@@ -173,6 +187,7 @@ func _build(f: Dictionary) -> void:
 	place.call("bldg_barn", 11.0, -10.5, -1.0, PI / 2.0)                 # the barracks and stables
 	place.call("bldg_jail_restored", 6.5, 10.5, 4.0, -PI / 2.0)          # the guardhouse
 	place.call("prop_watertower", 4.0, 11.5, -9.5, 0.0)
+	place.call("prop_gun_gatling", 2.4, 6.0, 13.0, PI / 2.0)              # the Gatling gun inside the gate, its barrels on the way in
 	place.call("veh_covered_wagon", 5.0, 9.0, 11.5, PI * 0.6)
 	place.call("prop_cart", 2.6, -11.0, 11.0, 0.4)
 	for c in [[-5.5, 9.0], [-6.8, 10.2], [5.5, -6.5]]: place.call("prop_crates", 1.5, c[0], c[1], rng.next())
@@ -196,8 +211,7 @@ func _build(f: Dictionary) -> void:
 		if stand_in: nm = STAND_INS[i % STAND_INS.size()]
 		var fig := ModelFigure.new(nm, {"hue": 3.6} if stand_in else {}) # (townsmen in borrowed blue, till the troopers' own figures come)
 		fig.borrow_clip("run", "folk_native_warrior"); fig.work_tool = "axe" # (at chores, splitting wood)
-		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
-		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); if pst[2] != "chores": fig.hands[1].add_child(rifle) # (the man at chores has his axe instead)
+		var rifle := ArmyForts.rifle(); if pst[2] != "chores": fig.hands[1].add_child(rifle) # (the man at chores has his axe instead)
 		else: rifle.free() # (held at the side, muzzle up, as the pick handles are)
 		var hm := at + fx * float(pst[0]) + fz * float(pst[1])
 		fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); fig.root.rotation.y = face
@@ -326,8 +340,7 @@ func _patrol_build(pt: Dictionary) -> void:
 		var nm: String = SOLDIERS[(i + forts.find(pt.fort)) % SOLDIERS.size()]
 		if not ModelFigure.has_folk(nm): nm = STAND_INS[i]
 		var fig := ModelFigure.new(nm)
-		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
-		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); fig.hands[1].add_child(rifle)
+		var rifle := ArmyForts.rifle(); fig.hands[1].add_child(rifle)
 		var h := Puppet.new("horse", 1.7)
 		add_child(h.group); add_child(fig.root)
 		pt.riders.append({"fig": fig, "horse": h})
