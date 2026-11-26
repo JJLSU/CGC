@@ -176,16 +176,64 @@ func _wear_quiver() -> void:
 ## The gun in hand rides at the hand in the body's own frame: carried pointing ahead and down, raised level while aiming.
 func _aim_guns() -> void:
 	var gun: Node3D = tools_by.revolver if tools_by.revolver.visible else (tools_by.rifle if tools_by.rifle.visible else null)
+	if gun == null and _made_on != null and _made_on.get_parent() == root: gun = _made_on
 	if gun == null or _hand_i < 0: return
 	var gp := _bone_xf(_hand_i).origin
 	if _fore_i >= 0: gp += (gp - _bone_xf(_fore_i).origin).normalized() * (0.04 if aiming else 0.045) # (the grip in his palm, not out past the fingers)
 	gun.position = root.to_local(gp); gun.rotation = Vector3(-0.05 if aiming else 0.55, 0, 0)
 
+# ------------------------------------------------------------------ the made tools (the player's tools-and-weapons set, through Meshy)
+## The stone, iron and steel axes and pickaxes, the spear and the guns as their own models (assets/models/props/prop_tool_*,
+## prop_gun_*), in place of the box-built ones once each is in; the old hatchet, hammer, rod and bow stay as they were.
+## Each model stands its handle up its y, head at the top, the blade toward +x; a gun lies along x, muzzle at -x.
+## [path, length in m, the handle's foot (model x, y) or for a gun the grip's model x]
+const MADE := {
+	"axe_stone": ["prop_tool_axe_stone", 0.9, 0.26], "axe_iron": ["prop_tool_axe_iron", 0.9, 0.3], "axe_steel": ["prop_tool_axe_steel", 0.9, 0.27],
+	"pick_stone": ["prop_tool_pick_stone", 0.9, 0.1], "pick_iron": ["prop_tool_pick_iron", 0.9, 0.0], "pick_steel": ["prop_tool_pick_steel", 0.9, 0.0],
+	"spear": ["prop_tool_spear", 1.65, 0.0], "revolver": ["prop_gun_revolver", 0.34, 0.72], "rifle": ["prop_gun_rifle_single", 1.2, 0.95]}
+var axe_tier := ""    ## "", "stone", "iron" or "steel" (the old hatchet when "")
+var pick_tier := "stone"
+var made := {}        ## MADE key -> Node3D, built the first time it's wanted
+var _made_on: Node3D = null
+
+func _made(key: String) -> Node3D:
+	if made.has(key): return made[key]
+	var spec: Array = MADE[key]; var path := "res://assets/models/props/%s.glb" % spec[0]
+	made[key] = null
+	if not ResourceLoader.exists(path): return null
+	var m := (load(path) as PackedScene).instantiate() as Node3D
+	var k: float = float(spec[1]) / 1.9 # (the models come 1.9 m along their long side)
+	var g := Node3D.new(); g.add_child(m); g.visible = false
+	if key in ["revolver", "rifle"]:
+		# along the body's forward, muzzle first: model -x to +z, y up; the grip at the hand
+		m.transform = Transform3D(Basis(Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)) * k, Vector3(0, 0.02, float(spec[2]) * k - (0.45 if key == "rifle" else 0.0)))
+		root.add_child(g)
+	else:
+		# in the fist: the handle (model y) along the grip's z, the head's blade (model +x) up its y; the foot of the handle at the fist
+		m.transform = Transform3D(Basis(Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)) * k, Vector3(0, -float(spec[2]) * k, 0.95 * k - (0.25 if key == "spear" else 0.12)))
+		grip.add_child(g)
+	for c in m.find_children("*", "GeometryInstance3D", true, false): (c as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	made[key] = g
+	return g
+
+## Which made model stands in for the tool in hand, if any.
+func _made_key() -> String:
+	match tool:
+		"axe": return "axe_" + axe_tier if axe_tier != "" else ""
+		"pick": return "pick_" + pick_tier
+		"spear", "revolver", "rifle": return tool
+	return ""
+
 func _show_tools(swim: bool) -> void:
 	var any := false
+	var mk := "" if (swim or seated) else _made_key()
+	var mn: Node3D = _made(mk) if mk != "" else null
+	if _made_on != null and _made_on != mn: _made_on.visible = false
+	_made_on = mn
+	if mn != null: mn.visible = true
 	for id in tools_by:
 		var on: bool = not swim and not seated and tool == id
-		tools_by[id].visible = on; any = any or on
+		tools_by[id].visible = on and mn == null; any = any or on
 	fist.visible = any
 	if any and _hand_i >= 0: _hold_tools()
 	_aim_guns()

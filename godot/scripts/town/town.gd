@@ -67,7 +67,7 @@ const TOWNSFOLK := {
 	"jail": {"new": "cgc_man_bandana", "model": "trades_1", "hue": 1.6},
 	"bank": {"new": "cgc_man_elder", "model": "townsfolk_2"},
 	"cn_store": {"new": "cgc_man_cn_elder", "model": "townsfolk_2", "hue": 1.2, "with": [{"new": "cgc_boy_cn", "model": "townsfolk_4", "at": -2.2, "out": 0.6, "turn": 0.4}]},
-	"cn_laundry": {"new": "cgc_woman_cn_thin", "model": "trades_6", "hue": 0.9, "with": [{"new": "cgc_man_cn_rust", "model": "trades_1", "at": -2.4, "out": 0.6, "turn": 0.3, "pose": "work"}]},
+	"cn_laundry": {"new": "cgc_woman_cn_thin", "model": "trades_6", "hue": 0.9, "with": [{"new": "cgc_man_cn_rust", "model": "trades_1", "at": -2.4, "out": 0.6, "turn": 0.3, "pose": "work"}, {"new": "cgc_woman_cn_curvy", "model": "trades_6", "at": 2.6, "out": 0.5, "turn": -0.35}]},
 	"cn_herbalist": {"new": "cgc_man_cn_young", "model": "trades_7", "hue": -0.8, "with": [{"new": "cgc_man_cn_strong", "model": "prospectors_1", "at": -2.6, "out": 0.6, "turn": 0.35}]},
 	"cn_boarding": {"new": "cgc_woman_cn_sultry", "model": "trades_2", "hue": 1.4, "with": [{"new": "cgc_man_cn_olive", "model": "prospectors_1", "at": -2.5, "out": 0.6, "turn": 0.35},
 		{"new": "cgc_girl_cn", "model": "townsfolk_4", "at": 3.2, "out": 0.5, "turn": -0.4}]},

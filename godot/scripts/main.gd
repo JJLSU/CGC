@@ -1619,6 +1619,8 @@ func _gather(active: bool, connected: bool) -> void:
 			if piece_t.dist < td: target = null
 			else: piece_t = null
 	player.avatar.tool = "hammer" if build.active else ("none" if held == "hands" else held) # (the hammer while building)
+	player.avatar.axe_tier = "steel" if tools.has("steelaxe") else ("iron" if tools.has("ironaxe") else ("stone" if tools.has("stoneaxe") else ""))
+	player.avatar.pick_tier = "steel" if tools.has("steelpick") else ("iron" if tools.has("ironpick") else "stone")
 	player.avatar.has_bow = tools.has("bow"); player.avatar.aiming = player.aiming # (his quiver; a gun comes up level while he aims)
 	player.avatar.jar_update(get_process_delta_time(), tools.has("jar"), jar_count, sky.night)
 	_hunt_and_fish(active)
