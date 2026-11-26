@@ -40,6 +40,6 @@ func _initialize() -> void:
 			var grade := rad_to_deg(atan2(Terrain.get_height(hp.x, hp.z) - Terrain.get_height(hb.x, hb.z), 4.0))
 			if absf(grade) < 20.0: worst_err = maxf(worst_err, absf(tilt - grade))
 	print("cars: steepest tilt %.1f deg, worst off the ground's grade %.1f deg  speed %.1f m/s" % [max_tilt, worst_err, Train.SPEED])
-	ok = ok and max_tilt > 1.0 and Train.SPEED == 3.5
+	ok = ok and max_tilt > 0.2 and max_tilt < 2.5 and Train.SPEED == 3.5 # (they tilt with the grade, which the railbed holds to 3%: under ~1.7 deg)
 	print("RAIL TIES TEST ", "PASS" if ok else "FAIL")
 	quit()
