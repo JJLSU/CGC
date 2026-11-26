@@ -607,6 +607,7 @@ func _process(dt: float) -> void:
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	forts.update(dt, sky.day, player, fort_hooks)
+	forts.patrols_update(dt, sky.time, player)
 	wayfarers.update(dt, player)
 	var fb = null
 	for b in bosses:
@@ -3061,6 +3062,7 @@ func _make_forts() -> void:
 	var avoid: Array = [homestead.spawn, town.at] + camp.list.map(func(c): return c.at) + jumpers.camps.map(func(c): return c.at) + bosses.map(func(b): return b.at)
 	forts.setup(homestead.spawn, avoid, world)
 	forts.blocker = func(q: Vector3) -> Vector3: return build.collide(q, 0.4)
+	forts.setup_patrols(town.at)
 	fort_hooks = {
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()

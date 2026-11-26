@@ -271,3 +271,67 @@ func officer_near(p: Vector3, r := 3.0):
 		for m in f.men:
 			if m.role == "officer" and not m.dead and Vector2(m.fig.root.position.x - p.x, m.fig.root.position.z - p.z).length() < r: return f
 	return null
+
+# ------------------------------------------------------------------ the patrols (the troopers about the county)
+## By day each fort sends two troopers on horseback out to the town and back at a walk: there and back once a day,
+## leaving in the morning, home by evening. They nod you by; they're only drawn while you're within NEAR of them.
+## (A story element as the player asked: you meet the army on the road.)
+var patrols: Array = []      ## {fort, riders: [{fig, horse}], pos, built}
+var town_at := Vector3.ZERO
+
+func setup_patrols(town_pos: Vector3) -> void:
+	town_at = town_pos
+	for f in forts: patrols.append({"fort": f, "riders": [], "pos": f.at, "built": false})
+
+## Where the patrol is at this hour (time 0-1): out from the gate at 0.3, at the town by 0.5, home by 0.72.
+func patrol_pos(pt: Dictionary, time: float) -> Vector3:
+	var f: Dictionary = pt.fort
+	var gate: Vector3 = f.at + Vector3(sin(f.face), 0, cos(f.face)) * (SIDE / 2.0 + 4.0)
+	var u := 0.0
+	if time > 0.3 and time < 0.5: u = (time - 0.3) / 0.2
+	elif time >= 0.5 and time < 0.52: u = 1.0
+	elif time >= 0.52 and time < 0.72: u = 1.0 - (time - 0.52) / 0.2
+	var to_town: Vector3 = town_at + (gate - town_at).normalized() * 60.0 # (they turn back at the edge of town)
+	return gate.lerp(to_town, u)
+
+func patrols_update(dt: float, time: float, player: Player) -> void:
+	for pt in patrols:
+		var was: Vector3 = pt.pos
+		var pos := patrol_pos(pt, time); pos.y = Terrain.get_height(pos.x, pos.z)
+		pt.pos = pos
+		var out: bool = time > 0.3 and time < 0.72 and not pt.fort.angry
+		var near := Vector2(pos.x - player.pos.x, pos.z - player.pos.z).length() < NEAR
+		if out and near and not pt.built: _patrol_build(pt)
+		elif pt.built and (not out or not near): _patrol_unbuild(pt)
+		if not pt.built: continue
+		var mv := Vector3(pos.x - was.x, 0, pos.z - was.z); var spd := mv.length() / maxf(dt, 1e-4)
+		var head: float = atan2(mv.x, mv.z) if mv.length() > 1e-4 else pt.get("head", 0.0)
+		pt.head = head
+		var side := Vector3(cos(head), 0, -sin(head))
+		for i in pt.riders.size():
+			var r: Dictionary = pt.riders[i]
+			var hp: Vector3 = pos + side * ((i - 0.5) * 2.6) - Vector3(sin(head), 0, cos(head)) * (i * 1.5)
+			hp.y = Terrain.get_height(hp.x, hp.z)
+			var h: Puppet = r.horse
+			h.group.position = hp # (the puppet turns itself the way it goes)
+			h.update(dt, minf(spd, 4.0) * 0.8, "walk", false, 0.0, 0.0)
+			var fig: ModelFigure = r.fig
+			fig.root.position = hp; fig.play("sit", 0.2)
+			NativeCamps.astride(fig); NativeCamps.seat(h, fig)
+
+func _patrol_build(pt: Dictionary) -> void:
+	pt.built = true
+	for i in 2:
+		var nm: String = SOLDIERS[(i + forts.find(pt.fort)) % SOLDIERS.size()]
+		if not ModelFigure.has_folk(nm): nm = STAND_INS[i]
+		var fig := ModelFigure.new(nm)
+		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
+		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); fig.hands[1].add_child(rifle)
+		var h := Puppet.new("horse", 1.7)
+		add_child(h.group); add_child(fig.root)
+		pt.riders.append({"fig": fig, "horse": h})
+
+func _patrol_unbuild(pt: Dictionary) -> void:
+	pt.built = false
+	for r in pt.riders: (r.fig as ModelFigure).root.queue_free(); (r.horse as Puppet).group.queue_free()
+	pt.riders = []
