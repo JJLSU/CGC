@@ -14,7 +14,7 @@ func _initialize() -> void:
 		if s == null and main.railroad.stops.size() > i: s = main.railroad.stops[i]
 		if s != null and s.has("keeper"):
 			var k: Vector3 = s.keeper.root.position; var st: Vector3 = k + Vector3(sin(s.keeper.root.rotation.y), 0, cos(s.keeper.root.rotation.y)) * 3.0
-			main.player.pos = Vector3(st.x, Terrain.get_height(st.x, st.z), st.z); main.rig.yaw = s.keeper.root.rotation.y + 0.4; main.rig.pitch = 0.2; main.rig.dist = 7.0
+			main.player.pos = Vector3(st.x, Terrain.get_height(st.x, st.z), st.z); main.rig.yaw = s.keeper.root.rotation.y + 0.4; main.rig.pitch = (0.75 if OS.get_cmdline_user_args().has("high") else 0.2); main.rig.dist = (26.0 if OS.get_cmdline_user_args().has("high") else 7.0)
 		elif s != null: main.player.pos = s.at
 		await process_frame
 	print("stop %s, keeper %s" % [s.name if s else "-", s.keeper.name if s and s.has("keeper") else "-"])

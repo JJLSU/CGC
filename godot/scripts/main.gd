@@ -927,7 +927,7 @@ func _new_game() -> void:
 
 ## Forget the old county: what the terrain, the props and the farm's garden keep between scenes (statics).
 static func reset_world() -> void:
-	Terrain.flat = null; Terrain.extra_flats.clear(); Terrain.RC = Vector2.ZERO
+	Terrain.flat = null; Terrain.extra_flats.clear(); Terrain.RC = Vector2.ZERO; Terrain.set_railbed(PackedVector3Array())
 	Terrain.e_memo.clear(); Terrain.lat_cache.clear(); Terrain.full_cache.clear(); Terrain.h_cache.clear(); Terrain.r_cache.clear()
 	Props.site_cache.clear(); Props.garden = null; Props._uniques = null; Props._uniques_seed = -1; Props._starter = []; Props._starter_seed = -1
 

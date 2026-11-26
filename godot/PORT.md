@@ -1689,3 +1689,15 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - The horse (the player's ask): mounted, you ford water to 8 deep (4 on foot) and take slopes to 1.0 (0.6 on foot; the mountains' lower shoulders and the steeper hills), slowed less uphill and in the water (Terrain.impassable/wadeable take the limits; Terrain.HORSE_STEEP / HORSE_WADE). Over a 1.2 km square: blocked ground 16.2% on foot, 11.9% mounted. tools/test_horse_terrain.gd: a ford (on foot turned back at 28%, mounted 100% across) and a hillside (8% / 100%): PASS. test_player, test_newgame PASS; test_terrain_exact's web comparison fails as it did before (new counties are random).
 - Fix (from play): a building mended early showed its keeper as only a floating "hello": ModelFigure loaded its model the ordinary way while main's background preloader had the same model mid-load, and got it back empty. ModelFigure.load_model now waits on (and takes) a model already loading. tools/test_keeper_load.gd (mending right at start, the preloader busy): 11 keepers, all with bodies, x3: PASS.
 - The bosses stay unknown till the town grows to them (the player's ask): main._boss_known (the street before his all mended, or beaten); no chip, no poster on the wanted board, no map mark before then (the board refreshes as one becomes known). test_boss: at the start none known, no board; Main Street done: Jebediah known (his poster up), Angus not: PASS; _save, _special PASS.
+- The railbed (the player: the track must run on sensible ground; it needn't be dead level): Railroad._grade, when the
+  route is planned and before the county is built, takes the ground along the line, smooths it over ~70 m and holds it
+  to a 3% climb (passes both ways), never below the water; Terrain.set_railbed eases a strip to it (fully within 4 m,
+  fading out by 9.5 m: cuts through rises, banks over hollows, the land beyond untouched; dry ground only). The ties
+  and the train ride the grade itself (Railroad.grade_at / grade_d), the trestles carry it over water, legs where the
+  ground falls away. Three counties: steepest 9 m of track 3.0% (was 27-93%), the ground within 0.3-0.6 m of the rails,
+  cuts to ~7 m. (Two bugs on the way: the lookup grid's PackedInt32Array appends were lost on copy; the line passing
+  near another stretch of itself muddled the ground, hence the track keeps its own grade.)
+- The trading posts stand clear of the whole line (the player saw track run into one at right angles: the line leaving
+  a stop swung back past the post's side): each post tries its side, the other, then further along, for a spot 7 m+
+  from every tie. Three counties: all 15 posts 7.6 m+ off. Looked at (tools/shot_keeper.gd <i> high). test_rail_ties,
+  test_newgame, test_place_sliced, test_horse_terrain PASS.

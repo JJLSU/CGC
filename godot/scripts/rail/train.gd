@@ -64,7 +64,7 @@ func at(d: float) -> Dictionary:
 	var P := rr.path; var f := clampf(d / TIE, 0.0, P.size() - 1.001); var i := floori(f); var t := f - i
 	var a: Vector3 = P[i]; var b: Vector3 = P[i + 1]
 	var x := a.x + (b.x - a.x) * t; var z := a.z + (b.z - a.z) * t
-	return {"pos": Vector3(x, 0.55 if Terrain.is_water(x, z) else Terrain.get_height(x, z) + 0.04, z), "yaw": atan2(b.x - a.x, b.z - a.z)}
+	return {"pos": Vector3(x, rr.grade_d(d), z), "yaw": atan2(b.x - a.x, b.z - a.z)} # (on the graded bed)
 
 ## Where she's standing for passengers, if she is: at the depot (home) or a whistle-stop (dwelling there).
 func stopped_at():

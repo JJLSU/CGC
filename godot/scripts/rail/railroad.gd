@@ -75,6 +75,7 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 		for j in n: path.append(a.lerp(b, float(j) / n))
 	path.append(pts[-1])
 	length = path.size() * TIE
+	_grade()
 	# the right-of-way: nothing grows on it
 	for i in range(0, path.size(), 5): world.exclusions.append({"x": path[i].x, "z": path[i].z, "r": 3.4})
 	world.exclusions.append({"x": depot.x, "z": depot.z, "r": 9.0})
@@ -89,6 +90,20 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 		var out: Vector3 = path[mini(path.size() - 1, k + 8)] - path[k]
 		if out.dot(side) > 0.0: side = -side
 		var alg := Vector3(sin(yaw), 0, cos(yaw))
+		# (the post must stand clear of the whole line, not just this stretch: where the line leaves the stop it can swing
+		# round past the side the post is on and run into it, the player saw: so try that side, then the other, then
+		# further back along the platform, and take the first spot the track stays 7 m clear of)
+		var clear_of_line := func(q: Vector3) -> bool:
+			for j in range(0, path.size(), 2): if Vector2(path[j].x - q.x, path[j].z - q.z).length() < 7.0: return false
+			return true
+		for tryi in [i, maxi(2, i - 8), maxi(2, i - 16), mini(path.size() - 3, i + 6)]:
+			var a2: Vector3 = path[maxi(0, tryi - 2)]; var b2: Vector3 = path[mini(path.size() - 1, tryi + 2)]; var yaw2 := atan2(b2.x - a2.x, b2.z - a2.z)
+			var sd := Vector3(cos(yaw2), 0, -sin(yaw2)); var al := Vector3(sin(yaw2), 0, cos(yaw2))
+			var placed := false
+			for sg in [side.dot(sd), -side.dot(sd)]:
+				var sdd: Vector3 = sd * signf(sg if sg != 0.0 else 1.0)
+				if clear_of_line.call(path[tryi] + sdd * 8.6 - al * 1.5): i = tryi; side = sdd; alg = al; placed = true; break
+			if placed: break
 		s.geo = {"i": i, "side": side, "along": alg, "plat": path[i] + side * 2.4, "post": path[i] + side * 8.6 - alg * 1.5}
 		world.exclusions.append({"x": s.geo.post.x, "z": s.geo.post.z, "r": 6.5})
 		if s.land == "breaks": # (your gold claim, if you file one: claim.js)
@@ -105,6 +120,27 @@ static func _open_ground(x: float, z: float) -> bool:
 ## over the pair's box and 240 m round it; mountain ground is solid, water dearer (the track bridges it on trestles).
 ## The way it finds is smoothed (corner-cutting, twice) and returned without its ends; empty if there's none.
 const CELL := 12.0
+## The railbed's grade (the player's ask: the track runs on level-ish ground that makes sense): the ground along the
+## line, smoothed over ~70 m, then held to a 3% climb either way (passes forward and back), never below the water's
+## level (trestles cross water). Terrain eases a narrow strip to it: cuts through rises, banks over hollows.
+const MAX_GRADE := 0.03
+func _grade() -> void:
+	var raw := PackedFloat32Array(); raw.resize(path.size())
+	for i in path.size(): raw[i] = Terrain.elevation(path[i].x, path[i].z)
+	var w := 40; var g := PackedFloat32Array(); g.resize(path.size())
+	var acc := 0.0; var cnt := 0
+	for i in range(0, mini(w, path.size())): acc += raw[i]; cnt += 1
+	for i in path.size():
+		if i + w < path.size(): acc += raw[i + w]; cnt += 1
+		if i - w - 1 >= 0: acc -= raw[i - w - 1]; cnt -= 1
+		g[i] = acc / cnt
+	var step := MAX_GRADE * TIE
+	for i in range(1, path.size()): g[i] = clampf(g[i], g[i - 1] - step, g[i - 1] + step)
+	for i in range(path.size() - 2, -1, -1): g[i] = clampf(g[i], g[i + 1] - step, g[i + 1] + step)
+	var pts := PackedVector3Array(); pts.resize(path.size())
+	for i in path.size(): pts[i] = Vector3(path[i].x, maxf(0.5, g[i]), path[i].z)
+	Terrain.set_railbed(pts)
+
 static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
 	var x0 := minf(a.x, b.x) - 240.0; var z0 := minf(a.z, b.z) - 240.0
 	var w := int((absf(a.x - b.x) + 480.0) / CELL) + 1; var h := int((absf(a.z - b.z) + 480.0) / CELL) + 1
@@ -133,13 +169,20 @@ static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
 		sm.append(pts[-1]); pts = sm
 	return pts.slice(1, pts.size() - 1)
 
-func ty(p: Vector3) -> float: return 0.55 if Terrain.is_water(p.x, p.z) else Terrain.get_height(p.x, p.z) + 0.04
+func ty(p: Vector3) -> float: return (maxf(0.55, Terrain._rail_at(p.x, p.z).y) + 0.04) if Terrain.is_water(p.x, p.z) else Terrain.get_height(p.x, p.z) + 0.04 # (over water the trestle carries the grade across)
+## The rail's height at tie i: the graded bed itself (the ground is eased to it; where the line passes near another
+## stretch of itself the ground can't take both, but the track keeps its own grade).
+func grade_at(i: int) -> float: return (Terrain.rail_pts[i].y if i < Terrain.rail_pts.size() else ty(path[i])) + 0.04
+## ... at distance d along the line (the train).
+func grade_d(d: float) -> float:
+	var f := clampf(d / TIE, 0.0, path.size() - 1.001); var i := floori(f)
+	return lerpf(grade_at(i), grade_at(i + 1), f - i)
 
 ## Lay the track and put up the depot (once: the town has earned its railroad).
 func build() -> void:
 	if built: return
 	built = true; visible = true
-	var ys := path.map(func(p): return ty(p))
+	var ys := range(path.size()).map(func(i): return grade_at(i))
 	# ties, one MultiMesh down the whole line; trestle legs down to the water's bottom
 	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(1.7, 0.08, 0.24); tm.mesh = tb; tm.instance_count = path.size()
 	var posts := SurfaceTool.new(); posts.begin(Mesh.PRIMITIVE_TRIANGLES); var any_post := false

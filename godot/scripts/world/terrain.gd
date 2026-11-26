@@ -40,6 +40,34 @@ static var h_cache := {}   ## "cx,cz" -> PackedFloat32Array (65*65 elevations)
 static var r_cache := {}   ## "cx,cz" -> PackedFloat32Array (17*17 region heights)
 static var flat = null     ## [x, z, r0, r1]: the farm's level sheet
 static var extra_flats: Array = []
+## The railbed (the player: the track must run on sensible ground): the route's points with a graded height each, in
+## a coarse grid for lookup. Within RAIL_R1 of the line the ground eases to the grade (cut through rises, banked up
+## over dips), fully at RAIL_R0; the land beyond keeps its own shape.
+static var rail_pts: PackedVector3Array = PackedVector3Array() ## x, grade height, z
+static var rail_grid := {}   ## "gx,gz" -> Array of point indices
+const RAIL_CELL := 10.0
+const RAIL_R0 := 4.0
+const RAIL_R1 := 9.5
+static func set_railbed(pts: PackedVector3Array) -> void:
+	rail_pts = pts; rail_grid = {}
+	for i in pts.size():
+		var k := "%d,%d" % [floori(pts[i].x / RAIL_CELL), floori(pts[i].z / RAIL_CELL)]
+		if not rail_grid.has(k): rail_grid[k] = []
+		rail_grid[k].append(i) # (a plain Array: a packed one is copied out and the append lost)
+	e_memo.clear(); h_cache.clear()
+## The railbed's pull at (x, z): [weight 0-1, grade height], or weight 0 away from the line.
+static func _rail_at(x: float, z: float) -> Vector2:
+	if rail_pts.is_empty(): return Vector2.ZERO
+	var gx := floori(x / RAIL_CELL); var gz := floori(z / RAIL_CELL); var best := INF; var bh := 0.0
+	for dx in [-1, 0, 1]:
+		for dz in [-1, 0, 1]:
+			var k := "%d,%d" % [gx + dx, gz + dz]
+			if not rail_grid.has(k): continue
+			for i in rail_grid[k]:
+				var q: Vector3 = rail_pts[i]; var d := (q.x - x) * (q.x - x) + (q.z - z) * (q.z - z)
+				if d < best: best = d; bh = q.y
+	if best > RAIL_R1 * RAIL_R1: return Vector2.ZERO
+	return Vector2(1.0 - ss(RAIL_R0, RAIL_R1, sqrt(best)), bh)
 static var _lx := 0.0      ## where region_height last looked, for last_range()
 static var _lz := 0.0
 # landAt's reused result (copy what you need)
@@ -200,6 +228,9 @@ static func elevation(x: float, z: float, rh_known: float = NAN, m_known: float 
 	for f in extra_flats:
 		var d := Vector2(x - f[0], z - f[1]).length()
 		if d < f[3]: e += (STEP * 1.5 - e) * (1.0 - ss(f[2], f[3], d))
+	if not base and e >= 0.12: # (the railbed, on dry ground right to the shore: over water the trestles carry it)
+		var r := _rail_at(x, z)
+		if r.x > 0.0: e += (r.y - e) * r.x
 	return maxf(0.0, e)
 
 static func _gh(ix: int, iz: int) -> float:
