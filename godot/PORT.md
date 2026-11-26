@@ -1594,3 +1594,6 @@ for N frames, then saves the viewport; needs a window, not --headless).
   (a painted house, stagecoach, freight wagon, powder crates, barrels, a tall lamp) lies 380-520 m out. 90 health,
   slow (3.0), lobs lit dynamite whose blast reaches 2.6 m (24), a slam of 26. The mortgage handed in pays $150 and is
   burnt in the assayer's stove. test_boss PASS with him; looked at mid-throw (tools/shot_boss.gd ... crane).
+- Trophies (Town.set_trophies, main._trophies on load and each hand-in): every boss whose prize is back has his
+  weapon nailed up on the assay office's false front: Jebediah's pick left of the sign, Angus's axe right, Crane's
+  dynamite (fuse cut) on the peak. test_boss checks all three go up; looked at (tools/shot_townfolk.gd assay flip far high).

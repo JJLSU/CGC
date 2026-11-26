@@ -2238,6 +2238,7 @@ func _apply_save(d: Dictionary) -> void:
 	if bs is Dictionary:
 		for b in bosses: b.load_state(bs.get(b.id))
 	else: boss.load_state(d.get("boss")) # (a save from before Big Angus: Jebediah's alone)
+	_trophies()
 	for b in bosses:
 		if b.beaten and not b.delivered and inventory.get(b.spec.prize_key, 0) <= 0: _drop_prize(b, b.mouth + (b.at - b.mouth).normalized() * 3.0) # (left lying at his lair)
 	var rr = d.get("railroad")
@@ -2884,3 +2885,6 @@ func _hand_in(b: Boss) -> void:
 	if b.id == "crane": hud.toast("The assayer burns the mortgage in the stove. \"Cold Glitter Creek owes no man.\" +$%d" % pay)
 	else: hud.toast("The assayer files %s. \"Cold Glitter Creek grows again.\" +$%d" % [b.spec.prize, pay])
 	town.grow()
+	_trophies()
+
+func _trophies() -> void: town.set_trophies(bosses.filter(func(b): return b.delivered).map(func(b): return b.id))

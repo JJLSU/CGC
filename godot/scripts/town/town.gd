@@ -1033,3 +1033,23 @@ func _stage(dt: float) -> void:
 static func folk_of(T: Dictionary) -> Array:
 	if T.has("new") and ModelFigure.has_folk(T.new): return [T.new, 0.0]
 	return [T.model, float(T.get("hue", 0.0))]
+
+## The bosses' trophies (the player's boss battles): each one beaten has his weapon nailed up over the assay office
+## door, where the town can see who it owes: Jebediah's pick and Angus's axe crossed either side, Crane's dynamite
+## (fuse cut) between. ids: the bosses whose prize is back.
+var trophies: Node3D
+func set_trophies(ids: Array) -> void:
+	if trophies: trophies.queue_free()
+	trophies = Node3D.new(); add_child(trophies)
+	var b: Dictionary = BUILDINGS.filter(func(q): return q.id == "assay")[0]
+	var outw: Vector3 = -toward * float(b.side) # (from the shopfront out into the street)
+	var wall: Vector3 = doors.assay - outw * 1.6
+	var base: Vector3 = wall - outw * 0.95 + Vector3.UP * (y0 + 3.45 - wall.y) # (on the false front, either side of the sign, above the porch roof)
+	trophies.position = base; trophies.basis = Basis(along, Vector3.UP, outw).orthonormalized()
+	var spots := {"jebediah": [-2.05, 0.35, 0.0], "angus": [2.05, -0.35, 0.0], "crane": [0.0, 0.0, 1.05]}
+	for id in ids:
+		if not spots.has(id): continue
+		var w: Node3D = {"jebediah": Boss._pick_mesh, "angus": Boss._axe_mesh, "crane": Boss._dynamite_mesh}[id].call(1.5 if id != "crane" else 1.3)
+		var tilt := Node3D.new(); tilt.position = Vector3(spots[id][0], spots[id][2], 0); tilt.rotation.z = spots[id][1]
+		w.rotation.x = -PI / 2.0; w.position = Vector3(0, -0.65 if id != "crane" else -0.25, 0) # (the handle hangs down, the head up)
+		tilt.add_child(w); trophies.add_child(tilt)
