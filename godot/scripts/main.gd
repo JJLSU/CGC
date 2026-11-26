@@ -2824,6 +2824,7 @@ func _make_boss() -> void:
 		var b := Boss.new(id); add_child(b)
 		b.setup(town.at, avoid, world); avoid.append(b.at)
 		b.hooks = _boss_hooks(b)
+		b.blocker = func(q: Vector3) -> Vector3: return build.collide(q, 1.1)
 		bosses.append(b)
 	boss = bosses[0]
 	town.gate = func(n: int) -> bool: return not bosses.any(func(b): return b.spec.street == n and not b.delivered)

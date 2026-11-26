@@ -53,6 +53,12 @@ func _initialize() -> void:
 		await process_frame
 	print("slam wound up %s, health %.0f -> %.0f" % [slammed, h1, p.health])
 	ok = ok and slammed and p.health < h1
+	# a palisade between him and the farmer holds him back (the player's walls stop a giant too)
+	var bp0: Vector3 = B.pos(); var wz: Vector3 = bp0 + Vector3(0, 0, 2.0)
+	main.build.add({"type": "palisade", "x": wz.x, "y": Terrain.get_height(wz.x, wz.z), "z": wz.z, "rot": 0}, true)
+	var pushed: Vector3 = B.blocker.call(Vector3(wz.x, wz.y, wz.z + 0.05))
+	print("palisade pushes him out: %.2f m" % Vector2(pushed.x - wz.x, pushed.z - (wz.z + 0.05)).length())
+	ok = ok and Vector2(pushed.x - wz.x, pushed.z - (wz.z + 0.05)).length() > 0.3
 	# beat him
 	p.health = p.max_health
 	var n0: int = main.drops.size()

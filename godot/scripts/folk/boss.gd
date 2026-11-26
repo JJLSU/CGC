@@ -42,6 +42,7 @@ const ORDER := ["jebediah", "angus", "crane"]
 var id := "jebediah"
 var spec: Dictionary = SPECS.jebediah
 var hooks := {}             ## main's: on_hit, on_throw, on_land, on_slam, on_fall, on_spotted
+var blocker: Callable      ## (pos) -> pos pushed out of anything built (main: build.collide): your walls hold even a giant
 
 var at := Vector3.ZERO      ## his fire, before the mine mouth
 var mouth := Vector3.ZERO
@@ -192,6 +193,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	if spd > 0.0:
 		var nx := me.x + want.x * spd * dt; var nz := me.z + want.z * spd * dt
 		if not Terrain.is_water(nx, nz): me.x = nx; me.z = nz
+		if blocker.is_valid(): me = blocker.call(me)
 	speed = lerpf(speed, spd, minf(1.0, dt * 6.0))
 	me.y = Terrain.get_height(me.x, me.z); r.position = me
 	r.rotation.x = sin(hurt_t * 40.0) * 0.05 if hurt_t > 0.0 else 0.0
