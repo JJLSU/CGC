@@ -1535,3 +1535,14 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - tools/test_homestead_build.gd (the shelf; each placed; two mornings gathered from coop, barn and shaft; the well's
   drink; a night in the lean-to; the palisade pushing a body out): PASS. Looked at them built in a row
   (tools/shot_newbuilds.gd). test_jumpers, test_craft_press PASS; smoke_actions clean but the known first-dusk line.
+
+### Iron near the farm; something on the prowl at night (2026-11-25; the player's asks)
+- Props.starter_ore: one small outcrop a county, 45-75 m from the farm on dry ground, clear of the farm's level sheet
+  and the town, picked by the seed: five ore rocks and two plain ones, added (Props._finish, shared by place and
+  place_sliced) to whichever chunk holds each. Reset with a new game. test: 5 ore within 80 m (nearest 65 m).
+- Night prowlers (main._night_prowlers): after dark, 45 m+ from the farm and 70 m+ from town, every 70-130 s (the
+  first ~40 s after nightfall) a pair of night coyotes settles 22-30 m ahead, on land; the coyote guardian with its
+  teeth pulled (4 health, 6 a bite, aggro 12, leash 25, one pelt). At dawn any left go, and none are kept in the
+  save's beaten list. A first toast warns of them. test: two came; six seconds standing among them cost 42 of 100;
+  beaten and gone; none left at dawn.
+- tools/test_night_iron.gd PASS; test_place_sliced (40 of 40 the same) PASS; smoke_actions: no errors. The exe rebuilt.

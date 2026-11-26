@@ -108,10 +108,43 @@ static func unique_encounters() -> Array:
 
 # ------------------------------------------------------------------ placeProps
 ## {list: [{type, x, z, y, lx, lz, rot, scale, lean, tint?, tone?}], colliders: [...], sites: [...]}
+static var _last_exclusions: Array = []
 static func place(cx: int, cz: int, exclusions: Array) -> Dictionary:
+	_last_exclusions = exclusions
 	return _finish(cx, cz, _place(cx, cz, exclusions))
 
+## Iron within an easy walk of the farm (the player's ask): one small outcrop a county, 45-75 m out on dry ground
+## clear of the farm's level sheet and anything kept clear (the town), chosen by the world's seed: five rusty ore
+## rocks and two plain ones. Each lands in whichever chunk holds it (_finish adds it to that chunk's layout).
+static var _starter: Array = []
+static var _starter_seed := -1
+static func starter_ore(exclusions: Array) -> Array:
+	if _starter_seed == Terrain.SEED and not _starter.is_empty(): return _starter
+	_starter_seed = Terrain.SEED; _starter = []
+	if Terrain.flat == null: return _starter
+	var fx: float = Terrain.flat[0]; var fz: float = Terrain.flat[1]
+	var rng := PNoise.Mulberry32.new(PNoise.hash2(3, 77, Terrain.SEED + 911))
+	var at := Vector2.INF
+	for k in 48:
+		var a := rng.next() * TAU; var d := 45.0 + rng.next() * 30.0
+		var x := fx + cos(a) * d; var z := fz + sin(a) * d
+		if Terrain.is_water(x, z) or Terrain.range_at(x, z) > 0.04: continue
+		if exclusions.any(func(e): return Vector2(e.x - x, e.z - z).length() < e.r + 6.0): continue
+		var dry := true
+		for j in 8: if Terrain.is_water(x + cos(j * 0.785) * 6.0, z + sin(j * 0.785) * 6.0): dry = false
+		if dry: at = Vector2(x, z); break
+	if at == Vector2.INF: return _starter
+	for i in 7:
+		var a := i * TAU / 7.0 + rng.next() * 0.5; var d := 1.6 + rng.next() * 2.6
+		var x := at.x + cos(a) * d; var z := at.y + sin(a) * d
+		if Terrain.is_water(x, z): continue
+		_starter.append({"type": "ore" if i < 5 else "rock", "x": x, "z": z, "rot": rng.next() * 6.28, "scale": 0.95 + rng.next() * 0.25})
+	return _starter
+
 static func _finish(cx: int, cz: int, out: Dictionary) -> Dictionary:
+	for q in starter_ore(_last_exclusions):
+		if floori(q.x / CHUNK) == cx and floori(q.z / CHUNK) == cz:
+			out.list.append({"type": q.type, "x": q.x, "z": q.z, "y": maxf(0.02, Terrain.get_height(q.x, q.z)), "lx": q.x - cx * CHUNK, "lz": q.z - cz * CHUNK, "rot": q.rot, "scale": q.scale, "lean": 0.0})
 	var ap: Array = out.list.filter(func(q): return q.type == "appletree")
 	var satchels := []; var si := 0
 	for q in out.list:
@@ -592,4 +625,5 @@ static func _place_co(cx: int, cz: int, exclusions: Array, budget_us: int) -> Di
 ## Props.place, spread over frames (await it): the same layout and caching, no more than budget_us a frame.
 static func place_sliced(cx: int, cz: int, exclusions: Array, budget_us: int) -> Dictionary:
 	var out: Dictionary = await _place_co(cx, cz, exclusions, budget_us)
+	_last_exclusions = exclusions
 	return _finish(cx, cz, out)

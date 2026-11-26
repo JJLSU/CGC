@@ -556,6 +556,7 @@ func _process(dt: float) -> void:
 	_pm("extras.porch_update")
 	_extras(dt, active)
 	_pm("_extras")
+	_night_prowlers(dt)
 	enemies.update(dt, player, rig.camera, sky.day + sky.time)
 	_pm("enemies.update")
 	_knocked_out(dt)
@@ -895,7 +896,7 @@ func _new_game() -> void:
 static func reset_world() -> void:
 	Terrain.flat = null; Terrain.extra_flats.clear(); Terrain.RC = Vector2.ZERO
 	Terrain.e_memo.clear(); Terrain.lat_cache.clear(); Terrain.full_cache.clear(); Terrain.h_cache.clear(); Terrain.r_cache.clear()
-	Props.site_cache.clear(); Props.garden = null; Props._uniques = null; Props._uniques_seed = -1
+	Props.site_cache.clear(); Props.garden = null; Props._uniques = null; Props._uniques_seed = -1; Props._starter = []; Props._starter_seed = -1
 
 ## post.js: the full-screen lens and grade pass, riding on the camera.
 func _make_post() -> void:
@@ -1458,6 +1459,44 @@ func _knocked_out(dt: float) -> void:
 		hud.toast("You wake by the farmhouse, a little worse for wear.")
 
 ## A guardian struck (a blow, an arrow, a bullet): it turns on you; beaten, it slinks off for good with its pelts.
+## Something on the prowl after dark (the player's ask: some enemies at night, not too hard): away from the farm and
+## the town, now and then a pair of night coyotes settles a little ahead of you and comes for you once you're near.
+## Weaker than the guardians' (4 health, 6 a bite), they go at dawn; beaten ones aren't kept in the save's "gone" list.
+var _night_t := 40.0
+var _night_sites: Array = []
+var _night_n := 0
+var _night_told := false
+func _night_prowlers(dt: float) -> void:
+	var dark := sky.night > 0.6
+	if not dark:
+		if not _night_sites.is_empty():
+			for st in _night_sites: enemies.despawn_site(st)
+			_night_sites.clear()
+		for k in world.destroyed.keys(): if String(k).begins_with("night:"): world.destroyed.erase(k)
+		_night_t = 40.0
+		return
+	if not (force_active or input.locked) or player.dead: return
+	var p := player.pos
+	var home_d := Vector2(p.x - homestead.spawn.x, p.z - homestead.spawn.z).length(); var town_d := Vector2(p.x - town.at.x, p.z - town.at.z).length()
+	if home_d < 45.0 or town_d < 70.0: return
+	_night_t -= dt
+	var live := enemies.list.any(func(e): return String(e.key).begins_with("night:") and not e.dying)
+	if _night_t > 0.0 or live: return
+	var at := Vector3.INF
+	for k in 8: # (ahead of you, or a little to one side: on land)
+		var f := player.forward().rotated(Vector3.UP, (k - 3.5) * 0.35); var q := p + Vector3(f.x, 0, f.z).normalized() * (22.0 + randf() * 8.0)
+		if not Terrain.is_water(q.x, q.z) and not Terrain.impassable(q.x, q.z): at = q; break
+	if at == Vector3.INF: _night_t = 5.0; return
+	_night_t = 70.0 + randf() * 60.0
+	_night_n += 1
+	var site := {"key": "night:%d:%d" % [sky.day, _night_n], "kind": "den", "guard": "coyote", "guards": 2, "x": at.x, "z": at.z}
+	enemies.spawn_site(site); _night_sites.append(site)
+	for e in enemies.list:
+		if String(e.key).begins_with(site.key):
+			var sp: Dictionary = e.spec.duplicate(); sp.name = "Night coyote"; sp.hp = 4; sp.dmg = 6; sp.aggro = 12.0; sp.leash = 25.0; sp.pelt = [1, 1]
+			e.spec = sp; e.hp = 4
+	if not _night_told: _night_told = true; hud.toast("Coyotes yip in the dark ahead. Keep your axe handy.")
+
 func guardian_hit(e: Dictionary, amount: int) -> void:
 	var r := enemies.damage(e, amount, player.pos)
 	confetti.burst(Enemies.pos(e) + Vector3(0, 0.6, 0), [0xa8865c, 0x7d6448, 0xefe5cc], 36 if r.killed else 8, 1.0 if r.killed else 0.6)
