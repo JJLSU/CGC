@@ -82,6 +82,7 @@ const MEND_TEXT := {
 	"livery": "The livery barn gets new doors and a whitewashed cross-brace. A mule looks out, unimpressed.",
 	"smithy": "The forge is relit and the anvil rings again: the blacksmith's is open for business.",
 	"church": "The steeple is set straight and the church is whitewashed till it shines. Sunday, the bell will ring.",
+	"church2": "The whole town turns out for the raising. By sundown a proper church stands at the head of Main Street, its bell hung in a tower of its own.",
 }
 const YARD := {"smithy": ["prop_woodpile", "prop_barrel"], "cooper": ["prop_barrel", "prop_barrel", "prop_woodpile"], "bakery": ["prop_woodpile", "prop_crates"], "livery": ["prop_haybales", "veh_handcart"], "stable2": ["prop_haybale_round", "prop_haybales"], "feed": ["prop_haybales", "prop_crates"], "saloon": ["prop_barrel", "prop_crates", "prop_barrel"]}
 const SIZE := {"prop_woodpile": [1.9, 0], "prop_barrel": [0.95, 1], "prop_crates": [1.2, 1], "prop_haybales": [2.2, 0], "prop_haybale_round": [1.3, 1], "veh_handcart": [2.6, 0]}
@@ -383,7 +384,18 @@ static func model_building(mname: String, tier: int, width: float, height: float
 	g.add_child(hold)
 	return g
 
-func church(tier: int) -> Node3D: return model_building("church", tier, 5.6, 10.0)
+func church(tier: int) -> Node3D:
+	if tier and tiers.get("church2", 0) and ResourceLoader.exists("res://assets/models/props/bldg_church2_restored.glb"): return model_building("church2", 1, CHURCH2_W, 10.0)
+	return model_building("church", tier, 5.6, 10.0)
+## The new church (the player's bigger church with its bell tower): once the old one's mended, $120 puts it up in its
+## place, its front a few paces further down Main Street (it's twice as long), the preacher and his wife at its door.
+const CHURCH2_W := 6.2
+const CHURCH2_COST := 120
+func _church2_door() -> Vector3:
+	# (in the church's own frame its front is +z, toward the street: the step before it, 1.4 m out)
+	var g: Node3D = parts.church; var bb := PaperMats._aabb(g, g.transform.affine_inverse()) # (_aabb takes in the node's own transform: undone, its own frame)
+	var p: Vector3 = g.transform * Vector3(0, 0, bb.end.z + 1.4)
+	return Vector3(p.x, church_at.y, p.z)
 
 ## The patched wall tent from the reference art (each a little bigger or smaller), lit from within after dark.
 func tent(rng: PNoise.Mulberry32) -> Node3D:
@@ -423,6 +435,8 @@ func projects() -> Array:
 	var out := []
 	for b in BUILDINGS: out.append({"id": b.id, "name": b.name, "cost": c.call(b.id, b.cost), "door": doors[b.id]})
 	out.append({"id": "church", "name": "church", "cost": 40, "door": doors.church})
+	if tiers.get("church", 0) and ResourceLoader.exists("res://assets/models/props/bldg_church2_restored.glb"):
+		out.append({"id": "church2", "name": "new church, with a bell tower", "cost": CHURCH2_COST, "door": doors.church})
 	for k in opened:
 		for b in STREETS[k].buildings: out.append({"id": b.id, "name": b.name, "cost": c.call(b.id, b.cost), "door": doors[b.id]})
 	for i in MARKET.size(): # (each market stall, tent and wagon, put to rights on its own: the player's ask)
@@ -494,6 +508,21 @@ func dress_up(id: String) -> void:
 		k += 1
 
 func mend(id: String) -> void:
+	if id == "church2":
+		tiers.church2 = 1; rebuild("church", 1, -1)
+		# (twice as long as the old one: slid down Main Street till its back stands clear of the north cross street)
+		var cg: Node3D = parts.church; var cbb := PaperMats._aabb(cg, Transform3D.IDENTITY); var back := -1e9
+		for i in 8: back = maxf(back, (cbb.get_endpoint(i) - at).dot(along))
+		var over := back - (CROSS_N - CROSS_HW - 0.8)
+		if over > 0.0: cg.position -= along * over
+		doors.church = _church2_door()
+		for key in folk.keys():
+			if key == "church" or String(key).begins_with("church_"):
+				folk[key].fig.root.queue_free()
+				if folk[key].has("bar"): folk[key].bar.queue_free()
+				folk.erase(key)
+		dress_up("church")
+		return
 	if id.begins_with("mkt_"): tiers[id] = 1; raided.erase(id); market_refresh(); return
 	var k := street_of(id)
 	if k >= 0 and not k in opened: open_street(k) # (a saved game: put the street up first)
@@ -790,6 +819,7 @@ func load_state(d) -> void:
 	for st in STREETS: order.append_array(st.buildings.map(func(b): return b.id))
 	for id in order: if int(d.get(id, 0)) == 1: mend(id)
 	for i in MARKET.size(): if int(d.get("mkt_%d" % i, 0)) == 1: mend("mkt_%d" % i)
+	if int(d.get("church2", 0)) == 1 and tiers.get("church", 0): mend("church2")
 	for id in d.get("raided", []): if not tiers.get(id, 0): raided[id] = true
 
 ## Where settler i lives: most scrape by on Squatters' Row; newcomers who came for the boarding house's rooms live
@@ -891,6 +921,7 @@ func say_hello(r: Node3D) -> void:
 func _hello_tick(dt: float) -> void:
 	if hello == null: return
 	hello_t -= dt
+	if hello_at == null or not is_instance_valid(hello_at): hello_t = 0.0 # (the one greeting has gone: a building rebuilt, or wrecked)
 	var on := hello_t > 0.0 and not far; hello.visible = on
 	if not on: return
 	var r := hello_at.position

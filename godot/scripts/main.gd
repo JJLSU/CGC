@@ -914,6 +914,7 @@ func _dev_town() -> void:
 	if not town.tiers.get("church", 0): town.mend("church")
 	for st in Town.STREETS: for b in st.buildings: if not town.tiers.get(b.id, 0): town.mend(b.id)
 	for i in Town.MARKET.size(): if not town.tiers.get("mkt_%d" % i, 0): town.mend("mkt_%d" % i)
+	if not town.tiers.get("church2", 0) and ResourceLoader.exists("res://assets/models/props/bldg_church2_restored.glb"): town.mend("church2")
 	_trophies(); hud.toast("Dev: the whole town's mended, every street up."); sound.craft(); save_all()
 
 ## The renderer's name for the dev badge (the page shows WebGPU or WebGL 2).
