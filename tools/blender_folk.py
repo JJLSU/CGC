@@ -74,6 +74,24 @@ def process(name):
         low = a.name.lower()
         for k, n in KEYS:
             if k in low and not bpy.data.actions.get(n): a.name = n; break
+    # everyday extras (tools/meshy_extras.py: extras.glb), merged in as x_<what>, after the main clips have their names
+    ex_src = os.path.join(SRC, name, 'extras.glb')
+    if os.path.exists(ex_src):
+        keep, before = set(bpy.data.objects), set(bpy.data.actions)
+        bpy.ops.import_scene.gltf(filepath=ex_src)
+        new = [a for a in bpy.data.actions if a not in before]
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in bpy.data.objects:
+            if o not in keep: o.select_set(True)
+        bpy.ops.object.delete()
+        XKEYS = [('idle_3', 'x_idle_a'), ('idle_4', 'x_idle_a'), ('idle_5', 'x_idle_b'), ('idle_6', 'x_idle_b'), ('hip', 'x_hip'), ('hands_open', 'x_talk'),
+                 ('shrug', 'x_shrug'), ('drink', 'x_drink'), ('look_around', 'x_look'), ('big_wave', 'x_wave_big')]
+        for a in new:
+            low = a.name.lower().replace(' ', '_')
+            nm = next((n for k, n in XKEYS if k in low), None)
+            if nm and not bpy.data.actions.get(nm): a.name = nm; a.use_fake_user = True
+            else: bpy.data.actions.remove(a)
+        print(f'   extras: {[a.name for a in bpy.data.actions if a.name.startswith("x_")]}')
     # the right hand, for tools
     hand = next((b.name for b in arm.data.bones if 'hand' in b.name.lower() and ('right' in b.name.lower() or b.name.lower().endswith('_r') or b.name.lower().endswith('.r') or 'r_' in b.name.lower())), None)
     # height

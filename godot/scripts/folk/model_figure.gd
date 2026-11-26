@@ -102,8 +102,8 @@ func update(dt: float, speed := 0.0, pose = null) -> void:
 	if pose == "swing" and player and player.has_animation("work"): play("work", 0.08, player.get_animation("work").length / 0.55)
 	elif pose != null and POSE_CLIP.has(pose): play(POSE_CLIP[pose])
 	elif speed > RUN_AT and player and player.has_animation("run"): play("run", 0.2, clampf(speed / 9.0, 0.8, 1.6))
-	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0))
-	else: play("idle", 0.4)
+	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0)); _ex_left = 0.0
+	else: _idle_life(dt)
 	_work_tool_show() # (after the clip's chosen: shown for the swing, put away the moment it ends)
 
 ## Things held in the hands at the figure's own size: Meshy's skeletons are in centimetres, so a hand holder on a
@@ -142,3 +142,24 @@ static func _hammer_mesh() -> Node3D:
 	var head := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.07, 0.2, 0.08)
 	head.mesh = bm; head.material_override = PaperMats.paper(Color("6a6d72")); head.position = Vector3(0, 0.04, 0.3); g.add_child(head)
 	return g
+
+## Standing about, now and then a clip of its own (the player's ask: more different idles and actions; the everyday
+## extras x_* from tools/meshy_extras.py: another idle, a shrug, talking, a drink, a look round, a wave...), once
+## through, then back to its idle; every 7-18 s, each figure on its own clock.
+var _extras = null
+var _ex_wait := 0.0
+var _ex_left := 0.0
+func _idle_life(dt: float) -> void:
+	if _extras == null:
+		_extras = []
+		if player: for a in player.get_animation_list(): if String(a).begins_with("x_"): _extras.append(a)
+		_ex_wait = 4.0 + randf() * 12.0
+	if _ex_left > 0.0:
+		_ex_left -= dt
+		if _ex_left > 0.0: return
+		play("idle", 0.5); _ex_wait = 7.0 + randf() * 11.0; return
+	if _extras.is_empty(): play("idle", 0.4); return
+	_ex_wait -= dt
+	if _ex_wait > 0.0: play("idle", 0.4); return
+	var clip: String = _extras[randi() % _extras.size()]
+	play(clip, 0.45); _ex_left = minf(player.get_animation(clip).length, 9.0)
