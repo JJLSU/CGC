@@ -254,6 +254,7 @@ func build() -> void:
 		i += 3
 	var rails := MeshInstance3D.new(); rails.mesh = bars.commit(); rails.material_override = PaperMats.paper(Color.hex(0x3a3632ff)); add_child(rails)
 	_lay_tail()
+	_pole()
 	_string_wire(ys)
 	_make_depot()
 	_make_yard()
@@ -320,6 +321,31 @@ func _make_yard() -> void:
 			var rail := _box(0.07, 0.1, len, Vector3(mid.x, hgt, mid.y), fence); rail.rotation.y = atan2(b.x - a.x, b.y - a.y); g.add_child(rail)
 	add_child(g)
 
+## The Meshy telegraph pole as one mesh to draw many times: its mesh and printed card, the transform that stands it
+## POLE_H tall on its foot, and where its outer insulators carry the wires (from its reference art: the top arm's
+## outer pair, a third of the arm out either side, at 94% of the height).
+const POLE_H := 5.4
+var pole_kit = null
+var pole_xfs: Array = []
+func _pole() -> void:
+	var path := "res://assets/models/props/prop_telegraph_medium.glb"
+	if not ResourceLoader.exists(path): return
+	var inst := (load(path) as PackedScene).instantiate() as Node3D
+	PaperMats.paperize(inst)
+	var mis := PaperMats._meshes(inst)
+	if mis.is_empty(): inst.free(); return
+	var mi: MeshInstance3D = mis[0]
+	var xf := mi.global_transform if mi.is_inside_tree() else _rel(mi, inst)
+	var bb := xf * mi.mesh.get_aabb()
+	var k := POLE_H / bb.size.y
+	var local := Transform3D(Basis().scaled(Vector3.ONE * k), Vector3.ZERO) * Transform3D(Basis(), -Vector3(bb.get_center().x, bb.position.y, bb.get_center().z)) * xf
+	pole_kit = {"mesh": mi.mesh, "mat": mi.get_active_material(0), "local": local, "wire_y": POLE_H * 0.94, "wire_x": bb.size.x * k * 0.35}
+	inst.free()
+static func _rel(n: Node3D, top: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY; var c: Node = n
+	while c != null and c != top: t = (c as Node3D).transform * t; c = c.get_parent()
+	return t
+
 ## Telegraph poles beside the line, a crossarm and two glass insulators on each, and two sagging wires between them.
 func _string_wire(ys: Array) -> void:
 	var poles := SurfaceTool.new(); poles.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -335,12 +361,18 @@ func _string_wire(ys: Array) -> void:
 		var x: float = path[i].x - cos(yaw) * 2.9; var z: float = path[i].z + sin(yaw) * 2.9
 		if Terrain.is_water(x, z) or ys[i] > Terrain.get_height(path[i].x, path[i].z) + 0.3 or not clear_of.call(x, z): last = null; i += 24; continue
 		var y := Terrain.get_height(x, z); var lean := ((i * 7919) % 100) / 100.0 - 0.5 # (each pole a little off true)
-		var pb := BoxMesh.new(); pb.size = Vector3(0.16, 4.6, 0.16)
-		poles.append_from(pb, 0, Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, lean * 0.04), Vector3(x, y, z)) * Transform3D(Basis(), Vector3(0, 2.3, 0)))
-		var cb := BoxMesh.new(); cb.size = Vector3(1.3, 0.12, 0.12)
-		poles.append_from(cb, 0, Transform3D(Basis(Vector3.UP, yaw), Vector3(x, y, z)) * Transform3D(Basis(), Vector3(0, 4.3, 0)))
-		var ends := [Vector3(x + cos(yaw) * -0.55, y + 4.46, z - sin(yaw) * -0.55), Vector3(x + cos(yaw) * 0.55, y + 4.46, z - sin(yaw) * 0.55)]
-		for e in ends: var gc := CylinderMesh.new(); gc.top_radius = 0.05; gc.bottom_radius = 0.07; gc.height = 0.16; gc.radial_segments = 6; gc.rings = 1; glass.append_from(gc, 0, Transform3D(Basis(), e - Vector3(0, 0.02, 0)))
+		var ends: Array
+		if pole_kit != null: # (the player's Meshy telegraph pole, its crossarms across the line; the wires on its outer insulators)
+			pole_xfs.append(Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, lean * 0.04), Vector3(x, y, z)) * pole_kit.local)
+			var wy: float = y + pole_kit.wire_y; var wx: float = pole_kit.wire_x
+			ends = [Vector3(x + cos(yaw) * -wx, wy, z - sin(yaw) * -wx), Vector3(x + cos(yaw) * wx, wy, z - sin(yaw) * wx)]
+		else:
+			var pb := BoxMesh.new(); pb.size = Vector3(0.16, 4.6, 0.16)
+			poles.append_from(pb, 0, Transform3D(Basis(Vector3.UP, yaw) * Basis(Vector3.BACK, lean * 0.04), Vector3(x, y, z)) * Transform3D(Basis(), Vector3(0, 2.3, 0)))
+			var cb := BoxMesh.new(); cb.size = Vector3(1.3, 0.12, 0.12)
+			poles.append_from(cb, 0, Transform3D(Basis(Vector3.UP, yaw), Vector3(x, y, z)) * Transform3D(Basis(), Vector3(0, 4.3, 0)))
+			ends = [Vector3(x + cos(yaw) * -0.55, y + 4.46, z - sin(yaw) * -0.55), Vector3(x + cos(yaw) * 0.55, y + 4.46, z - sin(yaw) * 0.55)]
+			for e in ends: var gc := CylinderMesh.new(); gc.top_radius = 0.05; gc.bottom_radius = 0.07; gc.height = 0.16; gc.radial_segments = 6; gc.rings = 1; glass.append_from(gc, 0, Transform3D(Basis(), e - Vector3(0, 0.02, 0)))
 		if last != null:
 			for w in 2: # each wire sags between its two poles
 				var p0: Vector3 = last[w]; var p1: Vector3 = ends[w]
@@ -350,8 +382,13 @@ func _string_wire(ys: Array) -> void:
 		last = ends; any = true
 		i += 24
 	if not any: return
-	var pm := MeshInstance3D.new(); pm.mesh = poles.commit(); pm.material_override = PaperMats.paper(Color.hex(0x5e4630ff)); add_child(pm)
-	var gm := MeshInstance3D.new(); gm.mesh = glass.commit(); gm.material_override = PaperMats.paper(Color.hex(0x7fb0a0ff)); add_child(gm)
+	if pole_kit != null:
+		var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.mesh = pole_kit.mesh; mm.instance_count = pole_xfs.size()
+		for k in pole_xfs.size(): mm.set_instance_transform(k, pole_xfs[k])
+		var mmi := MultiMeshInstance3D.new(); mmi.multimesh = mm; mmi.material_override = pole_kit.mat; mmi.custom_aabb = AABB(Vector3(-1e5, -100, -1e5), Vector3(2e5, 400, 2e5)); add_child(mmi)
+	else:
+		var pm := MeshInstance3D.new(); pm.mesh = poles.commit(); pm.material_override = PaperMats.paper(Color.hex(0x5e4630ff)); add_child(pm)
+		var gm := MeshInstance3D.new(); gm.mesh = glass.commit(); gm.material_override = PaperMats.paper(Color.hex(0x7fb0a0ff)); add_child(gm)
 	var im := ImmediateMesh.new(); var lm := StandardMaterial3D.new(); lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; lm.albedo_color = Color.hex(0x2a2018ff)
 	im.surface_begin(Mesh.PRIMITIVE_LINES, lm)
 	for v in wire: im.surface_add_vertex(v)
