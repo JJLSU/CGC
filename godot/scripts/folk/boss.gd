@@ -28,14 +28,14 @@ const FAR := 210.0
 const SPECS := {
 	"jebediah": {"name": "Mad Jebediah", "model": "boss_jebediah", "scale": 2.1, "hp": 54, "speed": 3.4, "weapon": "pick", "throw_hit": 20, "slam_hit": 25,
 		"cool": 2.5, "fly": 13.0, "arc": 1.0, "r0": 300.0, "r1": 450.0, "salt": 777, "lair": "diggings", "street": 0,
-		"prize": "the townsite deed", "prize_key": "deed"},
+		"prize": "the townsite deed", "prize_key": "deed", "bounty": 50},
 	"angus": {"name": "Big Angus Hackett", "model": "boss_lumberjack", "scale": 2.15, "hp": 72, "speed": 3.8, "weapon": "axe", "throw_hit": 22, "slam_hit": 28,
 		"cool": 2.1, "fly": 18.0, "arc": 0.35, "r0": 480.0, "r1": 620.0, "salt": 1313, "lair": "logging", "street": 1,
-		"prize": "the timber rights", "prize_key": "timber_rights"},
+		"prize": "the timber rights", "prize_key": "timber_rights", "bounty": 75},
 	# the mining baron: holds the whole town's mortgage once it's grown; slow and stout, but his lit dynamite blasts wide
 	"crane": {"name": "Thaddeus Crane", "model": "boss_tycoon", "scale": 2.2, "hp": 90, "speed": 3.0, "weapon": "dynamite", "throw_hit": 24, "slam_hit": 26,
 		"cool": 2.6, "fly": 12.0, "arc": 1.1, "hit_r": 2.6, "r0": 380.0, "r1": 520.0, "salt": 2929, "lair": "mansion", "street": 2,
-		"prize": "the town's mortgage", "prize_key": "mortgage", "reward": 150},
+		"prize": "the town's mortgage", "prize_key": "mortgage", "reward": 150, "bounty": 100},
 }
 const ORDER := ["jebediah", "angus", "crane"]
 
@@ -56,6 +56,7 @@ var act_t := 0.0
 var hp := 54
 var beaten := false
 var delivered := false     ## what he held is back at the assay office
+var bounty_paid := false   ## the sheriff's reward for him, claimed at the jail
 var dead := 0.0
 var state := "idle"         ## idle, fight, home
 var cool := 1.5
@@ -98,10 +99,10 @@ func setup(town_at: Vector3, avoid: Array, world: World = null) -> void:
 	mouth = at + back * 9.0; mouth.y = Terrain.get_height(mouth.x, mouth.z)
 	if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 24.0})
 
-func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered}
+func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered, "bountyPaid": bounty_paid}
 func load_state(d) -> void:
 	if d == null or not d is Dictionary: return
-	beaten = bool(d.get("beaten", false)); delivered = bool(d.get("delivered", false))
+	beaten = bool(d.get("beaten", false)); delivered = bool(d.get("delivered", false)); bounty_paid = bool(d.get("bountyPaid", false))
 
 func alive() -> bool: return built and fig != null and not beaten and dead == 0.0
 func fighting() -> bool: return alive() and state == "fight"

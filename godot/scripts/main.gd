@@ -1297,6 +1297,15 @@ func _town_doors() -> bool:
 		return true
 	# the sheriff: a price on one guarded den out in the county; beat every guardian there and come back for the reward
 	if _at_door("jail"):
+		# the bosses: a reward on each one's head, paid once he's beaten (on top of the assayer's fee for his prize)
+		var owed = null
+		for bo in bosses: if bo.beaten and not bo.bounty_paid: owed = bo; break
+		if owed != null:
+			beast_prompt = "[E] Claim the sheriff's $%d reward for %s" % [owed.spec.bounty, owed.title()]
+			if input.hit("KeyE"):
+				owed.bounty_paid = true; inv.dollars = inv.get("dollars", 0) + int(owed.spec.bounty); sound.craft(); journal.record("bounty")
+				hud.toast("The sheriff whistles low. \"%s? Folks'll sleep easier.\" +$%d" % [owed.title(), owed.spec.bounty])
+			return true
 		beast_prompt = ("[E] See the sheriff about the $%d bounty" % bounty.pay) if bounty != null else "[E] Ask the sheriff if there's a bounty posted"
 		if input.hit("KeyE"):
 			var beaten := func(b) -> bool:

@@ -85,6 +85,11 @@ func _initialize() -> void:
 	await _wait(0.3)
 	print("handed in: deed %d, delivered %s, Second Street opened %s" % [main.inventory.get("deed", 0), B.delivered, 0 in T.opened])
 	ok = ok and main.inventory.get("deed", 0) == 0 and B.delivered and 0 in T.opened
+	# the sheriff's reward for him, at the jail (Second Street's up now)
+	T.mend("jail"); var jd: Vector3 = T.doors.jail; var cash1: int = main.inventory.get("dollars", 0)
+	p.pos = Vector3(jd.x, Terrain.get_height(jd.x, jd.z), jd.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
+	print("sheriff's reward: +$%d, paid %s" % [main.inventory.get("dollars", 0) - cash1, B.bounty_paid])
+	ok = ok and B.bounty_paid and main.inventory.get("dollars", 0) - cash1 == 50
 	var sv: Dictionary = B.save()
 	ok = ok and sv.beaten and sv.delivered
 	# Big Angus: Second Street mended holds Third Street back till his timber rights are in
