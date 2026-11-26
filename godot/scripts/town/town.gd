@@ -1057,13 +1057,14 @@ func set_trophies(ids: Array) -> void:
 		tilt.add_child(w); trophies.add_child(tilt)
 
 ## Lettering for the shop signs the models left blank (the player saw bare boards): each board's centre, its facing and
-## its size in the building's own frame, found by casting rays through the board on screen into the model
+## its size in the building's own frame, found by casting rays through the board's four edges on screen into the model
+## (the centre is the midpoint of those edges)
 ## (tools/shot_facades.gd views; measured 2026-11-26), and the words painted on it.
-const SIGN_BOARDS := {"bakery": [0.16, 3.56, -0.41, 1.8, 0.75, "BAKERY"], "bank": [0.0, 3.08, -0.42, 2.35, 0.71, "MINERS' BANK"],
-	"barber": [0.0, 3.05, -0.37, 2.55, 0.52, "BARBER"], "cooper": [0.27, 2.4, 0.01, 1.75, 0.41, "COOPERAGE"],
-	"hotel2": [0.0, 5.55, -0.5, 2.57, 0.79, "GRAND HOTEL"], "opera": [0.27, 4.22, -0.72, 2.09, 0.59, "OPERA HOUSE"],
-	"telegraph": [0.59, 2.43, -0.17, 1.3, 0.55, "TELEGRAPH"], "dance": [0.0, 4.37, -0.45, 2.1, 0.45, "DANCE HALL"],
-	"drygoods": [0.19, 3.54, -0.34, 2.56, 0.85, "DRY GOODS"], "jail": [0.29, 3.45, -0.63, 2.38, 0.62, "SHERIFF"]}
+const SIGN_BOARDS := {"bakery": [0.43, 3.55, -0.40, 1.85, 0.72, "BAKERY"], "bank": [0.03, 3.08, -0.42, 2.21, 0.60, "MINERS' BANK"],
+	"barber": [0.27, 3.01, -0.37, 2.41, 0.44, "BARBER"], "cooper": [0.23, 2.36, 0.01, 1.62, 0.34, "COOPERAGE"],
+	"hotel2": [-0.01, 5.40, -0.50, 2.41, 0.71, "GRAND HOTEL"], "opera": [0.30, 4.09, -0.71, 1.95, 0.50, "OPERA HOUSE"],
+	"telegraph": [0.56, 2.41, -0.17, 1.16, 0.47, "TELEGRAPH"], "dance": [0.18, 4.18, -0.44, 2.12, 0.43, "DANCE HALL"],
+	"drygoods": [0.20, 3.52, -0.34, 2.42, 0.73, "DRY GOODS"], "jail": [0.10, 3.43, -0.63, 2.24, 0.54, "SHERIFF"]}
 static var _sign_font: Font
 func _sign(id: String, g: Node3D) -> void:
 	if not SIGN_BOARDS.has(id): return
