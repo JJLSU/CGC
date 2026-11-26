@@ -1,0 +1,15 @@
+{
+  "name": "cgc_saloon_daisy",
+  "height": 1.68,
+  "tris": 20520,
+  "tris_before": 20520,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
