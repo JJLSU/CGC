@@ -33,7 +33,7 @@ func _initialize() -> void:
 	print("chasing %d, health %.0f -> %.0f" % [chasing, h0, p.health])
 	ok = ok and chasing >= 2 and p.health < h0
 	# only men fight, three at least; the women aren't targets and keep to the shack in a fight
-	var men_ok: bool = c.men.size() >= 3 and c.men.all(func(m): return ClaimJumpers.MEN.has(m.fig.name))
+	var men_ok: bool = c.men.size() >= 3 and c.men.all(func(m): return ClaimJumpers.MEN.has(m.fig.name) or ClaimJumpers.OUTLAWS.has(m.fig.name)) # (the outlaws too, once theirs are in)
 	var targets: Array = J.targets()
 	var women_safe: bool = c.women.all(func(w): return not targets.any(func(t): return t.pos == w.fig.root.position))
 	var by_shack: bool = c.women.all(func(w): return Vector2(w.fig.root.position.x - c.shack.x, w.fig.root.position.z - c.shack.z).length() < 4.0)
