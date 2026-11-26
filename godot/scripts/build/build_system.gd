@@ -49,6 +49,8 @@ const EXTRA := {
 	"leanto": {"name": "Lean-to", "cost": {"wood": 12, "fiber": 6}, "model": "bldg_leanto", "size": 5.0, "use": "sleep", "hp": 6},
 	"palisade": {"name": "Palisade", "cost": {"wood": 4}, "snap": "edge", "solid": [1.0, 0.16, 2.6], "foot": [1.0, 0.16, 2.6], "hp": 9},
 }
+## Paper pieces the player's Meshy models now stand in for.
+const MODEL_PIECES := {"kiln": "prop_brick_kiln"}
 const EXTRA_SHELF := ["Homestead", ["henhouse", "haybarn", "shaft", "well", "leanto"]]
 
 static func load_data() -> void:
@@ -99,6 +101,15 @@ static func to_world_dir(p: Dictionary, lx: float, lz: float) -> Vector2:
 func make_mesh(t: String, as_ghost := false) -> Node3D:
 	if EXTRA.has(t): return _extra_mesh(t, as_ghost)
 	if not _meshes.has(t): _meshes[t] = load("res://assets/baked/pieces/%s.glb" % t)
+	if MODEL_PIECES.has(t) and ResourceLoader.exists("res://assets/models/props/%s.glb" % MODEL_PIECES[t]):
+		# (the player's Meshy model in place of the paper piece, as big as the paper one stood, in the same footprint)
+		var paper := (_meshes[t] as PackedScene).instantiate() as Node3D
+		var pb := PaperMats._aabb(paper, Transform3D.IDENTITY); paper.free()
+		var r2 := Node3D.new()
+		var m := PaperMats.seated(load("res://assets/models/props/%s.glb" % MODEL_PIECES[t]), maxf(pb.size.x, pb.size.z) * 1.05, false, true)
+		m.position = Vector3(pb.get_center().x, 0.0, pb.get_center().z); r2.add_child(m)
+		if as_ghost: _ghostify(r2)
+		return r2
 	var root := (_meshes[t] as PackedScene).instantiate() as Node3D
 	if as_ghost: _ghostify(root)
 	else: _skin(root)
