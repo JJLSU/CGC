@@ -113,6 +113,7 @@ func _init(center: Vector3) -> void:
 	home = center
 	for S in SETTLERS:
 		var folk := ModelFigure.new(S.new if S.has("new") and ModelFigure.has_folk(S.new) else S.model) # (the player's new folk, once made)
+		folk.work_tool = {"woodlot": "axe", "charpit": "axe", "quarry": "pick", "claypit": "pick", "diggings": "pick", "sluice": "pick"}.get(S.get("work", ""), "hammer") # (the tool of his trade)
 		folk.root.visible = false; add_child(folk.root)
 		# their camp: a little ring of stones and a tiny flame
 		var fire := Node3D.new()

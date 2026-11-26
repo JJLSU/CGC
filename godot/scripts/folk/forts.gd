@@ -195,9 +195,10 @@ func _build(f: Dictionary) -> void:
 		var stand_in := not ModelFigure.has_folk(nm)
 		if stand_in: nm = STAND_INS[i % STAND_INS.size()]
 		var fig := ModelFigure.new(nm, {"hue": 3.6} if stand_in else {}) # (townsmen in borrowed blue, till the troopers' own figures come)
-		fig.borrow_clip("run", "folk_native_warrior")
+		fig.borrow_clip("run", "folk_native_warrior"); fig.work_tool = "axe" # (at chores, splitting wood)
 		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
-		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); fig.hands[1].add_child(rifle) # (held at the side, muzzle up, as the pick handles are)
+		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); if pst[2] != "chores": fig.hands[1].add_child(rifle) # (the man at chores has his axe instead)
+		else: rifle.free() # (held at the side, muzzle up, as the pick handles are)
 		var hm := at + fx * float(pst[0]) + fz * float(pst[1])
 		fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); fig.root.rotation.y = face
 		add_child(fig.root)

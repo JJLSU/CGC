@@ -104,6 +104,7 @@ func update(dt: float, speed := 0.0, pose = null) -> void:
 	elif speed > RUN_AT and player and player.has_animation("run"): play("run", 0.2, clampf(speed / 9.0, 0.8, 1.6))
 	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0))
 	else: play("idle", 0.4)
+	_work_tool_show() # (after the clip's chosen: shown for the swing, put away the moment it ends)
 
 ## Things held in the hands at the figure's own size: Meshy's skeletons are in centimetres, so a hand holder on a
 ## bone sits at a world scale of 0.01 and a rifle or spear put in it shrank to nothing. Each frame the holders undo
@@ -116,3 +117,28 @@ func _hold_true() -> void:
 		if not att is BoneAttachment3D: continue
 		var ps: float = (att as Node3D).global_transform.basis.get_scale().x
 		if ps > 1e-6 and absf(ps * h.scale.x - want) > want * 0.02: h.scale = Vector3.ONE * (want / ps)
+
+## A tool in hand for the work swing (the player: anybody chopping needs a tool): when a figure plays its work clip
+## with nothing else in its right hand, an axe, a pickaxe or a hammer (work_tool) appears there, gone between swings.
+var work_tool := "hammer"
+var _tool_node: Node3D = null
+func _work_tool_show() -> void:
+	if hands.size() < 2: return
+	var working := current == "work"
+	if _tool_node == null:
+		if not working: return
+		var h: Node3D = hands[1]
+		if h.get_child_count() > 0: return # (already holding something of its own: a pick, a rifle, a club)
+		match work_tool:
+			"axe": _tool_node = Boss._axe_mesh(0.8)
+			"pick": _tool_node = Boss._pick_mesh(0.8)
+			_: _tool_node = _hammer_mesh()
+		_tool_node.rotation.x = PI / 2.0; _tool_node.position = Vector3(0, 0, 0.12); h.add_child(_tool_node)
+	_tool_node.visible = working
+static func _hammer_mesh() -> Node3D:
+	var g := Node3D.new()
+	var hd := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.022; cm.bottom_radius = 0.026; cm.height = 0.42; cm.radial_segments = 6
+	hd.mesh = cm; hd.material_override = PaperMats.paper(Color("8a6038")); hd.rotation.x = PI / 2.0; hd.position = Vector3(0, 0, 0.11); g.add_child(hd)
+	var head := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.07, 0.2, 0.08)
+	head.mesh = bm; head.material_override = PaperMats.paper(Color("6a6d72")); head.position = Vector3(0, 0.04, 0.3); g.add_child(head)
+	return g

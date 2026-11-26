@@ -1136,7 +1136,7 @@ func _hall_life(dt: float, night: float) -> void:
 		hall_girls = null
 	var open := clock > 0.4 or clock < 0.08
 	hall_barman.root.visible = open
-	if open: hall_barman.update(dt, 0.0, "work" if fmod(_t * 0.3, 3.0) < 1.0 else null)
+	if open: hall_barman.update(dt, 0.0, null) # (standing to his bar: no hammer swing)
 	var show := night > 0.3
 	if hall_girls == null:
 		hall_girls = []
