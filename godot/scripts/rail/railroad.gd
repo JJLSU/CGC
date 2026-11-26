@@ -9,7 +9,8 @@ extends Node3D
 const TIE := 0.9
 const LAND_KEYS := ["hollows", "breaks", "fen", "prairie", "pines"]
 const NAMES := {"hollows": "Silver Birch Hollows", "breaks": "Redrock Breaks", "fen": "Misty Fen", "prairie": "Golden Prairie", "pines": "Bluepine Highlands"}
-const KEEPERS := {"hollows": {"model": "trades_5", "hue": 0.6}, "breaks": {"model": "prospectors_4", "hue": 0.0}, "fen": {"model": "folk_calico_01", "hue": 2.2}, "prairie": {"model": "folk_farmhand_02", "hue": 0.4}, "pines": {"model": "trades_2", "hue": 3.4}}
+## (each a figure of the player's new folk, re-dyed, once made: "new"; else the old model)
+const KEEPERS := {"hollows": {"new": "cgc_woman_greenbustle", "model": "trades_5", "hue": 0.6}, "breaks": {"new": "cgc_man_ragged", "model": "prospectors_4", "hue": 0.0}, "fen": {"new": "cgc_woman_plumstripe", "model": "folk_calico_01", "hue": 2.2}, "prairie": {"new": "cgc_man_youth", "model": "folk_farmhand_02", "hue": 0.4}, "pines": {"new": "cgc_woman_calico", "model": "trades_2", "hue": 3.4}}
 
 var built := false
 var depot := Vector3.ZERO
@@ -251,7 +252,7 @@ func _make_post(s: Dictionary) -> void:
 	add_child(g); s.post_group = g
 	s.door = g.to_global(Vector3(0, 0, 2.6)) # (where you trade: the step before the door)
 	var K: Dictionary = KEEPERS[s.land]
-	var f := ModelFigure.new(K.model, {"hue": K.hue}); var kat := g.to_global(Vector3(1.3, 0, 2.9))
+	var f := ModelFigure.new(K.new if ModelFigure.has_folk(K.new) else K.model, {"hue": K.hue * 0.5 if ModelFigure.has_folk(K.new) else K.hue}); var kat := g.to_global(Vector3(1.3, 0, 2.9))
 	f.root.position = Vector3(kat.x, Terrain.get_height(kat.x, kat.z), kat.z); f.root.rotation.y = face + 0.3; add_child(f.root); s.keeper = f
 
 ## The whistle-stop whose trading post (x, z) is standing at, if any.

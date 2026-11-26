@@ -775,7 +775,7 @@ func _lamplighter(dt: float) -> void:
 		for S in street_lamps: _light(S, true)
 		lit_round = true; return
 	if lighter == null:
-		var fig := ModelFigure.new("prospectors_3", {"hue": 2.6}); var p0: Vector3 = at + along * -21.0
+		var fig := ModelFigure.new("cgc_man_elder" if ModelFigure.has_folk("cgc_man_elder") else "prospectors_3", {"hue": 2.6}); var p0: Vector3 = at + along * -21.0
 		fig.root.position = Vector3(p0.x, y0 + 0.02, p0.z); add_child(fig.root)
 		lighter = {"fig": fig, "i": 0, "wait": 0.0}
 		return

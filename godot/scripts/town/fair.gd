@@ -57,7 +57,7 @@ func _init(world: World, house: Dictionary, spot: Dictionary) -> void:
 	var sign := Town.board(1.7, 0.53, "res://assets/baked/homestead/fair_sign", 0.04)
 	sign.position = Vector3(0, 2.0 - 0.265, -0.48); hinge.add_child(sign)
 	# Mrs. Pruitt, the judge, facing out over the table
-	judge = ModelFigure.new("townsfolk_1")
+	judge = ModelFigure.new("cgc_man_gent" if ModelFigure.has_folk("cgc_man_gent") else "townsfolk_1", {"hue": 1.1}) # (the player's gent, in a judge's coat)
 	judge.root.position = Vector3(1.35, 0, -0.25); judge.root.rotation.y = -0.25
 	hinge.add_child(judge.root)
 	visible = false
