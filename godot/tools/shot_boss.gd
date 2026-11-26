@@ -14,6 +14,10 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 9000:
 		p.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); p.health = p.max_health; p.dead = false
 		main.rig.yaw = atan2(dir.x, dir.z) + 0.5; main.rig.pitch = 0.32; main.rig.dist = (12.0 if args.has("slam") else 8.0) if close else 15.0
+		if args.has("special"): # (riled, his third throw due: catch his trick in the air)
+			if B.fighting() and B.hp > int(B.spec.hp) / 3: B.hp = int(B.spec.hp) / 3; B.throws = 2; B.cool = 0.0
+			if B.picks.any(func(k): return k.landed < 0.0 and k.get("drop", false) and k.t > k.dur * 0.8) and B.picks.size() >= 3: break
+			await process_frame; continue
 		if args.has("slam"): # (stand in his reach till he winds up, and catch the ring half spread)
 			var bp: Vector3 = B.pos(); p.pos = Vector3(bp.x + 3.0, Terrain.get_height(bp.x + 3.0, bp.z), bp.z)
 			if B.slam_t > 0.0 and B.slam_t < 0.35: break

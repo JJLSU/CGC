@@ -65,6 +65,7 @@ var slam_t := -1.0          ## counting down a slam's wind-up
 var ring: MeshInstance3D
 var picks: Array = []       ## [{node, mark, from, to, t, dur, landed}]
 var told := false
+var throws := 0             ## throws so far this fight (every third, once riled, is his special)
 var last_p := Vector3.ZERO
 var vel := Vector3.ZERO
 var speed := 0.0
@@ -158,7 +159,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	if state != "fight" and not player.dead and dp < AGGRO and from_home < LEASH:
 		state = "fight"; cool = 1.2; _spotted(hooks)
 	if state == "fight" and (player.dead or from_home > LEASH):
-		state = "home"; slam_t = -1.0; ring.visible = false
+		state = "home"; slam_t = -1.0; ring.visible = false; throws = 0
 	var want := Vector3.ZERO; var spd := 0.0; var pose = null
 	if state == "fight":
 		var enraged: bool = hp * 2 < int(spec.hp)
@@ -176,8 +177,11 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 			if cool <= 0.0 and not player.dead:
 				if dp < 4.6: slam_t = 0.9 # (wind up)
 				elif dp < 32.0:
-					var n := 2 if enraged else 1
-					for i in n: _throw(me, p, vel, dp, (i - (n - 1) / 2.0) * 2.6)
+					throws += 1
+					if enraged and throws % 3 == 0: _special(me, p, vel, dp) # (every third throw, once he's riled: his own trick)
+					else:
+						var n := 2 if enraged else 1
+						for i in n: _throw(me, p, vel, dp, (i - (n - 1) / 2.0) * 2.6)
 					cool = (spec.cool * 0.76 if enraged else spec.cool) + randf() * 0.6; pose = "swing"; _act("throw", 0.9)
 					if hooks.has("on_throw"): hooks.on_throw.call()
 		r.rotation.y = _turn(r.rotation.y, atan2(to_p.x, to_p.z), dt * 6.0)
@@ -209,16 +213,40 @@ func _act(clip: String, sec: float) -> void:
 	else: act_t = maxf(act_t, sec)
 
 ## A pickaxe lobbed at where you'll be (he leads you a little), side: metres off to one side (the second of a pair).
-func _throw(from: Vector3, p: Vector3, v: Vector3, dp: float, side: float) -> void:
-	var dur := clampf(dp / spec.fly, 0.6, 1.7)
-	var to := p + Vector3(v.x, 0, v.z) * dur * 0.55
+func _throw(from: Vector3, p: Vector3, v: Vector3, dp: float, side: float, at = null, drop := false) -> void:
+	var dur := clampf(dp / spec.fly, 0.6, 1.7) if not drop else 1.25
+	var to: Vector3 = p + Vector3(v.x, 0, v.z) * dur * 0.55 if at == null else at
 	var fwd := Vector3(to.x - from.x, 0, to.z - from.z).normalized()
-	to += Vector3(-fwd.z, 0, fwd.x) * side
+	if at == null: to += Vector3(-fwd.z, 0, fwd.x) * side
 	to.y = Terrain.get_height(to.x, to.z)
-	var n := _weapon(2.3); add_child(n)
+	var n := _boulder() if drop else _weapon(2.3); add_child(n)
 	var mark := MeshInstance3D.new(); var dm := CylinderMesh.new(); var hr: float = spec.get("hit_r", PICK_R); dm.top_radius = hr; dm.bottom_radius = hr; dm.height = 0.02; dm.radial_segments = 20
 	mark.mesh = dm; mark.material_override = _mark_mat(); mark.position = to + Vector3(0, 0.05, 0); add_child(mark)
-	picks.append({"node": n, "mark": mark, "from": from + Vector3(0, 4.2, 0), "to": to, "t": 0.0, "dur": dur, "landed": -1.0})
+	picks.append({"node": n, "mark": mark, "from": (to + Vector3(0, 16.0, 0)) if drop else from + Vector3(0, 4.2, 0), "to": to, "t": 0.0, "dur": dur, "landed": -1.0, "drop": drop})
+
+## His own trick, every third throw once he's riled; each marked on the ground before it lands, so you can get clear:
+## Jebediah stamps and brings a rockfall down round you (three boulders), Angus throws three axes in a wide fan,
+## Crane rings you with dynamite (three sticks round you and one where you stand: run).
+func _special(me: Vector3, p: Vector3, v: Vector3, dp: float) -> void:
+	match spec.weapon:
+		"pick":
+			for i in 3:
+				var a := randf() * TAU; var q := p + Vector3(cos(a), 0, sin(a)) * (0.0 if i == 0 else 2.0 + randf() * 1.8) # (one where you stand: move)
+				_throw(me, p, v, dp, 0.0, q, true)
+			if hooks.has("on_slam"): hooks.on_slam.call(me) # (the stamp that shakes them loose)
+		"axe":
+			for i in 3: _throw(me, p, v, dp, (i - 1) * 4.5)
+		"dynamite":
+			_throw(me, p, v, dp, 0.0, p)
+			for i in 3:
+				var a := i * TAU / 3.0 + randf(); _throw(me, p, v, dp, 0.0, p + Vector3(cos(a), 0, sin(a)) * 3.2)
+
+## A boulder for the rockfall: a lumpy grey stone.
+static func _boulder() -> Node3D:
+	var g := Node3D.new()
+	var m := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 0.55; sm.height = 0.9; sm.radial_segments = 7; sm.rings = 4
+	m.mesh = sm; m.material_override = PaperMats.paper(Color("8a8278")); g.add_child(m)
+	return g
 
 func _picks_update(dt: float, player: Player, hooks: Dictionary) -> void:
 	for k in picks.duplicate():
@@ -229,12 +257,14 @@ func _picks_update(dt: float, player: Player, hooks: Dictionary) -> void:
 			continue
 		k.t += dt
 		var u := clampf(k.t / k.dur, 0.0, 1.0)
-		var q: Vector3 = (k.from as Vector3).lerp(k.to, u); q.y += sin(u * PI) * (3.0 + k.dur * 3.0) * spec.arc # (a high lob; an axe flies flatter)
-		n.position = q; n.rotation = Vector3(-k.t * 11.0, atan2(k.to.x - k.from.x, k.to.z - k.from.z), 0)
-		var m: MeshInstance3D = k.mark; (m.material_override as StandardMaterial3D).albedo_color.a = 0.2 + 0.4 * u
+		var q: Vector3 = (k.from as Vector3).lerp(k.to, u * u if k.drop else u) # (a boulder falls, quicker as it comes)
+		if not k.drop: q.y += sin(u * PI) * (3.0 + k.dur * 3.0) * spec.arc # (a high lob; an axe flies flatter)
+		n.position = q; n.rotation = Vector3(-k.t * (3.0 if k.drop else 11.0), atan2(k.to.x - k.from.x, k.to.z - k.from.z) if not k.drop else k.t, 0)
+		var m: MeshInstance3D = k.mark; (m.material_override as StandardMaterial3D).albedo_color.a = 0.28 + 0.34 * u
 		if u >= 1.0:
 			k.landed = 0.0; m.queue_free()
-			n.position = k.to + Vector3(0, 0.5, 0); n.rotation = Vector3(-2.3, n.rotation.y, 0) # (stuck in the dirt, handle up)
+			if k.drop: n.position = k.to + Vector3(0, 0.45, 0) # (a boulder, settled where it fell)
+			else: n.position = k.to + Vector3(0, 0.5, 0); n.rotation = Vector3(-2.3, n.rotation.y, 0) # (stuck in the dirt, handle up)
 			if hooks.has("on_land"): hooks.on_land.call(k.to)
 			if Vector2(player.pos.x - k.to.x, player.pos.z - k.to.z).length() < float(spec.get("hit_r", PICK_R)) and not player.dead and hooks.has("on_hit"): hooks.on_hit.call(int(spec.throw_hit))
 
@@ -379,7 +409,7 @@ static func _pick_mesh(length: float) -> Node3D:
 
 static func _mark_mat() -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.25, 0.13, 0.08, 0.3); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(0.3, 0.17, 0.1, 0.3) # (a red-brown stain, darkening as it comes); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return m
 
