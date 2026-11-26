@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_vest",
+  "height": 1.68,
+  "tris": 20305,
+  "tris_before": 20305,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

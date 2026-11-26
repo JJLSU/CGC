@@ -1585,3 +1585,7 @@ for N frames, then saves the viewport; needs a window, not --headless).
   hall's women.
 - tools/test_boss.gd PASS with Angus too (581 m out, 400 m from Jebediah; Third held then opened; axes thrown and
   hurt; the bar names him; the rights picked up and handed in). Looked at him in camp (tools/shot_boss.gd ... angus).
+- All 20 of the player's new folk are in (assets/models/folk/cgc_*.glb, ~20k tris each, 1.68 m women and 1.75 m
+  men): every keeper and neighbour listed above wears their own figure now; looked at the jail, bakery, dry goods,
+  boarding house, dance hall, the Row and the night revue (tools/shot_townfolk.gd <door|rowN> [flip] [night]).
+  test_boss PASS; smoke_actions: only the known "material is null" line. The exe rebuilt.
