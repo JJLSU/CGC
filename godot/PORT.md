@@ -1600,3 +1600,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - The rumour note points at the boss holding the town back (main._boss_rumour, ahead of the landmark tales): what
   folks say of him and his lair, the paces and the arrow; once he's fallen, where his prize lies; gone at the lair or
   with the prize in hand. The gate's note now leads with who holds what (it was cut off before saying). test_boss checks it.
+- tools/test_boss_save.gd: bosses across a save and reload (beaten, delivered, Second Street up, the trophy, an unclaimed prize still lying at the lair, the lairs unmoved): PASS.
