@@ -87,8 +87,21 @@ func play(clip: String, fade := 0.25, time_scale := 1.0) -> void:
 ## speed in m/s; pose as for the paper figures ("swing", "sit", "work", "dance"...).
 func update(dt: float, speed := 0.0, pose = null) -> void:
 	t += dt; phase += dt * (2.4 + speed * 1.9)
+	_hold_true()
 	if pose == "swing" and player and player.has_animation("work"): play("work", 0.08, player.get_animation("work").length / 0.55)
 	elif pose != null and POSE_CLIP.has(pose): play(POSE_CLIP[pose])
 	elif speed > RUN_AT and player and player.has_animation("run"): play("run", 0.2, clampf(speed / 9.0, 0.8, 1.6))
 	elif speed > 0.3: play("walk", 0.25, clampf(speed / 1.4, 0.6, 2.0))
 	else: play("idle", 0.4)
+
+## Things held in the hands at the figure's own size: Meshy's skeletons are in centimetres, so a hand holder on a
+## bone sits at a world scale of 0.01 and a rifle or spear put in it shrank to nothing. Each frame the holders undo
+## that, leaving what they hold scaled as the figure itself is (a giant's pick giant-sized).
+func _hold_true() -> void:
+	if not root.is_inside_tree(): return
+	var want := root.global_transform.basis.get_scale().x
+	for h in hands + [head]:
+		var att := (h as Node3D).get_parent()
+		if not att is BoneAttachment3D: continue
+		var ps: float = (att as Node3D).global_transform.basis.get_scale().x
+		if ps > 1e-6 and absf(ps * h.scale.x - want) > want * 0.02: h.scale = Vector3.ONE * (want / ps)

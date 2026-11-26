@@ -11,7 +11,7 @@ func _initialize() -> void:
 	var F: ArmyForts = main.forts; var f: Dictionary = F.forts[0]
 	print("%d forts: %s" % [F.forts.size(), F.forts.map(func(q): return "%s at %s" % [q.name, Vector2(q.at.x, q.at.z).round()])])
 	var fz := Vector3(sin(f.face), 0, cos(f.face))
-	for k in [["", 26.0, 0.25, 30.0], ["_top", 2.0, 1.0, 60.0]]:
+	for k in [["", 26.0, 0.25, 30.0], ["_top", 2.0, 1.0, 60.0], ["_gate", 21.0, 0.15, 7.0]]:
 		var t0 := Time.get_ticks_msec()
 		while Time.get_ticks_msec() - t0 < (6000 if k[0] == "" else 2500):
 			var st: Vector3 = f.at + fz * k[1]
