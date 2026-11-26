@@ -250,6 +250,7 @@ func _ready() -> void:
 	hud.on_newgame = _new_game
 	hud.on_devcash = _dev_cash
 	hud.on_devtown = _dev_town
+	hud.on_devtwister = spawn_twister
 	hud.on_save = func() -> void: save_all(); hud.flash_saved("Saved ✓" if saving else "Not saved (test run)")
 	hud.on_quit = _quit_game
 	hud.on_option = _cycle_option
@@ -717,6 +718,7 @@ func _process(dt: float) -> void:
 	homestead.update(dt, sky.night, rig.camera)
 	_pm("homestead.update")
 	storm.update(dt, rig.camera, player.pos, weather.storm and weather.rain > 0.6)
+	_twister_update(dt)
 	_pm("storm.update")
 	sky.rain = weather.rain * 0.45 if weather.kind == "snow" else weather.rain
 	_pm("sky.rain")
@@ -3295,3 +3297,45 @@ func _shot_hook(spec: String) -> void:
 ## grown to where he holds it back.) Known once the street before his is all mended, or once you've beaten him.
 func _boss_known(b: Boss) -> bool:
 	return b.beaten or b.back or b.delivered or town.street_done(int(b.spec.street) - 1)
+
+# ------------------------------------------------------------------ twisters (the player's paper tornado frames)
+## About one thunderstorm in two brings a twister: it drops out of the clouds ~170 m off and wanders across the open
+## land, mostly passing you by at a distance, now and then coming straight on (Twister). Caught in it you're thrown
+## clear with a knock (12, less in a coat); near it you're drawn in, so run crosswise or ride. Never in town.
+var twister: Twister = null
+var twister_storm := false            ## this storm has had its chance
+var twister_fling := Vector3.ZERO
+func _twister_update(dt: float) -> void:
+	if not weather.storm: twister_storm = false
+	elif not twister_storm and weather.rain > 0.6:
+		twister_storm = true
+		if randf() < 0.5 and town.at.distance_to(player.pos) > 90.0: spawn_twister()
+	if twister_fling.length_squared() > 0.01:
+		player.pos += twister_fling * dt; twister_fling = twister_fling.lerp(Vector3.ZERO, minf(1.0, dt * 2.2))
+	if twister == null: return
+	var r := twister.update(dt, rig.camera, player.pos, func(at: Vector3, cols: Array) -> void: confetti.burst(at + Vector3(randf_range(-2, 2), randf() * 3.0, randf_range(-2, 2)), cols, 6, 1.6))
+	if town.at.distance_to(twister.pos) < 80.0: # (it skirts the town)
+		twister.dir = Vector3(twister.pos.x - town.at.x, 0, twister.pos.z - town.at.z).normalized(); twister.aim = twister.pos + twister.dir * 200.0
+	if r.thrown and not player.dead:
+		var away := Vector3(player.pos.x - twister.pos.x, 0, player.pos.z - twister.pos.z).normalized()
+		if away.length_squared() < 0.5: away = Vector3(-twister.dir.z, 0, twister.dir.x)
+		twister_fling = (away + Vector3(-twister.dir.z, 0, twister.dir.x) * 0.6).normalized() * 16.0; player.vel_y = 9.0; player.riding = false
+		var out := player.hurt(12, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock(); sound.tear()
+		hud.toast("The twister snatches you up and flings you into the grass!")
+		if out: death_timer = 3.0
+	elif r.pull != Vector3.ZERO and not player.riding: player.pos += r.pull * dt
+	if twister.gone: twister.queue_free(); twister = null; hud.toast("The twister lifts back into the clouds.")
+
+## Set one down ~170 m off, heading past you (or, one time in four, right at you).
+func spawn_twister() -> void:
+	if twister != null: twister.queue_free()
+	var a := randf() * TAU; var p := player.pos + Vector3(cos(a), 0, sin(a)) * 170.0
+	for i in 12: # (somewhere on dry, open ground)
+		if not Terrain.is_water(p.x, p.z) and not Terrain.impassable(p.x, p.z, 1.4) and town.at.distance_to(p) > 70.0: break
+		a += 0.5; p = player.pos + Vector3(cos(a), 0, sin(a)) * 170.0
+	var to := Vector3(player.pos.x - p.x, 0, player.pos.z - p.z).normalized()
+	var miss := 0.0 if randf() < 0.25 else randf_range(35.0, 70.0) * (1.0 if randf() < 0.5 else -1.0)
+	twister = Twister.new(); add_child(twister)
+	twister.start(p, player.pos + Vector3(-to.z, 0, to.x) * miss)
+	sound.thunder(0.9)
+	hud.toast("A twister's touched down out on the prairie! Run crosswise to it, or ride.")

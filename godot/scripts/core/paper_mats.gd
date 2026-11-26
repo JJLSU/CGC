@@ -31,6 +31,7 @@ static func card(map: Texture2D, opts := {}) -> ShaderMaterial:
 	m.set_shader_parameter("sway", opts.get("sway", 0.0))
 	m.set_shader_parameter("self_fill", opts.get("self_fill", 0.0))
 	if opts.has("albedo"): m.set_shader_parameter("albedo", opts.albedo)
+	if opts.has("alpha_cut"): m.set_shader_parameter("alpha_cut", opts.alpha_cut)
 	return m
 
 static func ground(map_tex: Texture2D, land_tex: Texture2D, backdrop := false) -> ShaderMaterial:

@@ -808,6 +808,8 @@ var error_label: Label
 var on_time_preset: Callable  ## (i) a chip clicked
 var on_devcash: Callable
 var devtown: Button
+var devtwister: Button
+var on_devtwister: Callable  ## a twister set down near you, to see one
 var on_devtown: Callable  ## the whole town mended at once (the player's ask: to check it all out)
 
 ## A dev button bottom right, its right edge right px in from the corner: cream card, brown ink.
@@ -850,6 +852,7 @@ func _build_dev() -> void:
 	devcash = _dev_button("+$500", "Dev: add $500 (F4)", -12); devcash.pressed.connect(func() -> void: if on_devcash.is_valid(): on_devcash.call())
 	# beside it, "Whole town": every street up and every building mended, the bosses' prizes all back
 	devtown = _dev_button("Whole town", "Dev: mend the whole town, every street", -98); devtown.pressed.connect(func() -> void: if on_devtown.is_valid(): on_devtown.call())
+	devtwister = _dev_button("Twister", "Dev: a twister touches down nearby", -214); devtwister.pressed.connect(func() -> void: if on_devtwister.is_valid(): on_devtwister.call())
 	error_card = PanelContainer.new(); error_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var eb := StyleBoxFlat.new(); eb.bg_color = Color("fde2df"); eb.border_color = Color("c8323c"); eb.set_border_width_all(1)
 	eb.content_margin_left = 14; eb.content_margin_right = 14; eb.content_margin_top = 10; eb.content_margin_bottom = 10

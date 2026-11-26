@@ -21,7 +21,8 @@ uniform float faded = 0.0;         // a one-state model run-down: greyed and dar
 uniform float self_fill = 0.0;     // emissive share of the print (0.28 for the models)
 uniform vec3 night_glow = vec3(0.0); // windows: their dark panes glow amber at night (x paper_glow)
 uniform bool no_haze = false;      // (the paper clouds: fog: false)
-uniform bool ghosts = false;       // a pool whose cards can stand between camera and farmer: INSTANCE_CUSTOM.x is the fade
+uniform bool ghosts = false;
+uniform float alpha_cut = 0.0;     // a cut-out print (its own transparent ground, e.g. the twister's frames): cut where the print's alpha is below this       // a pool whose cards can stand between camera and farmer: INSTANCE_CUSTOM.x is the fade
 
 varying vec3 wnor;
 varying vec3 wpos;
@@ -55,6 +56,7 @@ void fragment() {
 	// dissolving to a faint ghost through a fine even stipple (interleaved-gradient noise), no movement
 	if (fade > 0.0) { float ign = fract(52.9829189 * fract(FRAGCOORD.x * 0.06711056 + FRAGCOORD.y * 0.00583715)); if (fade > ign) discard; }
 	vec2 muv = flip_map ? vec2(UV.x, 1.0 - UV.y) : UV;
+	if (alpha_cut > 0.0 && texture(map, muv).a < alpha_cut) discard;
 	// (the paper's own grain runs in three.js uv space, v up)
 	vec2 puv = vec2(UV.x, flip_map ? UV.y : 1.0 - UV.y);
 	float fib = fiber2(puv * 2.4 * paper_scale);
