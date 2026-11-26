@@ -9,6 +9,7 @@ extends Node3D
 ## They wear the player's new folk, their clothes re-dyed so they don't twin the townsfolk in town.
 
 const NEAR := 150.0
+const MOVE_DAYS := 4      ## every few days each breaks camp and pitches somewhere new (they're travellers)
 const FAR := 180.0
 const KINDS := [
 	{"id": "surveyor", "who": "Josiah Abernathy, a surveyor", "model": "cgc_man_glasses", "hue": 1.4, "pose": "work", "tent": true,
@@ -29,12 +30,13 @@ const STAND_IN := {"cgc_man_glasses": "trades_7", "cgc_man_suspenders": "prospec
 const MEALS := ["bread", "biscuits", "cornbread", "pie", "applepie", "honeycake", "stew", "fishfry", "flapjacks", "applecrisp", "johnnycake", "roast"]
 
 var camps: Array = []        ## {at, kind, seed, built, nodes, fig, day}
+var spots: Array = []        ## every good campsite found for the county; camp i is at spots[(i * stride + epoch * 5) % n]
+var epoch := -1
 
 func setup(home: Vector3, avoid: Array, world: World = null) -> void:
 	var rng := PNoise.Mulberry32.new(PNoise.hash2(41, 19, Terrain.SEED + 6060))
-	var kinds := KINDS.duplicate()
-	for tries in 800:
-		if kinds.is_empty(): break
+	for tries in 1400:
+		if spots.size() >= 24: break
 		var a := rng.next() * TAU; var r := 110.0 + rng.next() * 520.0
 		var x := home.x + cos(a) * r; var z := home.z + sin(a) * r
 		if Terrain.is_water(x, z) or Terrain.impassable(x, z) or Terrain.range_at(x, z) > 0.02: continue
@@ -44,10 +46,27 @@ func setup(home: Vector3, avoid: Array, world: World = null) -> void:
 			if Terrain.is_water(x + cos(b) * 7.0, z + sin(b) * 7.0): dry = false; break
 		if not dry: continue
 		if avoid.any(func(q): return Vector2(q.x - x, q.z - z).length() < 90.0): continue
-		if camps.any(func(c): return Vector2(c.at.x - x, c.at.z - z).length() < 140.0): continue
-		var k: Dictionary = kinds.pop_at(int(rng.next() * kinds.size()))
-		camps.append({"at": Vector3(x, Terrain.get_height(x, z), z), "kind": k, "seed": int(rng.next() * 1e6), "built": false, "nodes": [], "fig": null, "day": -1, "met": false})
+		if spots.any(func(q): return Vector2(q.x - x, q.z - z).length() < 110.0): continue
+		spots.append(Vector3(x, Terrain.get_height(x, z), z))
 		if world: world.exclusions.append({"x": x, "z": z, "r": 8.0})
+	var kinds := KINDS.duplicate()
+	for i in mini(kinds.size(), spots.size()):
+		camps.append({"at": spots[i], "kind": kinds[i], "seed": int(rng.next() * 1e6), "built": false, "nodes": [], "fig": null, "day": -1, "met": false})
+	move_to(0)
+
+## Where each camps for this stretch of days (day / MOVE_DAYS): all move on together, each to its own spot.
+func move_to(day: int) -> bool:
+	var e := day / MOVE_DAYS
+	if e == epoch or spots.size() < camps.size(): return false
+	epoch = e
+	for i in camps.size():
+		var c: Dictionary = camps[i]
+		var stride := maxi(1, spots.size() / camps.size()) # (spread evenly round the list, never two on one spot)
+		var nat: Vector3 = spots[(i * stride + e * 5) % spots.size()]
+		if c.at != nat:
+			if c.built: _unbuild(c)
+			c.at = nat
+	return true
 
 func save() -> Array: return camps.map(func(c): return [c.day, c.met])
 func load_state(d) -> void:
@@ -61,7 +80,8 @@ func near_camper(p: Vector3, r := 3.2):
 		if c.fig != null and Vector2(c.fig.root.position.x - p.x, c.fig.root.position.z - p.z).length() < r: return c
 	return null
 
-func update(dt: float, player: Player) -> void:
+func update(dt: float, player: Player, today := 0) -> void:
+	move_to(today)
 	var p := player.pos
 	for c in camps:
 		var d := Vector2(c.at.x - p.x, c.at.z - p.z).length()

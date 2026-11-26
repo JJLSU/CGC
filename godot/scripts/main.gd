@@ -608,7 +608,7 @@ func _process(dt: float) -> void:
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	forts.update(dt, sky.day, player, fort_hooks)
 	forts.patrols_update(dt, sky.time, player)
-	wayfarers.update(dt, player)
+	wayfarers.update(dt, player, sky.day)
 	var fb = null
 	for b in bosses:
 		b.day_now = sky.day
