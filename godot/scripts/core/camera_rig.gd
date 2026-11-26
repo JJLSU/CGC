@@ -16,6 +16,7 @@ var target_node: Node3D = null          ## what the camera rides on (the farmer)
 var height_at: Callable = func(_x: float, _z: float) -> float: return 0.0   ## terrain height lookup (world.getHeight)
 var water_level := 0.0
 var active := true
+var shake := 0.0   ## a jolt (a giant falling, a slam close by): metres, dying away in about half a second
 
 func _ready() -> void:
 	camera = Camera3D.new()
@@ -44,6 +45,9 @@ func update_camera(dt: float) -> void:
 	var want := maxf(0.0, floor_y - cam.y)
 	cam_lift += (want - cam_lift) * (1.0 - exp(-dt * (10.0 if want > cam_lift else 4.0)))
 	cam.y += cam_lift
+	if shake > 0.001: # (a brief jolt: the view itself, zoom and look left alone)
+		cam += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * 2.0 * shake
+		shake *= exp(-dt * 7.0)
 	camera.global_position = cam
 	if not cam.is_equal_approx(t): camera.look_at(t, Vector3.UP)
 

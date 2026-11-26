@@ -32,6 +32,10 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 9000:
 		p.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); p.health = p.max_health; p.dead = false
 		main.rig.yaw = atan2(dir.x, dir.z) + 0.5; main.rig.pitch = (0.2 if args.has("taunt") else 0.32); main.rig.dist = (12.0 if args.has("slam") else 8.0) if close else (26.0 if args.has("taunt") else 15.0)
+		if args.has("fall"): # (beaten: catch the dust a moment after he hits the ground)
+			if Time.get_ticks_msec() - t0 > 2500 and B.alive(): while B.alive(): B.damage(10, B.hooks)
+			if B.dead > 0.45: break
+			await process_frame; continue
 		if args.has("taunt"): # (as he calls out, the card half a second up)
 			if Time.get_ticks_msec() - t0 > 3000 and B.fighting() and B.say_t <= 0.0: B.say("fight", true)
 			if B.say_t > 2.0 and B.say_t < 2.5 and Time.get_ticks_msec() - t0 > 3000: break

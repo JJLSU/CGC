@@ -2896,12 +2896,20 @@ func _boss_hooks(b: Boss) -> Dictionary:
 		"on_land": func(at: Vector3) -> void:
 			if b.spec.weapon == "dynamite": sound.bang(true); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
 			else: sound.chop(),
-		"on_slam": func(at: Vector3) -> void: sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2),
+		"on_slam": func(at: Vector3) -> void:
+			sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2)
+			var dd := Vector2(at.x - player.pos.x, at.z - player.pos.z).length()
+			if dd < 12.0: rig.shake = maxf(rig.shake, 0.12 * (1.0 - dd / 12.0)), # (felt underfoot close by)
 		"on_spotted": func() -> void:
 			hud.toast({"pick": "%s! The giant roars and hefts a pickaxe. Watch where they land.", "axe": "%s! The giant lumberjack grins and spins a hand axe. They fly fast and flat.",
 				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark."}[b.spec.weapon] % nm.to_upper()),
 		"on_fall": func(at: Vector3) -> void:
 			sound.tear(); journal.record("boss")
+			# he comes down like a felled pine: the ground shakes, dust flies, and the fiddle runs up in triumph
+			sound.bang(true); rig.shake = 0.35
+			confetti.burst(at + Vector3(0, 0.5, 0), [0x8a6a48, 0xc8b48a, 0xe8dcc0], 40, 2.6)
+			var fl := [64, 67, 71, 76, 79, 76, 81]
+			for i in fl.size(): sound.play("fiddle_%d" % fl[i], 0.45, 0.55 + i * 0.11)
 			if b.returns > 0 and b.delivered: # (a rematch: nothing more to take home but the sheriff's reward)
 				_boss_board(); hud.toast("%s goes down again. The sheriff will want to hear of it." % nm); return
 			_drop_prize(b, at + Vector3(1.2, 0, 0.6)); _boss_board() # (his poster comes down)

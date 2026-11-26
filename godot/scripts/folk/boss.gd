@@ -163,6 +163,7 @@ func damage(n: int, hooks: Dictionary) -> bool:
 	beaten = true; back = false; dead = 0.001; slam_t = -1.0; fell_day = day_now
 	if ring: ring.visible = false
 	if hand_pick: hand_pick.visible = false
+	if say_card: say_card.visible = false; say_t = 0.0 # (no last word left hanging over him)
 	if hooks.has("on_fall"): hooks.on_fall.call(pos())
 	return true
 
