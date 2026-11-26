@@ -210,7 +210,7 @@ func _init(w: World, home: Vector3) -> void:
 		# a third new street (Chinatown) a row further out, beyond whichever of the first two has room
 		var far_off := 0.0
 		for k in [0, 1]:
-			var o: float = street_offs[k] * 2.0
+			var o: float = street_offs[k] * 2.0 + (signf(street_offs[k]) * 18.0 if k == 1 else 0.0) # (beyond Third Street, past the dance hall's deep back)
 			var fine := true
 			for sv in [-20, 0, 20]:
 				for cv in [-10, 0, 10]:
@@ -231,6 +231,14 @@ func _init(w: World, home: Vector3) -> void:
 			for v in [-0.5, -0.17, 0.17, 0.5]:
 				var q: Vector3 = hc + along * (u * float(dh.w)) + toward * (float(dh.side) * v * float(dh.d))
 				world.exclusions.append({"x": q.x, "z": q.z, "r": 4.2})
+	# the cross streets at either end (the player: not just rows), their whole run levelled and kept clear from the start
+	var omin := 0.0; var omax := 0.0
+	for off in street_offs: omin = minf(omin, off); omax = maxf(omax, off)
+	for cs in [CROSS_N, CROSS_S]:
+		var o := omin - 8.0
+		while o <= omax + 8.0:
+			var q: Vector3 = at + along * cs + toward * o
+			Terrain.add_flat_area(q.x, q.z, 9, 9); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
 	for off in street_offs:
 		for sv in [-16, 0, 16]:
 			var q: Vector3 = at + along * sv + toward * off
@@ -260,10 +268,10 @@ func _init(w: World, home: Vector3) -> void:
 		var t := tent(rng); var p := place(t, e[0], e[1], 9.5); t.rotation.y += (rng.next() - 0.5) * 0.5; tents.append(p)
 		world.colliders.append({"x": p.x + toward.x * e[1] * 2.6, "z": p.z + toward.z * e[1] * 2.6, "r": 1.6})
 	# Squatters' Row: a ragged lane of patched tents on the farm side, where most of the folk who'll work for you live
-	var row_c: Vector3 = at + along * -43.0
+	var row_c: Vector3 = at + along * -47.0
 	Terrain.add_flat_area(row_c.x, row_c.z, 11, 17); world.exclusions.append({"x": row_c.x, "z": row_c.z, "r": 13.0})
 	for side in [-1, 1]: var q: Vector3 = row_c + toward * side * 12.0; Terrain.add_flat_area(q.x, q.z, 10, 15); world.exclusions.append({"x": q.x, "z": q.z, "r": 11.0})
-	for s in [-34.0, -38.5, -43.0, -47.5, -52.0]:
+	for s in [-38.5, -43.0, -47.5, -52.0, -56.5]: # (the first a step back: the south cross street runs where it stood)
 		for side in [-1, 1]:
 			var p0: Vector3 = at + along * s + toward * side * 5.4
 			if Terrain.is_water(p0.x, p0.z): continue
@@ -275,9 +283,26 @@ func _init(w: World, home: Vector3) -> void:
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
 	# the dirt street: a long torn sheet of ochre with wheel ruts
 	var holder := street_sheet("street_main"); holder.position = Vector3(at.x, y0 + 0.03, at.z); add_child(holder)
-	sign_at = at + along * -27.0 + toward * 4.5
+	for cs in [CROSS_N, CROSS_S]: cross_sheet(-7.0, 7.0, cs) # (the crossings at Main Street's two ends)
+	sign_at = at + along * -34.5 + toward * 5.5 # (at the corner, clear of the cross street)
 	make_sign()
 	dress_street()
+
+## The cross streets (the player: cross streets at each end): at CROSS_N beyond the church's back and CROSS_S
+## before Squatters' Row, run across the town; each new street adds its stretch out from its neighbour, and the
+## railroad the last stretch out to the depot. Torn ochre sheets like the streets, in pieces of at most 40 m.
+const CROSS_N := 31.0
+const CROSS_S := -29.0
+func cross_sheet(o0: float, o1: float, cs: float) -> void:
+	var a := minf(o0, o1); var b := maxf(o0, o1)
+	var n := maxi(1, ceili((b - a) / 40.0)); var L := (b - a) / n
+	for i in n:
+		var mid := a + L * (i + 0.5)
+		var hl := L / 2.0 + 0.6
+		var sheet := card([[-4.4, -hl], [4.5, -hl], [4.8, -hl / 3.0], [4.3, hl / 3.0], [4.7, hl], [-4.5, hl], [-4.1, hl / 3.0], [-4.8, -hl / 3.0]], "street_new", 0.03, 0.45)
+		sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0
+		var holder := Node3D.new(); holder.add_child(sheet); holder.rotation.y = atan2(toward.x, toward.z)
+		var p: Vector3 = at + along * cs + toward * mid; holder.position = Vector3(p.x, y0 + 0.025, p.z); add_child(holder)
 
 ## Place obj at s along the street, side ±1, facing the street's centre line (street: its offset across from Main).
 func place(obj: Node3D, s: float, side: int, offset := 0.0, street_off := 0.0) -> Vector3:
@@ -398,6 +423,9 @@ func open_street(k: int) -> void:
 		doors[b.id] = p - toward * b.side * 1.6
 		_colliders(b, off, false)
 	var sheet := street_sheet("street_new"); var sp0: Vector3 = at + toward * off; sheet.position = Vector3(sp0.x, y0 + 0.03, sp0.z); add_child(sheet)
+	var inner := 0.0 # (its neighbour toward Main Street)
+	for o in street_offs: if signf(o) == signf(off) and absf(o) < absf(off): inner = o if absf(o) > absf(inner) else inner
+	for cs in [CROSS_N, CROSS_S]: cross_sheet(inner + signf(off) * 7.0, off + signf(off) * 7.0, cs)
 	var sp: Vector3 = at + along * -18.0 + toward * (off - signf(off) * 5.2)
 	var sg := Node3D.new(); var c := card([[-1.1, 0], [1.1, 0.03], [1.05, 0.42], [-1.1, 0.4]], "streetsign_%d" % k); c.position.y = 1.6; sg.add_child(c); sg.add_child(posts([0.0]))
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
@@ -414,6 +442,7 @@ func dress_up(id: String) -> void:
 	var run: Vector3 = toward if is_church else along
 	var p: Vector3 = door + run * float(T.get("at", 1.5)) - out * 0.3
 	var who := Town.folk_of(T)
+	if who.is_empty(): return # (Chinatown, its folk not in yet)
 	var f := ModelFigure.new(who[0], {"scale": T.get("modelScale", 1.0), "hue": who[1]})
 	f.root.position = Vector3(p.x, y0 if is_church else y, p.z); f.root.rotation.y = face; add_child(f.root)
 	# a barrel of red and yellow flowers on the other side of the door
@@ -431,7 +460,9 @@ func dress_up(id: String) -> void:
 	folk[id] = {"fig": f, "pose": T.get("pose"), "bar": bar, "face": face}
 	var k := 0
 	for E in T.get("with", []): # company: anyone else who hangs about this door
-		var ew := Town.folk_of(E); var e := ModelFigure.new(ew[0], {"hue": ew[1]})
+		var ew := Town.folk_of(E)
+		if ew.is_empty(): continue
+		var e := ModelFigure.new(ew[0], {"hue": ew[1]})
 		var pe: Vector3 = door + run * float(E.get("at", -1.6)) + out * float(E.get("out", 0.3))
 		e.root.position = Vector3(pe.x, y0 if is_church else surface_at(pe.x, pe.z, id), pe.z); e.root.rotation.y = face + float(E.get("turn", 0.0)); add_child(e.root)
 		folk["%s_%d" % [id, k]] = {"fig": e, "pose": E.get("pose"), "face": face + float(E.get("turn", 0.0))}
@@ -1076,7 +1107,18 @@ func _stage(dt: float) -> void:
 ## Who a TOWNSFOLK entry (or its company) is: [model, hue]. Their own new figure if it's in, else the old one re-dyed.
 static func folk_of(T: Dictionary) -> Array:
 	if T.has("new") and ModelFigure.has_folk(T.new): return [T.new, 0.0]
+	# Chinatown's folk are Chinese (the player: no one else standing about there): one not in from Meshy yet is stood
+	# in for by another of them, a man for a man, a woman for a woman, re-dyed; a child waits for its own model
+	if T.has("new") and String(T.new).contains("_cn"):
+		var nm := String(T.new)
+		if nm.begins_with("cgc_boy") or nm.begins_with("cgc_girl"): return []
+		var kin := "cgc_woman_cn_" if nm.begins_with("cgc_woman") else "cgc_man_cn_"
+		var have := CN_FOLK.filter(func(n): return n.begins_with(kin) and ModelFigure.has_folk(n))
+		if have.is_empty(): return []
+		return [have[absi(hash(nm)) % have.size()], 0.6 + float(absi(hash(nm)) % 5) * 0.4]
 	return [T.model, float(T.get("hue", 0.0))]
+const CN_FOLK := ["cgc_man_cn_elder", "cgc_man_cn_strong", "cgc_man_cn_young", "cgc_man_cn_rust", "cgc_man_cn_olive", "cgc_woman_cn_thin", "cgc_woman_cn_curvy",
+	"cgc_woman_cn_sultry", "cgc_woman_cn_blue", "cgc_woman_cn_mulberry"]
 
 ## The bosses' trophies (the player's boss battles): each one beaten has his weapon nailed up over the assay office
 ## door, where the town can see who it owes: Jebediah's pick and Angus's axe crossed either side, Crane's dynamite

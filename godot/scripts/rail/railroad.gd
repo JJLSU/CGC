@@ -21,6 +21,15 @@ var depot_group: Node3D
 var freight_at = null
 var freight := 0
 var crates: Array = []
+## The line past the town (the player: a station on the other side of town that the tracks go by realistically): it
+## runs straight down the far side from Chinatown, TRACK_O out from Main Street, parallel to the streets; the depot
+## stands at the end of the north cross street between the town and the track, and the line carries on past it the
+## other way (tail: track the trains don't use, so it reads as a through line). Across the track, the storage yard.
+const TRACK_O := 74.0
+var tail: Array = []
+var yard := Vector3.ZERO
+var far := 1.0        ## which side of Main Street the station is on (toward x far)
+var town_ref: Town
 static var _wood: Material
 static var _iron: Material
 
@@ -30,9 +39,22 @@ static func wood() -> Material:
 
 func _init(world: World, town: Town, home: Vector3) -> void:
 	visible = false
-	var A := town.at; var along := town.along
-	depot = A + along * 36.0
-	var start := A + along * 52.0
+	var A := town.at; var along := town.along; var toward := town.toward; town_ref = town
+	far = -signf(town.street_offs[2]) if town.street_offs.size() > 2 else 1.0
+	var dout := along if far < 0.0 else -along # (the way out of the depot: the town on its left, the depot's side)
+	depot = A + along * Town.CROSS_N + toward * far * TRACK_O + dout * 14.0 # (a little down the line from where the cross street meets it: the street comes out by the platform's end, not into the house)
+	var start := depot + dout * 110.0
+	for i in 100: tail.append(depot - dout * (i + 1) * TIE) # (the line on past the depot, the other way)
+	yard = A + along * (Town.CROSS_N - 4.0) + toward * far * (TRACK_O + 15.0)
+	# the right-of-way and the depot's ground level and clear; the yard's too; the cross street's last stretch out to it
+	for i in range(0, 260, 8):
+		var q: Vector3 = depot - dout * 90.0 + dout * i
+		Terrain.add_flat_area(q.x, q.z, 7, 7)
+	Terrain.add_flat_area(yard.x, yard.z, 12, 12); world.exclusions.append({"x": yard.x, "z": yard.z, "r": 12.0})
+	var o := 30.0
+	while o < TRACK_O:
+		var q: Vector3 = A + along * Town.CROSS_N + toward * far * o
+		Terrain.add_flat_area(q.x, q.z, 9, 9); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
 	# a whistle-stop in each wild land: its nearest good stretch, visited in turn, nearest first
 	var found := {}
 	var r := 80.0
@@ -54,7 +76,13 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	# the route: the depot, a straight run out past the church, then stop to stop, swinging wide of the town and home,
 	# and (the port's own: the web runs straight) round the mountains, never up them
 	var pts := [depot, start]
-	var avoid := [[A, 58.0], [home, 48.0]]
+	# (wide of the whole town, streets and all, and of the farm)
+	var omin := 0.0; var omax := 0.0
+	for so in town.street_offs: omin = minf(omin, so); omax = maxf(omax, so)
+	omin -= 16.0; omax += 16.0
+	var tc: Vector3 = A + toward * ((omin + omax) / 2.0)
+	var tr := minf((omax - omin) / 2.0 + 8.0, absf(far * TRACK_O - (omin + omax) / 2.0) - 9.0) # (never so wide it takes in the line past the depot)
+	var avoid := [[tc - along * 38.0, tr], [tc, tr], [tc + along * 38.0, tr], [home, 48.0]] # (three, down its length: a town is long, not round)
 	for s in stops:
 		var from: Vector3 = pts[-1]
 		var leg := _route(from, s.at, avoid)
@@ -78,6 +106,7 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	_grade()
 	# the right-of-way: nothing grows on it
 	for i in range(0, path.size(), 5): world.exclusions.append({"x": path[i].x, "z": path[i].z, "r": 3.4})
+	for i in range(0, tail.size(), 5): world.exclusions.append({"x": tail[i].x, "z": tail[i].z, "r": 3.4})
 	world.exclusions.append({"x": depot.x, "z": depot.z, "r": 9.0})
 	for s in stops: world.exclusions.append({"x": s.at.x, "z": s.at.z, "r": 6.0})
 	# each stop's layout: the platform a few ties back along the incoming track on the outside of the bend, the post behind
@@ -139,6 +168,7 @@ func _grade() -> void:
 	for i in range(path.size() - 2, -1, -1): g[i] = clampf(g[i], g[i + 1] - step, g[i + 1] + step)
 	var pts := PackedVector3Array(); pts.resize(path.size())
 	for i in path.size(): pts[i] = Vector3(path[i].x, maxf(0.5, g[i]), path[i].z)
+	for q in tail: pts.append(Vector3(q.x, maxf(0.5, g[0]), q.z)) # (the line on past the depot, level with it)
 	Terrain.set_railbed(pts)
 
 static func _route(a: Vector3, b: Vector3, avoid: Array) -> Array:
@@ -206,10 +236,72 @@ func build() -> void:
 			bars.append_from(bm, 0, Transform3D(Basis.looking_at(to - from, Vector3.UP), (from + to) * 0.5))
 		i += 3
 	var rails := MeshInstance3D.new(); rails.mesh = bars.commit(); rails.material_override = PaperMats.paper(Color.hex(0x3a3632ff)); add_child(rails)
+	_lay_tail()
 	_string_wire(ys)
 	_make_depot()
+	_make_yard()
+	if town_ref: town_ref.cross_sheet(far * (Town.STREET_OFF + 7.0), far * (TRACK_O - 4.0), Town.CROSS_N) # (the cross street's run out to the depot)
 	freight_at = depot_group.to_global(Vector3(-4.6, 0.3, 2.4)) # (the freight office's end of the platform)
 	for s in stops: _make_stop(s)
+
+## The line on past the depot (tail): ties and rails as on the main line, level with the depot, running out of sight.
+func _lay_tail() -> void:
+	if tail.is_empty(): return
+	var y: float = grade_at(0)
+	var line := [path[0]] + tail
+	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(1.7, 0.08, 0.24); tm.mesh = tb; tm.instance_count = line.size()
+	var yaw := atan2(line[1].x - line[0].x, line[1].z - line[0].z)
+	for i in line.size(): tm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, yaw), Vector3(line[i].x, y, line[i].z)))
+	var tmi := MultiMeshInstance3D.new(); tmi.multimesh = tm; tmi.material_override = wood(); add_child(tmi)
+	var bars := SurfaceTool.new(); bars.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var a: Vector3 = line[0]; var b: Vector3 = line[-1]
+	for sd in [-0.55, 0.55]:
+		var from := Vector3(a.x + cos(yaw) * sd, y + 0.08, a.z - sin(yaw) * sd); var to := Vector3(b.x + cos(yaw) * sd, y + 0.08, b.z - sin(yaw) * sd)
+		var bm := BoxMesh.new(); bm.size = Vector3(0.07, 0.07, from.distance_to(to)); bars.append_from(bm, 0, Transform3D(Basis.looking_at(to - from, Vector3.UP), (from + to) * 0.5))
+	var rails := MeshInstance3D.new(); rails.mesh = bars.commit(); rails.material_override = PaperMats.paper(Color.hex(0x3a3632ff)); add_child(rails)
+	# a buffer stop where it ends: two posts and a beam
+	var bs := Node3D.new(); bs.position = Vector3(b.x, y, b.z); bs.rotation.y = yaw
+	for sd in [-0.6, 0.6]: bs.add_child(_box(0.25, 1.0, 0.25, Vector3(sd, 0.5, 0), wood()))
+	bs.add_child(_box(1.8, 0.3, 0.3, Vector3(0, 0.85, 0), PaperMats.paper(Color.hex(0xa8352aff)))); add_child(bs)
+
+## The storage yard across the track from the depot (the player: a storage yard with lots of boxes and stuff): stacks
+## of crates, barrels in rows, a freight wagon and a handcart, piles of sawn lumber, all inside a rail fence.
+func _make_yard() -> void:
+	var g := Node3D.new(); var y := Terrain.get_height(yard.x, yard.z)
+	g.position = Vector3(yard.x, y, yard.z); g.rotation.y = atan2(town_ref.along.x, town_ref.along.z) if town_ref else 0.0
+	var put := func(nm: String, size: float, x: float, z: float, turn := 0.0, by_height := false, up := 0.0) -> void:
+		var pm := "res://assets/models/props/%s.glb" % nm
+		if not ResourceLoader.exists(pm): return
+		var h := PaperMats.seated(load(pm), size, by_height); h.position = Vector3(x, up, z); h.rotation.y = turn; g.add_child(h)
+	var rng := RandomNumberGenerator.new(); rng.seed = hash("yard")
+	# crates, stacked two and three high
+	for i in 6:
+		for j in 2:
+			var x := -8.0 + i * 1.5; var z := -6.0 + j * 1.4
+			for k in rng.randi_range(1, 2): put.call("prop_crates", 1.1, x + rng.randf_range(-0.1, 0.1), z, rng.randf_range(-0.2, 0.2), true, k * 1.08 - 1.08) # (on the ground, one or two high)
+	# barrels in rows
+	for i in 5:
+		for j in 2: put.call("prop_barrel", 1.0, 3.0 + i * 1.05, -6.2 + j * 1.05, rng.randf_range(0, TAU), true)
+	# a freight wagon and a handcart
+	put.call("veh_freight_wagon", 5.5, -3.0, 2.8, 0.15)
+	put.call("veh_handcart", 2.2, 5.0, 2.5, -0.6)
+	put.call("prop_haybales", 2.4, 8.5, 5.5, 0.3)
+	# sawn lumber, piled on sleepers
+	for pile in [[-8.0, 5.5], [-8.0, 8.0]]:
+		for k in 5:
+			var plank := _box(4.2, 0.16, 0.9 - k * 0.08, Vector3(pile[0], 0.12 + k * 0.17, pile[1]), PaperMats.paper(Color.hex(0xc49a62ff) if k % 2 else Color.hex(0xb08650ff)))
+			g.add_child(plank)
+	# a rail fence round it, a gap toward the track
+	var fence := PaperMats.paper(Color.hex(0x7a5a3cff))
+	var fx := -far * 10.5 # (local +x is away from Main Street; the track's side, local far * x, left open)
+	for side in [[fx, -8.5, fx, 10.0], [-10.5, -8.5, 10.5, -8.5], [-10.5, 10.0, 10.5, 10.0]]:
+		var a := Vector2(side[0], side[1]); var b := Vector2(side[2], side[3]); var n: int = ceili(a.distance_to(b) / 2.5)
+		for k in n + 1:
+			var q := a.lerp(b, float(k) / n); g.add_child(_box(0.14, 1.2, 0.14, Vector3(q.x, 0.6, q.y), fence))
+		for hgt in [0.5, 1.0]:
+			var mid := (a + b) / 2.0; var len := a.distance_to(b)
+			var rail := _box(0.07, 0.1, len, Vector3(mid.x, hgt, mid.y), fence); rail.rotation.y = atan2(b.x - a.x, b.y - a.y); g.add_child(rail)
+	add_child(g)
 
 ## Telegraph poles beside the line, a crossarm and two glass insulators on each, and two sagging wires between them.
 func _string_wire(ys: Array) -> void:

@@ -27,7 +27,7 @@ func _initialize() -> void:
 	print("ties: worst |cos| between a tie and the track %.3f (0 = square across)" % worst)
 	var ok := worst < 0.05
 	# the cars on the move: tilt against the grade under them
-	TR.state = "run"; TR.dir = 1; TR.ran = -2
+	TR.state = "run"; TR.dir = 1; TR.ran = -2; TR.s = 160.0 # (past the level run beside the town and its depot)
 	var max_tilt := 0.0; var worst_err := 0.0
 	for f in 600:
 		await process_frame
@@ -39,6 +39,7 @@ func _initialize() -> void:
 			var hp: Vector3 = c.position + fwd * 2.0; var hb: Vector3 = c.position - fwd * 2.0
 			var grade := rad_to_deg(atan2(Terrain.get_height(hp.x, hp.z) - Terrain.get_height(hb.x, hb.z), 4.0))
 			if absf(grade) < 20.0: worst_err = maxf(worst_err, absf(tilt - grade))
+	print("(built %s, at %.0f m of %.0f, %d cars, state %s, ground under the run: %.2f..%.2f)" % [R.built, TR.s, TR.end, TR.cars.size(), TR.state, Terrain.get_height(R.path[180].x, R.path[180].z), Terrain.get_height(R.path[400].x, R.path[400].z)])
 	print("cars: steepest tilt %.1f deg, worst off the ground's grade %.1f deg  speed %.1f m/s" % [max_tilt, worst_err, Train.SPEED])
 	ok = ok and max_tilt > 0.2 and max_tilt < 2.5 and Train.SPEED == 3.5 # (they tilt with the grade, which the railbed holds to 3%: under ~1.7 deg)
 	print("RAIL TIES TEST ", "PASS" if ok else "FAIL")
