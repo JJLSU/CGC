@@ -109,6 +109,7 @@ var day := 0
 var on_street: Callable
 var gate: Callable    ## (street index) -> may it go up now?
 var on_gate: Callable ## (street index): it's ready but held back
+var on_gossip: Callable ## (keeper id): the first greeting of the day from a keeper; main may add a word about the bosses
 var gated: Array = []
 static var tent_mats: Array = []
 static var glass_mat: StandardMaterial3D
@@ -871,7 +872,7 @@ func update_people(night: float, dt: float) -> void:
 		for k in folk:
 			if String(k).contains("_") or not folk[k].fig.root.visible: continue
 			var r: Node3D = folk[k].fig.root
-			if greeted.get(k, -1) != day and Vector2(player_pos.x - r.position.x, player_pos.z - r.position.z).length() < 3.2: greeted[k] = day; say_hello(r)
+			if greeted.get(k, -1) != day and Vector2(player_pos.x - r.position.x, player_pos.z - r.position.z).length() < 3.2: greeted[k] = day; say_hello(r); if on_gossip.is_valid(): on_gossip.call(k)
 	_hello_tick(dt)
 	# the Golden Garter's can-can revue: once the saloon is mended, after dark, three dancers high-kick on its boardwalk
 	if tiers.get("saloon", 0) and night > 0.45 and not far:

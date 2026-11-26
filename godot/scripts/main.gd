@@ -2876,6 +2876,7 @@ func _make_boss() -> void:
 	boss = bosses[0]
 	_boss_board.call_deferred() # (the wanted board up from the first day; remade on load)
 	town.gate = func(n: int) -> bool: return not bosses.any(func(b): return b.spec.street == n and not b.delivered)
+	town.on_gossip = func(_k) -> void: _boss_gossip()
 	town.on_gate = func(n: int) -> void:
 		for b in bosses:
 			if b.spec.street == n:
@@ -2984,3 +2985,20 @@ func town_rank() -> String:
 	if 1 in town.opened: return "the county seat"
 	if 0 in town.opened: return "a boom town"
 	return "a mining camp"
+
+## Now and then a keeper you pass has a word about the boss holding the town back (one a day at most, a third of the
+## time), or, once they're all beaten, about how the town's coming up.
+const GOSSIP := {"jebediah": ["\"Jebediah's dug that mine since before the town.\"", "\"Jebediah? Throws picks like other men throw stones.\"",
+	"\"Without that deed, Second Street's just a dream.\""], "angus": ["\"Angus cut every tree this side of the river.\"",
+	"\"Not a plank in town while Angus has the rights.\"", "\"Keep your head down round Angus: his axes fly flat.\""],
+	"crane": ["\"Crane's paper's on every roof in town.\"", "\"Crane keeps blasting powder like folk keep flour.\"",
+	"\"Pay off Crane? Better to burn his mortgage, I say.\""], "done": ["\"Free and clear, thanks to you!\"", "\"Hardly know the place, it's grown so.\""]}
+var gossip_day := -1
+func _boss_gossip() -> void:
+	if gossip_day == sky.day or randf() > 0.35: return
+	var b = _boss_holding()
+	var key: String = b.id if b != null else ("done" if bosses.all(func(q): return q.delivered) else "")
+	if key == "": return
+	gossip_day = sky.day
+	var lines: Array = GOSSIP[key]
+	hud.toast(lines[randi() % lines.size()])
