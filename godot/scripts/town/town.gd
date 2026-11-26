@@ -441,6 +441,7 @@ func rebuild(id: String, tier: int, k: int) -> void:
 		var b := find_b(id); g = building(b, tier); place(g, b.s, b.side)
 	old.queue_free()
 	parts[id] = g; lit = null
+	if tier > 0: _sign(id, g)
 	if id != "church": # keeper, company and flower barrel on the mended building's boardwalk
 		for key in folk.keys():
 			if key == id or String(key).begins_with(id + "_"):
@@ -1054,3 +1055,26 @@ func set_trophies(ids: Array) -> void:
 		var tilt := Node3D.new(); tilt.position = Vector3(spots[id][0], spots[id][2], 0); tilt.rotation.z = spots[id][1]
 		w.rotation.x = -PI / 2.0; w.position = Vector3(0, -0.65 if id != "crane" else -0.25, 0) # (the handle hangs down, the head up)
 		tilt.add_child(w); trophies.add_child(tilt)
+
+## Lettering for the shop signs the models left blank (the player saw bare boards): each board's centre, its facing and
+## its size in the building's own frame, found by casting rays through the board on screen into the model
+## (tools/shot_facades.gd views; measured 2026-11-26), and the words painted on it.
+const SIGN_BOARDS := {"bakery": [0.16, 3.56, -0.41, 1.8, 0.75, "BAKERY"], "bank": [0.0, 3.08, -0.42, 2.35, 0.71, "MINERS' BANK"],
+	"barber": [0.0, 3.05, -0.37, 2.55, 0.52, "BARBER"], "cooper": [0.27, 2.4, 0.01, 1.75, 0.41, "COOPERAGE"],
+	"hotel2": [0.0, 5.55, -0.5, 2.57, 0.79, "GRAND HOTEL"], "opera": [0.27, 4.22, -0.72, 2.09, 0.59, "OPERA HOUSE"],
+	"telegraph": [0.59, 2.43, -0.17, 1.3, 0.55, "TELEGRAPH"], "dance": [0.0, 4.37, -0.45, 2.1, 0.45, "DANCE HALL"],
+	"drygoods": [0.19, 3.54, -0.34, 2.56, 0.85, "DRY GOODS"], "jail": [0.29, 3.45, -0.63, 2.38, 0.62, "SHERIFF"]}
+static var _sign_font: Font
+func _sign(id: String, g: Node3D) -> void:
+	if not SIGN_BOARDS.has(id): return
+	var e: Array = SIGN_BOARDS[id]
+	if _sign_font == null:
+		var f := SystemFont.new(); f.font_names = PackedStringArray(["Rockwell", "Georgia", "Times New Roman", "serif"]); f.font_weight = 700; _sign_font = f
+	var L := Label3D.new(); L.text = e[5]; L.font = _sign_font; L.modulate = Color("3a2418"); L.outline_size = 0
+	L.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS; L.double_sided = false
+	L.font_size = 96
+	# (sized to the board: the lettering fills ~80% of its width and ~60% of its height, whichever is tighter)
+	var text_w := _sign_font.get_string_size(e[5], HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x; var text_h := 96.0 * 1.15
+	L.pixel_size = minf(float(e[3]) * 0.8 / text_w, float(e[4]) * 0.6 / text_h)
+	L.position = Vector3(e[0], e[1], float(e[2]) + 0.025) # (just proud of the board, facing the street: the model's +z)
+	g.add_child(L)

@@ -1701,3 +1701,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
   a stop swung back past the post's side): each post tries its side, the other, then further along, for a spot 7 m+
   from every tie. Three counties: all 15 posts 7.6 m+ off. Looked at (tools/shot_keeper.gd <i> high). test_rail_ties,
   test_newgame, test_place_sliced, test_horse_terrain PASS.
+- Shop-sign lettering where the models' boards were blank (the player's ask): Town.SIGN_BOARDS (bakery, Miners' bank, barber, cooperage, Grand Hotel, opera house, telegraph, dance hall, dry goods, sheriff), each board's centre and size in the building's frame, found by ray-casting the board's on-screen corners (tools/shot_facades.gd views) into the model's meshes; a dark serif Label3D just proud of the board, sized to fit, added when the building's mended (gone with it if raided). Looked at all ten. test_boss, test_raids PASS.
