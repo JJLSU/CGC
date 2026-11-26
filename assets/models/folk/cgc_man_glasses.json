@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_glasses",
+  "height": 1.75,
+  "tris": 20721,
+  "tris_before": 20721,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

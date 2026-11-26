@@ -39,23 +39,26 @@ const STREETS := [
 const MODEL_OF := {"smithy": "blacksmith", "saloon": "saloon", "store": "store", "boarding": "hotel", "church": "church", "assay": "assay", "livery": "livery"}
 const NIGHT_OWLS := ["saloon", "hotel2"]
 const SMOKERS := {"smithy": "day", "bakery": "day", "cooper": "day", "boarding": "meals", "hotel2": "meals"}
-## who stands out front of each building once it's mended (at: metres along the boardwalk from the door)
+## who stands out front of each building once it's mended (at: metres along the boardwalk from the door). "new": a figure of
+## their own (the player's 20 new folk, through Meshy), used once its model is in; till then the old one, re-dyed.
 const TOWNSFOLK := {
 	"store": {"model": "townsfolk_3", "with": [{"model": "townsfolk_4", "at": -2.5, "out": 0.7, "turn": 0.35}]},
-	"boarding": {"model": "trades_5"},
+	"boarding": {"model": "trades_5", "with": [{"new": "cgc_woman_pinafore", "model": "trades_2", "at": -2.4, "out": 0.6, "turn": 0.3}]},
+	"opera": {"new": "cgc_saloon_angel", "model": "saloon_2", "at": 2.0},
+	"dance": {"new": "cgc_saloon_burgundy", "model": "saloon_3", "at": 2.4, "pose": "beckon"},
 	"saloon": {"at": 2.9, "pose": "beckon", "model": "saloon_1", "with": [{"model": "prospectors_4", "at": -1.7, "out": 0.5, "turn": 0.6}]},
 	"livery": {"model": "folk_liveryman", "with": [{"model": "trades_4", "at": -2.7, "out": 0.6, "turn": 0.35}]},
 	"smithy": {"pose": "work", "model": "folk_amos", "modelScale": 1.1},
 	"stable2": {"model": "folk_silas", "hue": -1.3},
 	"cooper": {"model": "folk_ezra", "hue": 1.9, "pose": "work"},
-	"drygoods": {"model": "townsfolk_1", "hue": -2.2},
-	"telegraph": {"model": "trades_7", "hue": 2.3},
-	"hotel2": {"model": "prospectors_4", "hue": -0.35},
-	"feed": {"model": "prospectors_1", "hue": 0.7},
-	"barber": {"model": "townsfolk_3", "hue": 2.8},
-	"jail": {"model": "trades_1", "hue": 1.6},
-	"bank": {"model": "townsfolk_2"},
-	"bakery": {"model": "trades_6"},
+	"drygoods": {"new": "cgc_woman_vest", "model": "townsfolk_1", "hue": -2.2},
+	"telegraph": {"new": "cgc_man_glasses", "model": "trades_7", "hue": 2.3},
+	"hotel2": {"new": "cgc_man_gent", "model": "prospectors_4", "hue": -0.35},
+	"feed": {"new": "cgc_man_suspenders", "model": "prospectors_1", "hue": 0.7},
+	"barber": {"new": "cgc_man_goatee", "model": "townsfolk_3", "hue": 2.8},
+	"jail": {"new": "cgc_man_bandana", "model": "trades_1", "hue": 1.6},
+	"bank": {"new": "cgc_man_elder", "model": "townsfolk_2"},
+	"bakery": {"new": "cgc_woman_stripe", "model": "trades_6"},
 	"church": {"at": 2.2, "pose": "clipboard", "model": "trades_1", "with": [{"model": "trades_2", "at": -3.3, "out": 0.6, "turn": -0.3}]},
 }
 const MEND_TEXT := {
@@ -368,7 +371,8 @@ func dress_up(id: String) -> void:
 	var face := atan2(out.x, out.z); var y := y0 + 0.14
 	var run: Vector3 = toward if is_church else along
 	var p: Vector3 = door + run * float(T.get("at", 1.5)) - out * 0.3
-	var f := ModelFigure.new(T.model, {"scale": T.get("modelScale", 1.0), "hue": T.get("hue", 0.0)})
+	var who := Town.folk_of(T)
+	var f := ModelFigure.new(who[0], {"scale": T.get("modelScale", 1.0), "hue": who[1]})
 	f.root.position = Vector3(p.x, y0 if is_church else y, p.z); f.root.rotation.y = face; add_child(f.root)
 	# a barrel of red and yellow flowers on the other side of the door
 	var q: Vector3 = door - run * float(T.get("at", 1.5)) - out * 0.2
@@ -385,7 +389,7 @@ func dress_up(id: String) -> void:
 	folk[id] = {"fig": f, "pose": T.get("pose"), "bar": bar, "face": face}
 	var k := 0
 	for E in T.get("with", []): # company: anyone else who hangs about this door
-		var e := ModelFigure.new(E.model)
+		var ew := Town.folk_of(E); var e := ModelFigure.new(ew[0], {"hue": ew[1]})
 		var pe: Vector3 = door + run * float(E.get("at", -1.6)) + out * float(E.get("out", 0.3))
 		e.root.position = Vector3(pe.x, y0 if is_church else surface_at(pe.x, pe.z, id), pe.z); e.root.rotation.y = face + float(E.get("turn", 0.0)); add_child(e.root)
 		folk["%s_%d" % [id, k]] = {"fig": e, "pose": E.get("pose"), "face": face + float(E.get("turn", 0.0))}
@@ -667,8 +671,8 @@ func near(pos: Vector3, r := 34.0) -> bool: return Vector2(pos.x - at.x, pos.z -
 const WANTS := [["apples", 3, 4, "a sack of apples for the young ones"], ["fish", 2, 5, "a couple of fish for supper"], ["bread", 1, 4, "a loaf of bread"],
 	["wood", 6, 3, "firewood: the nights are cold under canvas"], ["venison", 2, 7, "venison, if you hunt"], ["honey", 1, 5, "a jar of honey for a cough"],
 	["pelt", 1, 6, "a hide to patch the tent"], ["egg", 4, 3, "a few eggs"], ["rope", 2, 4, "rope to guy the tent down"], ["berries", 4, 3, "berries for a pie"]]
-const ROW_FOLK := [["folk_calico_01", "Widow Pruitt"], ["folk_farmhand_01", "Jeb Calloway"], ["folk_calico_02", "Mrs. Dunaway"], ["prospectors_3", "Old Hiram"],
-	["folk_farmhand_02", "Tom Kessler"], ["folk_calico_03", "Ada Lark"], ["prospectors_4", "Rufus Pike"], ["folk_farmhand_03", "Silas Fry"]]
+const ROW_FOLK := [["folk_calico_01", "Widow Pruitt", "cgc_woman_patched"], ["folk_farmhand_01", "Jeb Calloway"], ["folk_calico_02", "Mrs. Dunaway", "cgc_woman_floral"], ["prospectors_3", "Old Hiram"],
+	["folk_farmhand_02", "Tom Kessler", "cgc_man_youth"], ["folk_calico_03", "Ada Lark", "cgc_woman_gingham"], ["prospectors_4", "Rufus Pike"], ["folk_farmhand_03", "Silas Fry", "cgc_man_ragged"]]
 var row_rng := PNoise.Mulberry32.new(4242)
 var civilians: Array = []
 var sunday := false
@@ -699,7 +703,7 @@ func grow_row(k: int) -> void:
 		world.colliders.append({"x": p.x - toward.x * side * 1.2, "z": p.z - toward.z * side * 1.2, "r": 1.5})
 		var i := civilians.size(); var rf: Array = ROW_FOLK[i % ROW_FOLK.size()]
 		var a: Vector3 = p + toward * side * 1.8
-		var fig := ModelFigure.new(rf[0]); fig.root.position = Vector3(a.x, y0 + 0.02, a.z); fig.root.rotation.y = atan2(side * toward.x, side * toward.z); add_child(fig.root)
+		var fig := ModelFigure.new(rf[2] if rf.size() > 2 and ModelFigure.has_folk(rf[2]) else rf[0]); fig.root.position = Vector3(a.x, y0 + 0.02, a.z); fig.root.rotation.y = atan2(side * toward.x, side * toward.z); add_child(fig.root)
 		var note := _two_faced("note"); note.position = Vector3(a.x, y0 + 2.35, a.z); add_child(note)
 		var ready := _two_faced("ready"); ready.visible = false; add_child(ready)
 		civilians.append({"name": rf[1], "fig": fig, "at": a, "door": p + toward * side * 0.9, "note": note, "ready": ready, "want": WANTS[(i * 3 + 1) % WANTS.size()], "day": -1, "goal": a, "wait": 4.0 + row_rng.next() * 10.0, "atMeeting": false})
@@ -874,7 +878,8 @@ func update_people(night: float, dt: float) -> void:
 		if revue == null:
 			revue = []
 			for i in 3:
-				var f := ModelFigure.new(["saloon_2", "saloon_3", "saloon_4"][i]); f.t = i * 0.35
+				var nw: String = ["cgc_saloon_pink", "cgc_saloon_daisy", "cgc_saloon_orange"][i]
+				var f := ModelFigure.new(nw if ModelFigure.has_folk(nw) else ["saloon_2", "saloon_3", "saloon_4"][i]); f.t = i * 0.35
 				parts.saloon.add_child(f.root); f.root.position = Vector3(-2 + i * 2, 0.14, 1.1); revue.append(f)
 		for f in revue: f.root.visible = true; f.update(dt, 0.0, "cancan")
 	elif revue != null:
@@ -931,7 +936,8 @@ func dance_hall(evening: bool, dt: float) -> void:
 		var i := 0
 		for pr in [["folk_farmhand_02", -1.0, "folk_calico_02", 1.3], ["folk_farmhand_03", 2.4, "folk_calico_03", -2.0]]:
 			for e in [[pr[0], pr[1], -1.0], [pr[2], pr[3], 1.0]]:
-				var fig := ModelFigure.new(e[0], {"hue": e[1]}); add_child(fig.root); fig.root.visible = false
+				var nw: String = {"folk_calico_02": "cgc_woman_blueapron", "folk_calico_03": "cgc_woman_stripe"}.get(e[0], "")
+				var fig := ModelFigure.new(nw, {}) if nw != "" and ModelFigure.has_folk(nw) else ModelFigure.new(e[0], {"hue": e[1]}); add_child(fig.root); fig.root.visible = false
 				hall_dancers.append({"fig": fig, "pair": i, "sgn": e[2]})
 			i += 1
 		hall_floor = doors.dance - toward * b.side * 3.4 # (out in the street before the doors)
@@ -1022,3 +1028,8 @@ func _stage(dt: float) -> void:
 	for H in C.horses:
 		var q: Vector3 = p + fwd * 4.6 + side * H.dz
 		H.h.group.position = Vector3(q.x, y0, q.z); H.h.update(dt, speed, "walk" if speed > 0.2 else "idle", false, 0.0)
+
+## Who a TOWNSFOLK entry (or its company) is: [model, hue]. Their own new figure if it's in, else the old one re-dyed.
+static func folk_of(T: Dictionary) -> Array:
+	if T.has("new") and ModelFigure.has_folk(T.new): return [T.new, 0.0]
+	return [T.model, float(T.get("hue", 0.0))]

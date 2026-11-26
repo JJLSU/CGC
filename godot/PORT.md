@@ -1570,3 +1570,18 @@ for N frames, then saves the viewport; needs a window, not --headless).
   (throw), Attack, Run, and the rest the folk get (Meshy's action 86 came back a Basic Jump, kept as "slam" but
   unused: the slam plays the Heavy Hammer Swing). Mad Jebediah is boss_jebediah at 2.1x; the pick never leaves his
   hand (each thrown one is fresh from his pack). The other three wait for later streets.
+
+### Big Angus holds Third Street; the new townsfolk (2026-11-25; the player's asks)
+- Boss is now data (Boss.SPECS, one Boss node each, main.bosses in street order). Big Angus Hackett (boss_lumberjack,
+  2.15x, 72 health, quicker) has taken the county's timber rights: Third Street waits for them. His logging camp lies
+  480-620 m from town (woodpiles, a felled pine, stumps, lean-to, freight wagon, tent and fire, axes in the pile);
+  he throws hand axes flat and fast (arc 0.35, 18 m/s). The gate, NEXT, the assay hand-in, the map and the save all
+  go over every boss (save "bosses": {id: state}; an older save's "boss" is Jebediah's). Each prize is a ribbon-tied
+  roll that never spoils (red ribbon the deed, green the timber rights).
+- The player's 20 new folk (assets/refs/cgc_*.png, Meshy in progress) take the town's re-dyed stand-ins' places as
+  they come in (Town.folk_of: an entry's "new" figure if its model exists): the bank, barber, bakery, jail, feed,
+  telegraph, Grand Hotel and dry goods keepers, a boarding-house neighbour, an angel at the opera house and a
+  burgundy-coated hostess at the dance hall, five of the Row's families, the can-can three and two of the dance
+  hall's women.
+- tools/test_boss.gd PASS with Angus too (581 m out, 400 m from Jebediah; Third held then opened; axes thrown and
+  hurt; the bar names him; the rights picked up and handed in). Looked at him in camp (tools/shot_boss.gd ... angus).

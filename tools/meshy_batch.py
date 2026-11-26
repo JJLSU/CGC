@@ -108,7 +108,7 @@ def run(name):
             if url and not os.path.exists(os.path.join(d, fn)): download(url, os.path.join(d, fn))
         return
     if 'rig' not in st:
-        st['rig'] = call('POST', '/rigging', {'input_task_id': st['model'], 'height_meters': CHILDREN.get(name, 1.75)})['result']; save()
+        st['rig'] = call('POST', '/rigging', {'input_task_id': st['model'], 'height_meters': CHILDREN.get(name, 1.68 if name.startswith(('cgc_woman', 'cgc_saloon')) else 1.75)})['result']; save()
     t = wait(f'/rigging/{st["rig"]}', 'rig')
     if not os.path.exists(os.path.join(d, 'rigged.glb')): download(t['result']['rigged_character_glb_url'], os.path.join(d, 'rigged.glb'))
     acts = {**ACTIONS, **(WARRIOR_ACTIONS if name in WARRIORS else {}), **(BOSS_ACTIONS if name in BOSSES else {})}

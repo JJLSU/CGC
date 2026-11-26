@@ -1,0 +1,15 @@
+{
+  "name": "cgc_man_elder",
+  "height": 1.75,
+  "tris": 20562,
+  "tris_before": 20562,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

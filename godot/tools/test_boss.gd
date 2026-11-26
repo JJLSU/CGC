@@ -52,7 +52,7 @@ func _initialize() -> void:
 	# beat him
 	p.health = p.max_health
 	var n0: int = main.drops.size()
-	while not B.beaten: B.damage(4, main.boss_hooks)
+	while not B.beaten: B.damage(4, B.hooks)
 	await _wait(0.3)
 	var deed = main.drops.filter(func(d): return d.loot.has("deed"))
 	print("beaten %s, deed dropped %s, bar hidden %s" % [B.beaten, deed.size() == 1, not main.hud.boss_card.visible])
@@ -77,5 +77,32 @@ func _initialize() -> void:
 	ok = ok and main.inventory.get("deed", 0) == 0 and B.delivered and 0 in T.opened
 	var sv: Dictionary = B.save()
 	ok = ok and sv.beaten and sv.delivered
+	# Big Angus: Second Street mended holds Third Street back till his timber rights are in
+	var A: Boss = main.bosses[1]
+	var da := Vector2(A.at.x - T.at.x, A.at.z - T.at.z).length(); var apart := Vector2(A.at.x - B.at.x, A.at.z - B.at.z).length()
+	for bb in Town.STREETS[0].buildings: T.mend(bb.id)
+	print("Angus %.0f m out (%.0f m from Jebediah); Second done %s, Third opened %s, gate told %s" % [da, apart, T.street_done(0), 1 in T.opened, gated])
+	ok = ok and da > 420.0 and apart > 120.0 and T.street_done(0) and not 1 in T.opened and gated == [0, 1]
+	var off2: Vector3 = A.at + (A.at - T.at).normalized() * -18.0
+	p.pos = Vector3(off2.x, Terrain.get_height(off2.x, off2.z), off2.z); p.health = p.max_health
+	var h2 := p.health; var axes := 0
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 6000:
+		p.pos = Vector3(off2.x, Terrain.get_height(off2.x, off2.z), off2.z); p.health = maxf(p.health, 30.0); p.dead = false
+		axes = maxi(axes, A.picks.size()); await process_frame
+	print("Angus built %s, props %d, fighting %s, axes out %d, health %.0f -> %.0f, bar: %s" % [A.built, A.nodes.size(), A.fighting(), axes, h2, p.health, main.hud._boss_name.text])
+	ok = ok and A.built and A.nodes.size() >= 12 and A.fighting() and axes >= 1 and p.health < h2 and main.hud._boss_name.text == "Big Angus Hackett"
+	p.health = p.max_health
+	while not A.beaten: A.damage(4, A.hooks)
+	await _wait(0.3)
+	var pr = main.drops.filter(func(d): return d.loot.has("timber_rights"))
+	ok = ok and pr.size() == 1
+	var tp: Vector3 = pr[0].pos; p.pos = Vector3(tp.x, Terrain.get_height(tp.x, tp.z), tp.z)
+	await _wait(0.2); main.input.pressed["KeyE"] = true; await _wait(0.2)
+	p.pos = Vector3(ad.x, Terrain.get_height(ad.x, ad.z), ad.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
+	print("timber rights handed in %s, Third Street opened %s" % [A.delivered, 1 in T.opened])
+	ok = ok and A.delivered and 1 in T.opened
+	var all: Dictionary = main._bosses_save()
+	ok = ok and all.jebediah.delivered and all.angus.delivered
 	print("PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
