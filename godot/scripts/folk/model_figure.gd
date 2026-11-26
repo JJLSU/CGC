@@ -26,11 +26,22 @@ const RUN_AT := 8.0 ## m/s: faster than this, a figure with a run clip runs (the
 
 static func has_folk(n: String) -> bool: return ResourceLoader.exists(BASE + n + ".glb")
 
+## A model, safely: main preloads every model on background threads at the start; asking for one the ordinary way
+## while its background load is still going came back empty now and then (the player: a mended building's keeper
+## was only a floating "hello"). So a model already loading is waited for and taken from that load.
+static func load_model(path: String) -> PackedScene:
+	if ResourceLoader.has_cached(path): return load(path)
+	var st := ResourceLoader.load_threaded_get_status(path)
+	if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS or st == ResourceLoader.THREAD_LOAD_LOADED:
+		var r = ResourceLoader.load_threaded_get(path) # (waits for it)
+		if r is PackedScene: return r
+	return load(path)
+
 ## Borrow a clip from another figure on the same skeleton (the same bone names), re-pointed at this one's skeleton:
 ## the farmer's model has no run, the warriors' do (the player's ask: he should run when he sprints).
 func borrow_clip(clip: String, from_model: String) -> bool:
 	if player == null or skeleton == null or player.has_animation(clip) or not has_folk(from_model): return false
-	var src: Node3D = (load(BASE + from_model + ".glb") as PackedScene).instantiate()
+	var src: Node3D = load_model(BASE + from_model + ".glb").instantiate()
 	var aps := src.find_children("*", "AnimationPlayer", true, false)
 	if aps.is_empty() or not (aps[0] as AnimationPlayer).has_animation(clip): src.free(); return false
 	var anim: Animation = (aps[0] as AnimationPlayer).get_animation(clip).duplicate(true)
@@ -50,7 +61,7 @@ func _init(model_name: String, spec := {}) -> void:
 	name = model_name
 	root.add_child(turn); turn.add_child(body)
 	if spec.has("scale"): root.scale = Vector3.ONE * float(spec.scale)
-	var scene: PackedScene = load(BASE + model_name + ".glb")
+	var scene: PackedScene = load_model(BASE + model_name + ".glb")
 	model = scene.instantiate() as Node3D
 	PaperMats.paperize(model, false, float(spec.get("hue", 0.0)))
 	body.add_child(model)
