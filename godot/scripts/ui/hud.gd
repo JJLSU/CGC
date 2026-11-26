@@ -960,5 +960,8 @@ func _build_boss() -> void:
 func set_boss(who: String, frac: float) -> void:
 	boss_card.visible = who != ""
 	if who == "": return
-	if _boss_name.text != who: _boss_name.text = who
+	var riled := frac < 0.5 # (below half he starts his tricks: say so)
+	var nm := (who + "  —  riled!") if riled else who
+	if _boss_name.text != nm: _boss_name.text = nm; _boss_name.add_theme_color_override("font_color", Color("8a2a20") if riled else INK)
 	_boss_fill.size.x = (BOSS_W - 4.0) * clampf(frac, 0.0, 1.0)
+	_boss_fill.color = Color("7a1f18") if riled else Color("a8352a")
