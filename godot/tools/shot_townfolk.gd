@@ -23,7 +23,7 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 5000:
 		var stand: Vector3 = keeper + Vector3(sin(f.face if f != null else 0.0), 0, cos(f.face if f != null else 0.0)) * 1.2
 		main.player.pos = Vector3(stand.x, Terrain.get_height(stand.x, stand.z), stand.z)
-		main.rig.yaw = (f.face if f != null else 0.0) + (0.0 if id.begins_with("row") else PI) + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
+		main.rig.yaw = (f.face if f != null else 0.0) + (0.0 if id.begins_with("row") or args.has("flip") else PI) + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
 		await process_frame
 	if T.revue != null: print("revue: ", T.revue.map(func(r): return r.name))
 	await RenderingServer.frame_post_draw
