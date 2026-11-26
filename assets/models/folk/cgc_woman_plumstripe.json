@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_plumstripe",
+  "height": 1.68,
+  "tris": 20384,
+  "tris_before": 20384,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

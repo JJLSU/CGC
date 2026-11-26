@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_greenbustle",
+  "height": 1.68,
+  "tris": 20343,
+  "tris_before": 20343,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

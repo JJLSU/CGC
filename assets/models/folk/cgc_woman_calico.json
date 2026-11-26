@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_calico",
+  "height": 1.68,
+  "tris": 20302,
+  "tris_before": 20302,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

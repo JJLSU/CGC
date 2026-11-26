@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_greenapron",
+  "height": 1.68,
+  "tris": 20247,
+  "tris_before": 20247,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
