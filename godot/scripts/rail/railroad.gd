@@ -304,6 +304,14 @@ func _make_yard() -> void:
 	put.call("veh_freight_wagon", 5.5, -3.0, 2.8, 0.15)
 	put.call("veh_handcart", 2.2, 5.0, 2.5, -0.6)
 	put.call("prop_haybales", 2.4, 8.5, 5.5, 0.3)
+	# the player's cargo and supplies, about the yard: cotton bales off the last train, black powder and dynamite kept
+	# well apart in a far corner, barrels of tools, crates of rifles, crates of bottles, an open crate, a box, a trunk
+	for e in [["prop_cotton_bale", 1.5, 1.2, 5.6, 0.1, 0.0], ["prop_cotton_bale", 1.5, 2.9, 5.7, -0.15, 0.0], ["prop_cotton_bale", 1.5, 2.0, 5.65, 0.05, 1.0],
+			["prop_powder_barrels", 1.6, 8.6, -1.0, 0.4, 0.0], ["prop_dynamite", 1.0, 8.8, 1.0, -0.3, 0.0],
+			["prop_tool_barrels", 1.6, -8.6, 1.6, 0.2, 0.0], ["prop_weapon_crates", 1.5, -6.2, 0.6, -0.4, 0.0],
+			["prop_bottle_crates", 1.2, 0.8, -1.6, 0.6, 0.0], ["prop_crate_open", 1.3, 2.4, -0.2, 0.3, 0.0],
+			["prop_box_closed", 1.2, -1.0, -1.4, -0.2, 0.0], ["prop_trunk", 1.1, -0.4, 4.6, 1.2, 0.0]]:
+		put.call(e[0], e[1], e[2], e[3], e[4], false, e[5])
 	# sawn lumber, piled on sleepers
 	for pile in [[-8.0, 5.5], [-8.0, 8.0]]:
 		for k in 5:
