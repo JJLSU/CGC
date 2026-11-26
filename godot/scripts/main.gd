@@ -1246,7 +1246,7 @@ func _wanted_sheet(g: Node3D, lines: Array) -> MeshInstance3D:
 var boss_board: Node3D
 func _boss_board() -> void:
 	if boss_board: boss_board.queue_free(); boss_board = null
-	var left: Array = bosses.filter(func(b): return not b.beaten or b.back)
+	var left: Array = bosses.filter(func(b): return (not b.beaten or b.back) and _boss_known(b))
 	if left.is_empty() or not town.doors.has("assay"): return
 	var ab := Town.find_b("assay")
 	var outw: Vector3 = -town.toward * float(ab.side)
@@ -2404,7 +2404,7 @@ func _open_map(rewash := true) -> void:
 				var o = L.orchard
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
 	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": NativeCamps.R, "peace": maxi(0, c.peace_until - sky.day)})
-	for b in bosses: sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
+	for b in bosses.filter(func(q): return _boss_known(q)): sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
 	for w in wayfarers.camps: sites.append({"kind": "wayfarer", "x": w.at.x, "z": w.at.z, "rumour": w.met, "name": String(w.kind.who).get_slice(",", 0)})
 	for f in forts.forts: sites.append({"kind": "fort", "x": f.at.x, "z": f.at.z, "rumour": true, "name": f.name, "angry": f.angry})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
@@ -2906,6 +2906,7 @@ func _make_boss() -> void:
 	town.gate = func(n: int) -> bool: return not bosses.any(func(b): return b.spec.street == n and not b.delivered)
 	town.on_gossip = func(_k) -> void: _boss_gossip()
 	town.on_gate = func(n: int) -> void:
+		_boss_board() # (his poster goes up: now he's known)
 		for b in bosses:
 			if b.spec.street == n:
 				hud.toast("%s holds %s. The town can't grow till you win it back." % [b.title(), b.spec.prize])
@@ -3163,9 +3164,13 @@ func _fort_officer(active: bool) -> bool:
 ## The boss chip: the next boss to beat (or one back for a rematch, or a fallen one whose prize still lies at his camp),
 ## always on the top bar till that's done, whatever else NEXT or the rumour note is saying; hidden in his fight, near
 ## his camp, or while you carry his prize (the homeward chip points you to the assay office then).
+var _known_n := -1
 func _update_boss_chip() -> void:
+	var kn := bosses.filter(func(q): return _boss_known(q)).size()
+	if kn != _known_n: _known_n = kn; _boss_board() # (a boss newly known: his poster goes up)
 	var b = null
 	for q in bosses:
+		if not _boss_known(q): continue
 		if q.back or not q.beaten or (q.beaten and not q.delivered and inventory.get(q.spec.prize_key, 0) <= 0): b = q; break
 	if b == null or player.dead or b.fighting(): hud.set_boss_chip(false); return
 	var h := Vector2(b.at.x - player.pos.x, b.at.z - player.pos.z); var d := h.length()
@@ -3273,3 +3278,8 @@ func _shot_hook(spec: String) -> void:
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out)
 	Shutdown.quit(get_tree())
+
+## Is this boss known yet? (The player: you shouldn't know who the next boss is, or see him marked, till the town has
+## grown to where he holds it back.) Known once the street before his is all mended, or once you've beaten him.
+func _boss_known(b: Boss) -> bool:
+	return b.beaten or b.back or b.delivered or town.street_done(int(b.spec.street) - 1)
