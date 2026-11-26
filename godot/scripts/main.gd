@@ -249,6 +249,7 @@ func _ready() -> void:
 	hud.on_overlay_click = func() -> void: input.lock()
 	hud.on_newgame = _new_game
 	hud.on_devcash = _dev_cash
+	hud.on_devtown = _dev_town
 	hud.on_save = func() -> void: save_all(); hud.flash_saved("Saved ✓" if saving else "Not saved (test run)")
 	hud.on_quit = _quit_game
 	hud.on_option = _cycle_option
@@ -886,6 +887,15 @@ func _quit_game() -> void:
 ## Dev: $500 at a click (the +$500 button, or F4).
 func _dev_cash() -> void:
 	inventory.dollars = inventory.get("dollars", 0) + 500; hud.toast("Dev: +$500 in your poke."); sound.pick(); save_all()
+
+## Dev: the whole town at once (the player's ask, to look round it all): every boss's prize back (so no street is held),
+## Main Street, the church and every new street mended, Chinatown included; the trophies up.
+func _dev_town() -> void:
+	for b in bosses: b.delivered = true; b.beaten = true
+	for b in Town.BUILDINGS: if not town.tiers.get(b.id, 0): town.mend(b.id)
+	if not town.tiers.get("church", 0): town.mend("church")
+	for st in Town.STREETS: for b in st.buildings: if not town.tiers.get(b.id, 0): town.mend(b.id)
+	_trophies(); hud.toast("Dev: the whole town's mended, every street up."); sound.craft(); save_all()
 
 ## The renderer's name for the dev badge (the page shows WebGPU or WebGL 2).
 func _renderer_name() -> String:

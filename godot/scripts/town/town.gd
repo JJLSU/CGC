@@ -35,6 +35,14 @@ static var STREETS := [ # (a static var, not a const: the dance hall's side and 
 		{"id": "cooper", "name": "cooperage", "model": "blacksmith", "cost": 25, "w": 5.0, "h": 3.4, "d": 5.5, "side": 1, "s": -11.0},
 		{"id": "stable2", "name": "stage stables", "model": "livery", "cost": 30, "w": 7.4, "h": 4.4, "d": 8.0, "side": 1, "s": -1.0, "barn": true},
 		{"id": "dance", "name": "dance hall", "model": "saloon", "cost": 45, "w": 8.6, "h": 4.4, "d": 13.4, "side": 1, "s": 9.4}]},
+	# Chinatown (the player's Chinatown set: its four buildings and folk through Meshy), past Second or Third Street; it
+	# goes up once Thaddeus Crane's mortgage is burnt (his gate: Boss.SPECS crane street 2). Each uses its own model
+	# (bldg_cn_*_restored / _ruined) once it's in, else the nearest old one.
+	{"id": "chinatown", "name": "Chinatown", "buildings": [
+		{"id": "cn_store", "name": "Chinese general store", "model": "store", "cost": 40, "w": 6.6, "h": 5.0, "d": 7.0, "side": -1, "s": -10.0},
+		{"id": "cn_laundry", "name": "Chinese laundry", "model": "store", "cost": 35, "w": 7.4, "h": 3.8, "d": 6.6, "side": -1, "s": 3.0},
+		{"id": "cn_herbalist", "name": "herbalist's shop", "model": "assay", "cost": 40, "w": 4.6, "h": 6.0, "d": 6.6, "side": 1, "s": -10.0},
+		{"id": "cn_boarding", "name": "Chinese boarding house", "model": "hotel", "cost": 50, "w": 7.4, "h": 5.4, "d": 7.0, "side": 1, "s": 2.0}]},
 ]
 const MODEL_OF := {"smithy": "blacksmith", "saloon": "saloon", "store": "store", "boarding": "hotel", "church": "church", "assay": "assay", "livery": "livery"}
 const NIGHT_OWLS := ["saloon", "hotel2"]
@@ -58,6 +66,11 @@ const TOWNSFOLK := {
 	"barber": {"new": "cgc_man_goatee", "model": "townsfolk_3", "hue": 2.8},
 	"jail": {"new": "cgc_man_bandana", "model": "trades_1", "hue": 1.6},
 	"bank": {"new": "cgc_man_elder", "model": "townsfolk_2"},
+	"cn_store": {"new": "cgc_man_cn_elder", "model": "townsfolk_2", "hue": 1.2, "with": [{"new": "cgc_boy_cn", "model": "townsfolk_4", "at": -2.2, "out": 0.6, "turn": 0.4}]},
+	"cn_laundry": {"new": "cgc_woman_cn_thin", "model": "trades_6", "hue": 0.9, "with": [{"new": "cgc_man_cn_rust", "model": "trades_1", "at": -2.4, "out": 0.6, "turn": 0.3, "pose": "work"}]},
+	"cn_herbalist": {"new": "cgc_man_cn_young", "model": "trades_7", "hue": -0.8},
+	"cn_boarding": {"new": "cgc_woman_cn_sultry", "model": "trades_2", "hue": 1.4, "with": [{"new": "cgc_man_cn_olive", "model": "prospectors_1", "at": -2.5, "out": 0.6, "turn": 0.35},
+		{"new": "cgc_girl_cn", "model": "townsfolk_4", "at": 3.2, "out": 0.5, "turn": -0.4}]},
 	"bakery": {"new": "cgc_woman_stripe", "model": "trades_6"},
 	"church": {"at": 2.2, "pose": "clipboard", "model": "trades_1", "with": [{"model": "trades_2", "at": -3.3, "out": 0.6, "turn": -0.3}]},
 }
@@ -192,7 +205,19 @@ func _init(w: World, home: Vector3) -> void:
 				if Terrain.is_water(q.x, q.z) or Terrain.range_at(q.x, q.z) >= 0.002: return false
 		return true
 	var sides := [1, -1].filter(func(sd): return ok_side.call(sd))
-	for i in STREETS.size(): street_offs.append(float(sides[i] if i < sides.size() else ((-sides[0]) if sides.size() else (-1 if i else 1))) * STREET_OFF)
+	for i in STREETS.size():
+		if i < 2: street_offs.append(float(sides[i] if i < sides.size() else ((-sides[0]) if sides.size() else (-1 if i else 1))) * STREET_OFF); continue
+		# a third new street (Chinatown) a row further out, beyond whichever of the first two has room
+		var far_off := 0.0
+		for k in [0, 1]:
+			var o: float = street_offs[k] * 2.0
+			var fine := true
+			for sv in [-20, 0, 20]:
+				for cv in [-10, 0, 10]:
+					var q: Vector3 = at + along * sv + toward * (o + cv)
+					if Terrain.is_water(q.x, q.z) or Terrain.range_at(q.x, q.z) >= 0.002: fine = false
+			if fine: far_off = o; break
+		street_offs.append(far_off if far_off != 0.0 else street_offs[0] * 2.0)
 	# the dance hall (the player's big open-fronted hall, ~17 m deep) goes on the side of its street that backs onto open
 	# country, never onto Main Street's backs: 10.6 m along where that's side 1, else 18 m along on the other side
 	var dh := find_b("dance"); var dk := street_of("dance")

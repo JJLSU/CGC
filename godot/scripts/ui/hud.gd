@@ -807,6 +807,27 @@ var error_card: PanelContainer
 var error_label: Label
 var on_time_preset: Callable  ## (i) a chip clicked
 var on_devcash: Callable
+var devtown: Button
+var on_devtown: Callable  ## the whole town mended at once (the player's ask: to check it all out)
+
+## A dev button bottom right, its right edge right px in from the corner: cream card, brown ink.
+func _dev_button(text: String, tip: String, right: float) -> Button:
+	var bt := Button.new(); bt.text = text; bt.tooltip_text = tip; bt.focus_mode = Control.FOCUS_NONE
+	var serif := SystemFont.new(); serif.font_names = PackedStringArray(["Georgia", "serif"]); serif.font_weight = 600
+	bt.add_theme_font_override("font", serif); bt.add_theme_font_size_override("font_size", 14)
+	var mk := func(bg: Color) -> StyleBoxFlat:
+		var sb := StyleBoxFlat.new(); sb.bg_color = bg; sb.border_color = Color("6a4a30"); sb.set_border_width_all(2); sb.set_corner_radius_all(6)
+		sb.shadow_color = Color(90 / 255.0, 60 / 255.0, 30 / 255.0, 0.35); sb.shadow_size = 1; sb.shadow_offset = Vector2(2, 3)
+		sb.content_margin_left = 12; sb.content_margin_right = 12; sb.content_margin_top = 6; sb.content_margin_bottom = 6
+		return sb
+	bt.add_theme_stylebox_override("normal", mk.call(Color("f2e8d0"))); bt.add_theme_stylebox_override("hover", mk.call(Color("f2e8d0")))
+	bt.add_theme_stylebox_override("pressed", mk.call(Color("e6d8b6")))
+	for st in ["font_color", "font_hover_color", "font_pressed_color"]: bt.add_theme_color_override(st, Color("3a2a1c"))
+	bt.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	bt.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT); bt.grow_horizontal = Control.GROW_DIRECTION_BEGIN; bt.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	bt.offset_right = right; bt.offset_bottom = -84; bt.z_index = 7
+	root.add_child(bt)
+	return bt
 
 func _build_dev() -> void:
 	backend = card(0.0, Vector4(10, 2, 10, 2)); backend_label = label("…", 15, INK_SOFT); backend.add_child(backend_label)
@@ -826,22 +847,9 @@ func _build_dev() -> void:
 		b.pressed.connect(func() -> void: if on_time_preset.is_valid(): on_time_preset.call(i))
 		times.add_child(b); time_chips.append(b)
 	root.add_child(times)
-	devcash = Button.new(); devcash.text = "+$500"; devcash.tooltip_text = "Dev: add $500 (F4)"; devcash.focus_mode = Control.FOCUS_NONE
-	var serif := SystemFont.new(); serif.font_names = PackedStringArray(["Georgia", "serif"]); serif.font_weight = 600
-	devcash.add_theme_font_override("font", serif); devcash.add_theme_font_size_override("font_size", 14)
-	var mk := func(bg: Color) -> StyleBoxFlat:
-		var sb := StyleBoxFlat.new(); sb.bg_color = bg; sb.border_color = Color("6a4a30"); sb.set_border_width_all(2); sb.set_corner_radius_all(6)
-		sb.shadow_color = Color(90 / 255.0, 60 / 255.0, 30 / 255.0, 0.35); sb.shadow_size = 1; sb.shadow_offset = Vector2(2, 3)
-		sb.content_margin_left = 12; sb.content_margin_right = 12; sb.content_margin_top = 6; sb.content_margin_bottom = 6
-		return sb
-	devcash.add_theme_stylebox_override("normal", mk.call(Color("f2e8d0"))); devcash.add_theme_stylebox_override("hover", mk.call(Color("f2e8d0")))
-	devcash.add_theme_stylebox_override("pressed", mk.call(Color("e6d8b6")))
-	for st in ["font_color", "font_hover_color", "font_pressed_color"]: devcash.add_theme_color_override(st, Color("3a2a1c"))
-	devcash.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	devcash.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT); devcash.grow_horizontal = Control.GROW_DIRECTION_BEGIN; devcash.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	devcash.offset_right = -12; devcash.offset_bottom = -84; devcash.z_index = 7
-	devcash.pressed.connect(func() -> void: if on_devcash.is_valid(): on_devcash.call())
-	root.add_child(devcash)
+	devcash = _dev_button("+$500", "Dev: add $500 (F4)", -12); devcash.pressed.connect(func() -> void: if on_devcash.is_valid(): on_devcash.call())
+	# beside it, "Whole town": every street up and every building mended, the bosses' prizes all back
+	devtown = _dev_button("Whole town", "Dev: mend the whole town, every street", -98); devtown.pressed.connect(func() -> void: if on_devtown.is_valid(): on_devtown.call())
 	error_card = PanelContainer.new(); error_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var eb := StyleBoxFlat.new(); eb.bg_color = Color("fde2df"); eb.border_color = Color("c8323c"); eb.set_border_width_all(1)
 	eb.content_margin_left = 14; eb.content_margin_right = 14; eb.content_margin_top = 10; eb.content_margin_bottom = 10
