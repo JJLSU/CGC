@@ -2,6 +2,8 @@ extends SceneTree
 ## 21f: the faster noise and the elevation memo change no value. Simplex.at against the original (at_ref) over 200k
 ## points and several seeds, bit for bit; get_height with the memo against a fresh computation without it; timings.
 func _initialize() -> void:
+	var _sp := OS.get_environment("CGC_SAVE_PATH") # (a fresh throwaway each run, never the player's save: an old one would carry the last run's state in)
+	if _sp != "" and not _sp.contains("paperfjord.builds") and FileAccess.file_exists(_sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(_sp))
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
