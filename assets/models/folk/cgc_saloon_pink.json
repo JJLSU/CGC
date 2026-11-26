@@ -1,0 +1,15 @@
+{
+  "name": "cgc_saloon_pink",
+  "height": 1.68,
+  "tris": 20758,
+  "tris_before": 20758,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -17,12 +17,14 @@ func _initialize() -> void:
 	var keeper: Vector3 = f.fig.root.position if f != null else d
 	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
 	main.player.avatar.root.visible = false # (stood just in front of the keeper, out of the way)
+	if args.has("night"): main.sky.time = 0.9 # (the can-can revue on the saloon's boardwalk)
 	var t0 := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 5000:
 		var stand: Vector3 = keeper + Vector3(sin(f.face if f != null else 0.0), 0, cos(f.face if f != null else 0.0)) * 1.2
 		main.player.pos = Vector3(stand.x, Terrain.get_height(stand.x, stand.z), stand.z)
 		main.rig.yaw = (f.face if f != null else 0.0) + PI + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
 		await process_frame
+	if T.revue != null: print("revue: ", T.revue.map(func(r): return r.name))
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)
 	quit()
