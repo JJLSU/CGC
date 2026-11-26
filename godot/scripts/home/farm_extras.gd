@@ -56,21 +56,27 @@ func _init(world: World, center: Vector3) -> void:
 	C = Vector3(center.x, 0, center.z)
 	for n in ["coop", "cellar", "bunkhouse", "laundry", "vane", "porch"]:
 		var info: Dictionary = JSON.parse_string(FileAccess.open("res://assets/baked/homestead/%s.json" % n, FileAccess.READ).get_as_text())
-		for e in info.exclusions: world.exclusions.append({"x": C.x + e.x, "z": C.z + e.z, "r": e.r})
-		for e in info.colliders: world.colliders.append({"x": C.x + e.x, "z": C.z + e.z, "r": e.r})
+		var mv := _moved(n)
+		for e in info.exclusions: world.exclusions.append({"x": C.x + e.x + mv.x, "z": C.z + e.z + mv.z, "r": e.r})
+		for e in info.colliders: world.colliders.append({"x": C.x + e.x + mv.x, "z": C.z + e.z + mv.z, "r": e.r})
 		parts[n] = {"info": info}
-	coop_pos = C + _v(parts.coop.info.vecs.pos); roost_at = C + _v(parts.coop.info.vecs.get("roostAt", [0, 0, 0]))
+	coop_pos = C + _v(parts.coop.info.vecs.pos) + _moved("coop"); roost_at = C + _v(parts.coop.info.vecs.get("roostAt", [0, 0, 0])) + _moved("coop")
 	cellar_pos = C + _v(parts.cellar.info.vecs.pos)
 	bunk_pos = C + _v(parts.bunkhouse.info.vecs.pos); bunk_door = C + _v(parts.bunkhouse.info.vecs.door); fire_at = C + _v(parts.bunkhouse.info.vecs.fireAt)
 	seat = C + _v(parts.porch.info.vecs.seat); seat_facing = parts.porch.info.vecs.facing
 
 static func _v(a) -> Vector3: return Vector3(a[0], a[1], a[2])
 
+## Parts moved from where the web had them (the player: the coop and its run, set slantwise between the house and the
+## barn, blocked the way across the yard): the coop goes round the far side of the barn.
+const MOVED := {"coop": Vector3(-16.5, 0, -3.0)}
+static func _moved(n: String) -> Vector3: return MOVED.get(n, Vector3.ZERO)
+
 func _ready() -> void:
 	position = C
 	for n in parts:
 		var root := (load("res://assets/baked/homestead/%s.glb" % n) as PackedScene).instantiate() as Node3D
-		add_child(root)
+		add_child(root); root.position += _moved(n)
 		_skin(root)
 		for m in parts[n].info.models:
 			var scene: PackedScene = load("res://assets/models/props/%s.glb" % m.model)
@@ -80,7 +86,7 @@ func _ready() -> void:
 			var meshes := PaperMats._meshes(inst)
 			if meshes.size() > int(m.mesh):
 				var src: MeshInstance3D = meshes[int(m.mesh)]
-				var mi := MeshInstance3D.new(); mi.mesh = src.mesh; mi.transform = Homestead._m(m.m)
+				var mi := MeshInstance3D.new(); mi.mesh = src.mesh; mi.transform = Homestead._m(m.m); mi.position += _moved(n)
 				for s in src.mesh.get_surface_count(): mi.set_surface_override_material(s, src.get_surface_override_material(s))
 				add_child(mi)
 			inst.free()

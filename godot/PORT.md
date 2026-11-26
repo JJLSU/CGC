@@ -1674,3 +1674,12 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - Patrols (ArmyForts.setup_patrols / patrols_update): by day each fort sends two mounted troopers (the player's cavalry, rifles in hand) out at a walk toward town and back: out of the gate at 0.30, turning 60 m short of town at 0.50, home by 0.72; built only within 180 m of you, gone while their fort's riled. A story element on the road. Looked at (tools/shot_patrol.gd); test_forts, test_newgame PASS.
 - More of the player's new folk in story roles: the five whistle-stops' trading-post keepers (greenbustle, ragged man, plumstripe, youth, calico), the County Fair's judge (the gent), and the lamplighter (the elder). Looked at the Bluepine keeper (tools/shot_keeper.gd); test_rail_ties, test_newgame PASS.
 - Wayfarers move on: 24 campsites found for the county; every 4 days all six break camp and pitch elsewhere (spots[(i * stride + epoch * 5) % n], never two on one spot), their map marks following. test_wayfarers: all six moved after 4 days, six distinct spots: PASS.
+- From play (2026-11-26): the coop and its run stood slantwise between the house and the barn and blocked the way
+  across: FarmExtras.MOVED shifts the coop (model, run, colliders, exclusions, egg box, roost) round the far west side
+  of the barn, and the hens' yard with it; between the barn's east wall and the house a ~7 m way now runs clear
+  (colliders probed along it). Silver veins and thunder eggs ring with the pick as gold quartz does (sound.mine).
+  The boss indicator can't be crowded out any more: a boss chip on the top bar (hud.set_boss_chip, main
+  _update_boss_chip) with a red arrow, his name and the paces, always up for the next boss to beat, one back for a
+  rematch, or a fallen one whose prize still lies at his camp; hidden in his fight, within 35 m, or while you carry his
+  prize (the homeward chip has the assay office then). The rumour note is the landmarks' again. Looked at both
+  (tools/shot_yard.gd); test_boss, _save, yard, homestead_build x2, newgame PASS.

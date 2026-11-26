@@ -322,7 +322,7 @@ func _ready() -> void:
 	critters = Critters.new(); add_child(critters)
 	critters.on_spotted = func(_c) -> void: journal.record("deer")
 	critters.on_gobble = func(d: float) -> void: sound.gobble(maxf(0.15, 1.0 - d / 35.0))
-	critters.setup(Vector3(center.x - 7, 0, center.z - 1), Vector3(center.x - 5, 0, center.z + 17)) # hens by the barn, cow & sheep in the pasture
+	critters.setup(Vector3(center.x - 20, 0, center.z - 1.5), Vector3(center.x - 5, 0, center.z + 17)) # hens by their coop round the far side of the barn (moved out of the way: the player), cow & sheep in the pasture
 	critters.on_herd = func(_c) -> void: hud.toast("A herd of bison grazing the high prairie, shaggy as old haystacks! Folks say they once ran so thick the ground shook for a day. Best not crowd them.")
 	critters.on_dressed = func(c: Dictionary) -> void:
 		var T: Dictionary
@@ -984,6 +984,7 @@ func _update_hud(dt: float) -> void:
 	_rumour_note()
 	_update_next(dt)
 	_update_homeward()
+	_update_boss_chip()
 	hud.set_fortune("$%d in your poke" % inventory.get("dollars", 0) if fortune or inventory.get("dollars", 0) else "")
 	if input.hit("KeyM") or input.hit("Tab"):
 		if hud.map_card.visible: hud.map_card.visible = false
@@ -1657,7 +1658,7 @@ func _gather(active: bool, connected: bool) -> void:
 		var at := Vector3(target.x, target.y + 1.0, target.z).lerp(player.pos, 0.35)
 		at.y = player.pos.y + 1.1
 		confetti.burst(at, def.chips, 7, 0.6)
-		if target.type in ["rock", "ore", "quartz"]: sound.mine()
+		if target.type in ["rock", "ore", "quartz", "silver", "geode"]: sound.mine() # (silver and thunder eggs ring like gold quartz: the player)
 		elif target.type in ["bush", "grass", "mushroom", "hive", "clay", "corn", "pumpkin", "apples", "stook"]: sound.pick()
 		else: sound.chop()
 		if r.destroyed:
@@ -2359,8 +2360,7 @@ func save_all() -> void:
 
 ## The rumour note under NEXT: the nearest landmark you haven't seen, and an arrow that turns with your view.
 func _rumour_note() -> void:
-	var r = _boss_rumour() # (a boss holding the town back comes first: where his lair lies, and how far)
-	if r == null: r = rumours.update(player.pos, journal.GOALS.filter(func(_g): return false), func(k) -> bool: return landmarks.found.has(k))
+	var r = rumours.update(player.pos, journal.GOALS.filter(func(_g): return false), func(k) -> bool: return landmarks.found.has(k))
 	if r == null: hud.set_rumour(null, 0.0); return
 	var cam := rig.camera; var a := cam.unproject_position(player.pos); var b := cam.unproject_position(player.pos + r.dir * 4.0)
 	hud.set_rumour(r, rad_to_deg(atan2(b.x - a.x, -(b.y - a.y))))
@@ -3149,3 +3149,17 @@ func _fort_officer(active: bool) -> bool:
 			hud.county_map.reveal(jc.at.x, jc.at.z, 30.0); sound.place()
 			hud.toast("\"Claim jumpers, %d paces off. Clear 'em out and there's $30 in it.\" (marked on your map)" % (roundi(bd * 1.3 / 10.0) * 10))
 	return true
+
+## The boss chip: the next boss to beat (or one back for a rematch, or a fallen one whose prize still lies at his camp),
+## always on the top bar till that's done, whatever else NEXT or the rumour note is saying; hidden in his fight, near
+## his camp, or while you carry his prize (the homeward chip points you to the assay office then).
+func _update_boss_chip() -> void:
+	var b = null
+	for q in bosses:
+		if q.back or not q.beaten or (q.beaten and not q.delivered and inventory.get(q.spec.prize_key, 0) <= 0): b = q; break
+	if b == null or player.dead or b.fighting(): hud.set_boss_chip(false); return
+	var h := Vector2(b.at.x - player.pos.x, b.at.z - player.pos.z); var d := h.length()
+	if d < 35.0: hud.set_boss_chip(false); return
+	var cam := rig.camera; var a := cam.unproject_position(player.pos); var e := cam.unproject_position(player.pos + Vector3(h.x / d, 0, h.y / d) * 4.0)
+	var what: String = ("%s's camp (%s)" % [b.title(), b.spec.prize.trim_prefix("the ")]) if b.beaten and not b.back else b.title()
+	hud.set_boss_chip(true, rad_to_deg(atan2(e.x - a.x, -(e.y - a.y))), "%s, %d paces" % [what, roundi(d * 1.3 / 10.0) * 10])

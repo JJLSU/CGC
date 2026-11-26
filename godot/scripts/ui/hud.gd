@@ -162,6 +162,12 @@ func _build_top() -> void:
 	homeward_arrow = Glyph.new(); homeward_arrow.kind = "arrow"; hr.add_child(homeward_arrow)
 	homeward_label = label("", 16); hr.add_child(homeward_label); homeward.add_child(hr); top.add_child(homeward)
 	fortune = card(0.5); fortune_label = label(""); fortune.add_child(fortune_label); fortune.visible = false; top.add_child(fortune)
+	# the boss chip (the player's ask: a boss's whereabouts that no other errand or rumour can take away): a red arrow
+	# that turns with your view, his name and the paces to his camp
+	boss_chip = card(0.7, Vector4(12, 4, 12, 4)); boss_chip.visible = false
+	var br := HBoxContainer.new(); br.add_theme_constant_override("separation", 6); br.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_arrow = Glyph.new(); boss_arrow.kind = "arrow"; boss_arrow.modulate = Color("a8352a"); br.add_child(boss_arrow)
+	boss_chip_label = label("", 16, Color("8a2a20")); br.add_child(boss_chip_label); boss_chip.add_child(br); top.add_child(boss_chip)
 	root.add_child(top)
 	var notes := VBoxContainer.new(); notes.position = Vector2(16, 58); notes.add_theme_constant_override("separation", 8); notes.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	next_card = PanelContainer.new(); next_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -973,3 +979,12 @@ func set_boss(who: String, frac: float) -> void:
 var town_rank: Label
 func set_town_rank(rank: String) -> void:
 	if town_rank and town_rank.text != rank: town_rank.text = rank
+
+var boss_chip: PanelContainer
+var boss_arrow: Glyph
+var boss_chip_label: Label
+func set_boss_chip(show: bool, deg := 0.0, text := "") -> void:
+	boss_chip.visible = show
+	if not show: return
+	boss_arrow.rotation = lerp_angle(boss_arrow.rotation, deg_to_rad(deg), 0.25)
+	if boss_chip_label.text != text: boss_chip_label.text = text
