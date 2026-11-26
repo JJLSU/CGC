@@ -146,6 +146,9 @@ var climbs: Climbs
 var jumpers: ClaimJumpers
 var jumper_hooks := {}
 var jumper_t = null
+var forts: ArmyForts       ## the cavalry's posts out in the county (the player's ask)
+var fort_hooks := {}
+var soldier_t = null
 var boss: Boss            ## Mad Jebediah, who stole the townsite deed (the player's boss battles)
 var bosses: Array = []    ## every boss, in street order (Boss.ORDER): Jebediah, then Big Angus
 var boss_t = null
@@ -398,6 +401,7 @@ func _ready() -> void:
 		var out := camp.targets()
 		if jumpers: out.append_array(jumpers.targets())
 		for b in bosses: out.append_array(b.targets())
+		if forts: out.append_array(forts.targets())
 		for e in enemies.list: if not e.dying: out.append({"pos": Enemies.pos(e), "r": 0.65 * e.spec.scale, "h": e.spec.top * e.spec.scale, "enemy": e})
 		return out
 	hunting.on_target = func(t: Dictionary, a: Dictionary) -> void:
@@ -405,6 +409,7 @@ func _ready() -> void:
 		elif t.has("w"): camp.damage(t.w, a.get("dmg", 6), camp_hooks, raid_hooks); sound.land()
 		elif t.has("j"): jumpers.damage(t.j, a.get("dmg", 6), jumper_hooks); sound.land()
 		elif t.has("boss"): t.boss.damage(a.get("dmg", 6), t.boss.hooks); sound.land()
+		elif t.has("s"): forts.damage(t.s, a.get("dmg", 6), fort_hooks); sound.land()
 	hunting.on_hit = func(c: Dictionary) -> void:
 		if not hunt_told: hunt_told = true; hud.toast("A clean shot. The %s folds down in the grass: walk up to it to dress it." % c.type)
 	hunting.on_wound = func(c: Dictionary) -> void:
@@ -446,6 +451,7 @@ func _ready() -> void:
 		"on_spotted": func(_c) -> void: hud.toast("Claim jumpers! A ragged camp of hard cases, and they've seen you. They come at you swinging. Fight, or run for it."),
 	}
 	_make_boss()
+	_make_forts()
 	camp_hooks = {
 		"on_warn": func() -> void: hud.toast("A warrior blocks your way and signals you back. This is their land: the painted poles mark it. An arrow thuds into the ground at your feet."),
 		"on_fight": func() -> void: hud.toast("You stayed. The warriors come for you, bows drawn: get back over the poles!"),
@@ -597,6 +603,7 @@ func _process(dt: float) -> void:
 	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle")
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
+	forts.update(dt, sky.day, player, fort_hooks)
 	var fb = null
 	for b in bosses:
 		b.day_now = sky.day
@@ -1580,11 +1587,12 @@ func _gather(active: bool, connected: bool) -> void:
 	camp_t = camp.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and active and not player.dead and not build.active else null
 	jumper_t = jumpers.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and camp_t == null and active and not player.dead and not build.active else null
 	boss_t = null
-	if enemy_t == null and camp_t == null and jumper_t == null and active and not player.dead and not build.active:
+	soldier_t = forts.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and camp_t == null and jumper_t == null and active and not player.dead and not build.active else null
+	if enemy_t == null and camp_t == null and jumper_t == null and soldier_t == null and active and not player.dead and not build.active:
 		for b in bosses:
 			boss_t = b.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0))
 			if boss_t != null: break
-	target = player.find_target(world) if active and not player.dead and enemy_t == null and jumper_t == null and boss_t == null else null
+	target = player.find_target(world) if active and not player.dead and enemy_t == null and jumper_t == null and boss_t == null and soldier_t == null else null
 	piece_t = null
 	if active and not player.dead and enemy_t == null and not build.active:
 		var f := player.forward(); piece_t = build.find_target(player.pos, f.x, f.z, Player.REACH)
@@ -1614,6 +1622,9 @@ func _gather(active: bool, connected: bool) -> void:
 	elif connected and boss_t != null:
 		blow(); sound.chop(); boss_t.damage(maxi(2, edge("enemy")), boss_t.hooks)
 		confetti.burst(boss_t.pos() + Vector3(0, 2.6, 0), [0xa8352a, 0xefe2c4], 10, 0.9)
+	elif connected and soldier_t != null:
+		blow(); sound.chop(); forts.damage(soldier_t, maxi(2, edge("enemy")), fort_hooks)
+		confetti.burst(soldier_t.fig.root.position + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
 	elif connected and jumper_t != null:
 		blow(); sound.chop(); jumpers.damage(jumper_t, maxi(2, edge("enemy")), jumper_hooks)
 		confetti.burst(jumper_t.fig.root.position + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
@@ -2283,6 +2294,7 @@ func _apply_save(d: Dictionary) -> void:
 	dog.found_day = int(d.get("dogDay", 0)) # (he's already been digging today, if the save says so)
 	camp.load_state(d.get("campPeace")) # (days of peace bought with gifts)
 	jumpers.load_state(d.get("jumpers")) # (camps cleared, and when)
+	forts.load_state(d.get("forts"))
 	celebrate_day = int(d.get("celebrateDay", -1))
 	var bs = d.get("bosses")
 	if bs is Dictionary:
@@ -2331,7 +2343,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -2385,6 +2397,7 @@ func _open_map(rewash := true) -> void:
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
 	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": 46.0, "peace": maxi(0, c.peace_until - sky.day)})
 	for b in bosses: sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
+	for f in forts.forts: sites.append({"kind": "fort", "x": f.at.x, "z": f.at.z, "rumour": true, "name": f.name, "angry": f.angry})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
 	var mended := 0
 	for k in town.tiers: if town.tiers[k]: mended += 1
@@ -3031,3 +3044,24 @@ func _boss_tune(dt: float, fb) -> void:
 	var n: int = BOSS_TUNE[tune_i % BOSS_TUNE.size()]
 	sound.play("fiddle_%d" % n, (0.4 if riled else 0.32) if tune_i % 4 == 0 else (0.3 if riled else 0.22))
 	tune_i += 1
+
+# ------------------------------------------------------------------ the army's forts (the player's ask)
+## Two or three forts a county, clear of home, the town, the lodges, the jumpers and the bosses. The troopers let
+## you be; strike one and the fort turns out.
+func _make_forts() -> void:
+	forts = ArmyForts.new(); add_child(forts)
+	var avoid: Array = [homestead.spawn, town.at] + camp.list.map(func(c): return c.at) + jumpers.camps.map(func(c): return c.at) + bosses.map(func(b): return b.at)
+	forts.setup(homestead.spawn, avoid, world)
+	forts.blocker = func(q: Vector3) -> Vector3: return build.collide(q, 0.4)
+	fort_hooks = {
+		"on_hit": func(dmg: int) -> void:
+			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
+			if out: death_timer = 3.0; hud.toast("The troopers drag you out past the gate and leave you there. You come to a long while later."),
+		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
+		"on_fall": func(m: Dictionary) -> void:
+			sound.knock(); var p: Vector3 = m.fig.root.position
+			add_drop("prop_pouch", 0.45, Vector3(p.x + 0.5, 0, p.z + 0.3), "his haversack", [{"cartridges": 6}, {"cartridges": 4, "dollars": 3}, {"dollars": 7}, {"cartridges": 8}][randi() % 4])
+			hud.toast("The trooper goes down. His haversack lies in the dirt."),
+		"on_angry": func(f: Dictionary) -> void: hud.toast("You've struck a trooper! %s turns out, rifles up. Get clear!" % f.name),
+		"on_first": func(f: Dictionary) -> void: hud.toast("%s: the colours over the stockade, a sentry at the gate. The troopers nod you by." % f.name),
+	}

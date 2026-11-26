@@ -249,6 +249,13 @@ func _draw() -> void:
 			draw_arc(p, 15.0, 0, TAU, 20, col, 2.0, true)
 			_label("Claim Jumpers" + (" (cleared)" if site.cleared else ""), p + Vector2(0, 31), 15, serif_b, col)
 			continue
+		if site.kind == "fort": # the army's fort: a square stockade with the colours flying, in blue (red if you've riled it)
+			var col := Color("2e3e6a") if not site.angry else Color("8a2a20")
+			var sq := PackedVector2Array([p + Vector2(-9, -9), p + Vector2(9, -9), p + Vector2(9, 9), p + Vector2(-9, 9), p + Vector2(-9, -9)])
+			draw_polyline(sq, col, 2.5, true); draw_line(p + Vector2(0, 5), p + Vector2(0, -15), col, 1.5, true)
+			draw_rect(Rect2(p + Vector2(0, -15), Vector2(8, 5)), Color("a8352a"))
+			_label(String(site.name), p + Vector2(0, 26), 15, serif_b, col)
+			continue
 		if site.kind == "boss": # a boss's lair: a skull-pale ring and crossed picks in red, his name under it
 			var col := Color("8a2a20") if not site.beaten else Color(INK, 0.45)
 			draw_line(p + Vector2(-9, -9), p + Vector2(9, 9), col, 3.0, true); draw_line(p + Vector2(9, -9), p + Vector2(-9, 9), col, 3.0, true)

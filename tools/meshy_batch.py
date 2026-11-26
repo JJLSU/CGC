@@ -31,7 +31,8 @@ ACTIONS = {
 }
 # the warriors also shoot, fight and run (on top of everything the folk do), and ride with the sit clip
 WARRIOR_ACTIONS = {'shoot': 224, 'attack': 4, 'run': 14}  # Archery Shot, Attack, Run 2
-WARRIORS = {'folk_native_warrior', 'folk_native_archer', 'folk_native_hunter'}
+WARRIORS = {'folk_native_warrior', 'folk_native_archer', 'folk_native_hunter', 'cgc_warrior_1', 'cgc_warrior_2', 'cgc_warrior_3',
+            'cgc_soldier_officer', 'cgc_soldier_2', 'cgc_soldier_3', 'cgc_soldier_4', 'cgc_soldier_5', 'cgc_soldier_6'}  # (the fort's troopers fight too)
 # the bosses (Cold Glitter Creek's boss battles) fight too: an attack, a run, and the heavy swing doubles as a slam
 BOSSES = {'boss_jebediah', 'boss_lumberjack', 'boss_tycoon', 'boss_spirit'}
 BOSS_ACTIONS = {'walk': 119, 'attack': 4, 'run': 14, 'throw': 421, 'slam': 86}  # a Slow Orc Walk (the casual one read feminine on a giant), Attack, Run, Over Shoulder Throw, Jump Attack

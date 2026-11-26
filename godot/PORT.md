@@ -1637,3 +1637,17 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - Rematches (Boss.maybe_return, back/fell_day/returns saved): a week after a boss falls with his prize home he's back at his lair (a word from the hills; his poster back on the board), a quarter tougher each return (max_hp); beaten again he drops nothing, and the sheriff pays his reward a quarter higher each time. The town keeps its streets, trophies and rank; his lair's spoils wait while he's back. test_boss_save: back with 68 of 54, beaten again, no drop, +$63 at the jail, Second Street still up: PASS (and it now sets force_active on the reloaded game, as headless runs need).
 - A fight's fiddle (main._boss_tune): while a boss is on you, a low driving E-minor figure on the baked reel notes, bowed softly (0.22-0.32); riled, quicker (0.2 s a note) and harder. Crane's dynamite lands with the big bang. Probe: 11 notes in the first seconds of a fight; test_boss PASS.
 - A boss's fall has weight: the big bang, a camera jolt (CameraRig.shake, 0.35 m dying away in ~0.5 s; zoom and look untouched), a big dust burst, and a rising fiddle run; a slam within 12 m jolts the view a little. His taunt card goes with him. Looked at (tools/shot_boss.gd ... fall taunt).
+
+### The army's forts; bigger native camps; the new folk about the county (2026-11-26; the player's asks)
+- ArmyForts (scripts/folk/forts.gd): two or three forts a county (seeded), 260-680 m out on dry level ground, 260 m+
+  apart, clear of home, town, lodges, jumpers and bosses. A 34 m square stockade of sharpened logs (two multimeshes,
+  ~320 logs) with a gate toward home under a beam with the fort's name; inside the officers' house, a barracks barn,
+  the guardhouse, a water tower, a covered wagon, cart, crates and barrels, and a flagpole with the colours stirring.
+  The stockade stops you (world colliders every 1.4 m, the gate left open). Seven troopers: two sentries out at the
+  gate, the officer before his house, three at drill on the parade ground, one about the yard at chores. They let you
+  be. Strike one and the whole fort turns out (rifles, 22 a ball, from a dozen paces) till you're 110 m from the gate;
+  forgotten by the next day; a trooper beaten drops his haversack (cartridges, dollars); a fort's men back three days
+  after they're all beaten. On the map: a blue square with the colours and its name (red while riled). Saved.
+  The troopers wear the player's cavalry figures (cgc_soldier_*, Meshy in progress) once made; townsmen in blue till then.
+- tools/test_forts.gd PASS (3 forts 314 m+ apart; 4 s among them unharmed; the wall a collider, the gate open; one
+  struck: all 7 turn out and fire; a haversack; stood down far off; forgotten next day); looked at (tools/shot_fort.gd).
