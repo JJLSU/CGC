@@ -127,8 +127,7 @@ func set_fortune(fortune: float) -> void:
 	house_state = state
 	if house_model: house_model.queue_free()
 	else:
-		for c in house.get_children():
-			if c is MeshInstance3D: (c as MeshInstance3D).visible = false
+		for c in house.find_children("*", "MeshInstance3D", true, false): (c as MeshInstance3D).visible = false # (all of the paper house, its nested roof too: the player saw it lying over the model's)
 	var m := scene.instantiate() as Node3D
 	PaperMats.paperize(m)
 	var meta: Dictionary = {}

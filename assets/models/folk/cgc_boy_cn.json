@@ -1,0 +1,15 @@
+{
+  "name": "cgc_boy_cn",
+  "height": 1.2,
+  "tris": 20592,
+  "tris_before": 20592,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_cn_sultry",
+  "height": 1.68,
+  "tris": 19598,
+  "tris_before": 19598,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_cn_mulberry",
+  "height": 1.68,
+  "tris": 20144,
+  "tris_before": 20144,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}

@@ -188,13 +188,17 @@ func _wear_quiver() -> void:
 func _aim_guns() -> void:
 	var gun: Node3D = tools_by.revolver if tools_by.revolver.visible else (tools_by.rifle if tools_by.rifle.visible else null)
 	if gun == null and _made_on != null and _made_on.get_parent() == root: gun = _made_on
-	if gun == null or _hand_i < 0: return
+	if gun == null or _hand_i < 0: fist.transform = Transform3D.IDENTITY; return
 	var gp := _bone_xf(_hand_i).origin
 	if _fore_i >= 0: gp += (gp - _bone_xf(_fore_i).origin).normalized() * (0.04 if aiming else 0.045) # (the grip in his palm, not out past the fingers)
-	# carried: the six-shooter pointing a little down; the rifle nearly level along his forearm, its stock tucked under
-	# his arm at the hip (the player: he held the rifle weird, muzzle in the dirt and the stock up at his elbow)
+	# carried: the six-shooter pointing a little down; the rifle upright (the player: held vertical till he's ready to
+	# shoot), its stock down by his hip; raised level to aim
 	var rifle_like: bool = gun == tools_by.rifle or (gun == _made_on and made.get("rifle") == _made_on)
-	gun.position = root.to_local(gp); gun.rotation = Vector3(-0.05 if aiming else (0.1 if rifle_like else 0.35), 0, 0)
+	gun.position = root.to_local(gp); gun.rotation = Vector3(-0.05 if aiming else (-1.4 if rifle_like else 0.35), 0, 0) # (the rifle stood upright in his fist, muzzle skyward, till he aims: the player's ask)
+	# his fist round the gun's own grip (the player: the gun sat above his hand), angled down the grip, not across it
+	var made_gun: bool = gun == _made_on
+	var at := Vector3(0, -0.012, -0.035) if made_gun else (Vector3(0, -0.04, -0.12) if rifle_like else Vector3(0, -0.06, -0.01))
+	fist.global_transform = gun.global_transform * Transform3D(Basis(Vector3.RIGHT, 1.9), at)
 
 # ------------------------------------------------------------------ the made tools (the player's tools-and-weapons set, through Meshy)
 ## The stone, iron and steel axes and pickaxes, the spear and the guns as their own models (assets/models/props/prop_tool_*,
