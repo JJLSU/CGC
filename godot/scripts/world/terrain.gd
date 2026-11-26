@@ -146,11 +146,15 @@ static func range_at(x: float, z: float) -> float: return range_mask(x, z)
 ## ~31 deg). The web stops at the range mask alone (0.24: only ~3.4 m up its rise), which shut low gentle passes
 ## between peaks; the player found those should go through.
 const STEEP := 0.6
-static func impassable(x: float, z: float) -> bool:
+static func impassable(x: float, z: float, steep := STEEP) -> bool:
 	if range_at(x, z) <= RANGE_STOP: return false
 	if sqrt(x * x + z * z) > 950.0 + RC.length() * 0.5 - 30.0: return true # (the outer wall)
 	var gx := absf(get_height(x + 1.5, z) - get_height(x - 1.5, z)); var gz := absf(get_height(x, z + 1.5) - get_height(x, z - 1.5))
-	return maxf(gx, gz) / 3.0 > STEEP
+	return maxf(gx, gz) / 3.0 > steep
+## A horse goes where a man on foot is turned back (the player's ask): steeper hillsides and the mountains' lower
+## shoulders (a slope of 1.0 to a man's 0.6), and fords water twice as deep.
+const HORSE_STEEP := 1.0
+const HORSE_WADE := 8.0
 
 # ------------------------------------------------------------------ region field and elevation
 static func region_height(x: float, z: float) -> float:
@@ -224,7 +228,7 @@ static func get_height(x: float, z: float) -> float:
 	return hd + (hc - hd) * (1.0 - fx) + (hb - hd) * (1.0 - fz)
 
 static func is_water(x: float, z: float) -> bool: return get_height(x, z) < 0.12
-static func wadeable(x: float, z: float) -> bool: return region_height(x, z) > WATER_T - 4.0
+static func wadeable(x: float, z: float, depth := 4.0) -> bool: return region_height(x, z) > WATER_T - depth
 static func wade_depth(x: float, z: float) -> float: return clampf((WATER_T - region_height(x, z)) / 4.0, 0.0, 1.0)
 static func moisture(x: float, z: float) -> float:
 	land_at(x, z)

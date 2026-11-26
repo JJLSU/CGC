@@ -112,11 +112,11 @@ func update(dt: float, input: GameInput, world: World, active: bool) -> Dictiona
 	if fullness <= 0.0 and not dead and health > 20.0: health = maxf(20.0, health - dt * 0.3)
 	stamina = clampf(stamina, 0.0, max_stamina)
 	var speed := (SWIM if swimming else (SPRINT if sprinting else WALK)) * ((1.7 * (1.25 if oats_fed else 1.0)) if riding and not swimming else 1.0)
-	if wading: speed *= 0.6 - 0.2 * Terrain.wade_depth(pos.x, pos.z)
+	if wading: speed *= (0.8 - 0.15 * Terrain.wade_depth(pos.x, pos.z)) if riding else (0.6 - 0.2 * Terrain.wade_depth(pos.x, pos.z))
 	if avatar.swing >= 0.0: speed *= 0.45
 	if moving and on_ground: # steep uphill slows you down
 		var ahead := ground_at(pos.x + wish.x * 0.6, pos.z + wish.z * 0.6)
-		speed *= clampf(1.35 - (ahead - ground) / 0.6 * 0.35, 0.3, 1.0)
+		speed *= clampf(1.35 - (ahead - ground) / 0.6 * (0.2 if riding else 0.35), 0.5 if riding else 0.3, 1.0) # (a horse takes a hill in its stride)
 	var k := 1.0 - exp(-((3.2 if moving else 0.45) if (on_ice and on_ground) else (12.0 if (on_ground or swimming) else 3.0)) * dt)
 	vel.x += (wish.x * speed - vel.x) * k
 	vel.z += (wish.z * speed - vel.z) * k
@@ -127,8 +127,9 @@ func update(dt: float, input: GameInput, world: World, active: bool) -> Dictiona
 	var deck := func(x: float, z: float) -> bool: return (build != null and build.surface_at(x, z, pos.y) > -INF) or (climbs != null and climbs.surface_at(x, z, pos.y) > -INF)
 	on_deck = Terrain.is_water(pos.x, pos.z) and deck.call(pos.x, pos.z)
 	on_ice = ice_on and Terrain.is_water(pos.x, pos.z) and not on_deck
-	var deep := func(x: float, z: float) -> bool: return (Terrain.is_water(x, z) and not Terrain.wadeable(x, z)) or Terrain.impassable(x, z)
-	if deep.call(pos.x, pos.z) and ((not on_deck and not ice_on) or Terrain.impassable(pos.x, pos.z)):
+	var steep: float = Terrain.HORSE_STEEP if riding else Terrain.STEEP; var ford: float = Terrain.HORSE_WADE if riding else 4.0 # (mounted, deeper fords and steeper ground)
+	var deep := func(x: float, z: float) -> bool: return (Terrain.is_water(x, z) and not Terrain.wadeable(x, z, ford)) or Terrain.impassable(x, z, steep)
+	if deep.call(pos.x, pos.z) and ((not on_deck and not ice_on) or Terrain.impassable(pos.x, pos.z, steep)):
 		if not deep.call(pos.x, prev_z): pos.z = prev_z
 		elif not deep.call(prev_x, pos.z): pos.x = prev_x
 		else: pos.x = prev_x; pos.z = prev_z
