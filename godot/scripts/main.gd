@@ -602,6 +602,7 @@ func _process(dt: float) -> void:
 		b.update(dt, player, b.hooks)
 		if fb == null and b.fighting(): fb = b
 	hud.set_boss(fb.title() if fb != null else "", fb.hp_frac() if fb != null else 0.0)
+	hud.set_town_rank(town_rank())
 	_pm("camp.update")
 	_raid_tick()
 	_pm("_raid_tick")
@@ -2945,3 +2946,10 @@ func _boss_spoils(active: bool) -> bool:
 			if b.id == "jebediah": settlers.discover("gold")
 		return true
 	return false
+
+## Where the town stands (shown beside its name; it rises as the bosses fall and their prizes come home).
+func town_rank() -> String:
+	if bosses.size() > 2 and bosses[2].delivered: return "a free town"
+	if 1 in town.opened: return "the county seat"
+	if 0 in town.opened: return "a boom town"
+	return "a mining camp"

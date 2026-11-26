@@ -101,6 +101,8 @@ func _initialize() -> void:
 	var g1: int = main.inventory.get("gold", 0); main.input.pressed["KeyE"] = true; await _wait(0.3)
 	print("Jebediah's old diggings: +%d gold, then +%d the same day" % [g1 - g0, main.inventory.get("gold", 0) - g1])
 	ok = ok and g1 - g0 == 2 and main.inventory.get("gold", 0) == g1
+	print("rank after the deed: %s" % main.town_rank())
+	ok = ok and main.town_rank() == "a boom town"
 	var sv: Dictionary = B.save()
 	ok = ok and sv.beaten and sv.delivered
 	# Big Angus: Second Street mended holds Third Street back till his timber rights are in
@@ -157,6 +159,8 @@ func _initialize() -> void:
 	print("mortgage handed in %s, +$%d, holding now %s" % [C.delivered, main.inventory.get("dollars", 0) - cash0, main._boss_holding()])
 	ok = ok and C.delivered and main.inventory.get("dollars", 0) - cash0 == 150 and main._boss_holding() == null
 	print("trophies over the assay office: %d" % T.trophies.get_child_count())
+	print("rank at the end: %s (shown: %s)" % [main.town_rank(), main.hud.town_rank.text])
+	ok = ok and main.town_rank() == "a free town"
 	var al: Array = main.journal.almanac_lines(func(i): return i, func(i): return i)
 	print("the day's almanac: %s" % "; ".join(al.filter(func(l): return String(l).contains("giant") or String(l).contains("prize"))))
 	ok = ok and al.any(func(l): return String(l).contains("giants")) and al.any(func(l): return String(l).contains("prize home"))

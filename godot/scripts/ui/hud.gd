@@ -150,7 +150,9 @@ func _build_hurt() -> void:
 
 func _build_top() -> void:
 	var top := HBoxContainer.new(); top.position = Vector2(16, 14); top.add_theme_constant_override("separation", 10); top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var a := card(-1.2); a.add_child(label("Cold Glitter Creek")); top.add_child(a)
+	var a := card(-1.2); var ab := HBoxContainer.new(); ab.add_theme_constant_override("separation", 8); ab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ab.add_child(label("Cold Glitter Creek")); town_rank = label("", 15, INK_SOFT); town_rank.size_flags_vertical = Control.SIZE_SHRINK_CENTER; ab.add_child(town_rank)
+	a.add_child(ab); top.add_child(a)
 	var b := card(0.8); clock = label("Day 1"); b.add_child(clock); top.add_child(b)
 	# the way home (#homeward): once you're well out, a chip with an arrow that turns with your view (the assay
 	# office instead while you carry gold); and the poke (#fortune)
@@ -965,3 +967,9 @@ func set_boss(who: String, frac: float) -> void:
 	if _boss_name.text != nm: _boss_name.text = nm; _boss_name.add_theme_color_override("font_color", Color("8a2a20") if riled else INK)
 	_boss_fill.size.x = (BOSS_W - 4.0) * clampf(frac, 0.0, 1.0)
 	_boss_fill.color = Color("7a1f18") if riled else Color("a8352a")
+
+## The town's standing beside its name (the player's boss battles: each boss beaten raises it): a mining camp, a
+## boom town once Second Street's up, the county seat with Third, a free town once Crane's mortgage is burnt.
+var town_rank: Label
+func set_town_rank(rank: String) -> void:
+	if town_rank and town_rank.text != rank: town_rank.text = rank
