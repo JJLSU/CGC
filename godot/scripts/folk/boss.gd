@@ -164,7 +164,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 			# the slam: the pick held high while the ring spreads, then down
 			slam_t -= dt; pose = "work"; _act("work", 0.2) # (his Heavy Hammer Swing, the pick brought down overhead)
 			var k := 1.0 - clampf(slam_t / 0.9, 0.0, 1.0)
-			ring.visible = true; ring.position = Vector3(me.x, Terrain.get_height(me.x, me.z) + 0.06, me.z); ring.scale = Vector3(SLAM_R * k, 1, SLAM_R * k)
+			ring.visible = true; ring.position = Vector3(me.x, Terrain.get_height(me.x, me.z) + 0.06, me.z); ring.scale = Vector3(SLAM_R * k, 0.06, SLAM_R * k) # (flat on the dirt)
 			if slam_t < 0.0:
 				ring.visible = false; cool = 1.6
 				if hooks.has("on_slam"): hooks.on_slam.call(me)
@@ -250,7 +250,7 @@ func _build() -> void:
 	if spec.lair == "logging": _build_logging(place, rng, face, side, outw)
 	elif spec.lair == "mansion": _build_mansion(place, rng, face, side, outw)
 	else: _build_diggings(place, rng, face, side, outw)
-	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.86; tm.outer_radius = 1.0; tm.rings = 32; tm.ring_segments = 4
+	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.9; tm.outer_radius = 1.0; tm.rings = 40; tm.ring_segments = 4
 	ring.mesh = tm; ring.material_override = PaperMats.paper(Color("a8352a")); ring.visible = false; add_child(ring); nodes.append(ring)
 	if beaten: return
 	if not ModelFigure.has_folk(spec.model): return
