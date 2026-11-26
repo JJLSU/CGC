@@ -71,6 +71,12 @@ var beaten := false
 var delivered := false     ## what he held is back at the assay office
 var bounty_paid := false   ## the sheriff's reward for him, claimed at the jail
 var spoils_day := -1       ## the day you last worked his lair, once it's yours (one go a day)
+## Rematches: a week after he's beaten (and his prize is home) he's back at his lair, a quarter tougher each time, for
+## another of the sheriff's rewards; the town keeps what it won. back: he's there now; fell_day: when he last fell.
+const BACK_DAYS := 7
+var back := false
+var fell_day := -1
+var returns := 0
 var dead := 0.0
 var state := "idle"         ## idle, fight, home
 var cool := 1.5
@@ -79,6 +85,7 @@ var slam_t := -1.0          ## counting down a slam's wind-up
 var ring: MeshInstance3D
 var picks: Array = []       ## [{node, mark, from, to, t, dur, landed}]
 var told := false
+var day_now := 0            ## today (main sets it each frame)
 var throws := 0             ## throws so far this fight (every third, once riled, is his special)
 var say_card: Label3D
 var say_t := 0.0          ## the card's time left up
@@ -118,15 +125,23 @@ func setup(town_at: Vector3, avoid: Array, world: World = null) -> void:
 	mouth = at + back * 9.0; mouth.y = Terrain.get_height(mouth.x, mouth.z)
 	if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 24.0})
 
-func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered, "bountyPaid": bounty_paid, "spoilsDay": spoils_day}
+func save() -> Dictionary: return {"beaten": beaten, "delivered": delivered, "bountyPaid": bounty_paid, "spoilsDay": spoils_day, "back": back, "fellDay": fell_day, "returns": returns}
 func load_state(d) -> void:
 	if d == null or not d is Dictionary: return
 	beaten = bool(d.get("beaten", false)); delivered = bool(d.get("delivered", false)); bounty_paid = bool(d.get("bountyPaid", false)); spoils_day = int(d.get("spoilsDay", -1))
+	back = bool(d.get("back", false)); fell_day = int(d.get("fellDay", -1)); returns = int(d.get("returns", 0))
 
-func alive() -> bool: return built and fig != null and not beaten and dead == 0.0
+func alive() -> bool: return built and fig != null and (not beaten or back) and dead == 0.0
+func max_hp() -> int: return roundi(float(spec.hp) * (1.0 + 0.25 * returns))
+## Is he due back today? (main calls this each morning); true if he's just come back.
+func maybe_return(today: int) -> bool:
+	if not beaten or not delivered or back or fell_day < 0 or today < fell_day + BACK_DAYS: return false
+	back = true; returns += 1; bounty_paid = false; told = false
+	if built: _unbuild() # (built afresh with him in it next time you're near)
+	return true
 func fighting() -> bool: return alive() and state == "fight"
 func pos() -> Vector3: return fig.root.position if fig else at
-func hp_frac() -> float: return clampf(float(hp) / spec.hp, 0.0, 1.0)
+func hp_frac() -> float: return clampf(float(hp) / max_hp(), 0.0, 1.0)
 
 ## For the hunting (arrows and bullets): [{pos, r, h, boss}]
 func targets() -> Array:
@@ -145,7 +160,7 @@ func damage(n: int, hooks: Dictionary) -> bool:
 	hp -= n; hurt_t = 0.3
 	if state != "fight": state = "fight"; _spotted(hooks)
 	if hp > 0: return false
-	beaten = true; dead = 0.001; slam_t = -1.0
+	beaten = true; back = false; dead = 0.001; slam_t = -1.0; fell_day = day_now
 	if ring: ring.visible = false
 	if hand_pick: hand_pick.visible = false
 	if hooks.has("on_fall"): hooks.on_fall.call(pos())
@@ -190,7 +205,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		return
 	cool = maxf(0.0, cool - dt); hurt_t = maxf(0.0, hurt_t - dt)
 	_say_tick(dt)
-	if state == "fight" and not was_riled and hp * 2 < int(spec.hp): was_riled = true; say("riled", true)
+	if state == "fight" and not was_riled and hp * 2 < max_hp(): was_riled = true; say("riled", true)
 	var me := r.position
 	var to_p := Vector3(p.x - me.x, 0, p.z - me.z); var dp := to_p.length()
 	var from_home := Vector2(p.x - at.x, p.z - at.z).length()
@@ -200,7 +215,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		state = "home"; slam_t = -1.0; ring.visible = false; throws = 0
 	var want := Vector3.ZERO; var spd := 0.0; var pose = null
 	if state == "fight":
-		var enraged: bool = hp * 2 < int(spec.hp)
+		var enraged: bool = hp * 2 < max_hp()
 		if slam_t >= 0.0:
 			# the slam: the pick held high while the ring spreads, then down
 			slam_t -= dt; pose = "work"; _act("work", 0.2) # (his Heavy Hammer Swing, the pick brought down overhead)
@@ -230,7 +245,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 		var tg := Vector3(goal.x - me.x, 0, goal.z - me.z)
 		if tg.length() > 0.6: want = tg.normalized(); spd = spec.speed * 0.7
 		else:
-			if state == "home": state = "idle"; hp = spec.hp; was_riled = false
+			if state == "home": state = "idle"; hp = max_hp(); was_riled = false
 			r.rotation.y = _turn(r.rotation.y, atan2(mouth.x - me.x, mouth.z - me.z), dt * 2.0)
 			pose = "work" if fmod(t, 7.0) < 3.0 else null
 		if want != Vector3.ZERO: r.rotation.y = _turn(r.rotation.y, atan2(want.x, want.z), dt * 4.0)
@@ -324,7 +339,7 @@ func _build() -> void:
 	else: _build_diggings(place, rng, face, side, outw)
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.9; tm.outer_radius = 1.0; tm.rings = 40; tm.ring_segments = 4
 	ring.mesh = tm; ring.material_override = PaperMats.paper(Color("a8352a")); ring.visible = false; add_child(ring); nodes.append(ring)
-	if beaten: return
+	if beaten and not back: return
 	if not ModelFigure.has_folk(spec.model): return
 	fig = ModelFigure.new(spec.model, {"scale": spec.scale})
 	fig.borrow_clip("run", "folk_native_warrior")
@@ -341,7 +356,7 @@ func _build() -> void:
 	var bm := StandardMaterial3D.new(); bm.albedo_color = Color("f4ecd8"); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.render_priority = 9
 	back.material_override = bm; back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; say_card.add_child(back)
 	add_child(say_card); nodes.append(say_card)
-	hp = spec.hp; state = "idle"; dead = 0.0
+	hp = max_hp(); state = "idle"; dead = 0.0
 
 ## Mad Jebediah's diggings: a mine mouth, windlass, tool rack and ore cart, his tent and fire, boulders, a heap of picks.
 func _build_diggings(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:

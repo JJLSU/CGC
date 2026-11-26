@@ -31,6 +31,7 @@ func _initialize() -> void:
 	while (current_scene == m1 or current_scene == null) and Time.get_ticks_msec() - t0 < 30000: await process_frame
 	await _wait(2.0)
 	var m2: Node = current_scene
+	m2.force_active = true # (a headless run: let the game take E)
 	var J2: Boss = m2.bosses[0]; var A2: Boss = m2.bosses[1]; var C2: Boss = m2.bosses[2]
 	var rights = m2.drops.filter(func(d): return d.loot.has("timber_rights"))
 	print("after: Jebediah beaten %s delivered %s; Angus beaten %s delivered %s; Crane beaten %s; Second opened %s; trophies %d; rights lying %d; lairs moved %.1f m, %.1f m" % [
@@ -38,6 +39,23 @@ func _initialize() -> void:
 		(J2.at - at_j).length(), (A2.at - at_a).length()])
 	ok = ok and J2.beaten and J2.delivered and A2.beaten and not A2.delivered and not C2.beaten and 0 in m2.town.opened
 	ok = ok and m2.town.trophies.get_child_count() == 1 and rights.size() == 1 and (J2.at - at_j).length() < 0.5 and (A2.at - at_a).length() < 0.5
+	# a rematch: a week after Jebediah fell he's back, tougher; beaten again he drops nothing, the sheriff pays more,
+	# and the town keeps its street
+	var Jr: Boss = J2; Jr.fell_day = m2.sky.day; m2.sky.day += 7; m2.sky.time = 0.4
+	await _wait(0.3)
+	print("rematch: back %s, returns %d, max hp %d (was %d), on the board %s" % [Jr.back, Jr.returns, Jr.max_hp(), Jr.spec.hp, m2.boss_board != null])
+	ok = ok and Jr.back and Jr.returns == 1 and Jr.max_hp() > int(Jr.spec.hp) and m2.boss_board != null
+	var ofr: Vector3 = Jr.at + (Jr.at - m2.town.at).normalized() * -20.0; m2.player.pos = Vector3(ofr.x, Terrain.get_height(ofr.x, ofr.z), ofr.z)
+	await _wait(0.6)
+	var d0: int = m2.drops.size()
+	while Jr.alive(): Jr.damage(6, Jr.hooks)
+	await _wait(0.3)
+	print("farmer dead after the fight: %s" % m2.player.dead); m2.player.dead = false; m2.player.health = m2.player.max_health; m2.death_timer = 0.0
+	m2.town.mend("jail"); var jd: Vector3 = m2.town.doors.jail; var c0: int = m2.inventory.get("dollars", 0)
+	m2.player.pos = Vector3(jd.x, Terrain.get_height(jd.x, jd.z), jd.z); await _wait(0.3); m2.input.pressed["KeyE"] = true; await _wait(0.3)
+	print("jail prompt: '%s'  paid %s  inv %s" % [m2.beast_prompt, Jr.bounty_paid, m2.inventory.get("dollars", 0)])
+	print("rematch won: back %s, drops +%d, reward +$%d, Second still open %s" % [Jr.back, m2.drops.size() - d0, m2.inventory.get("dollars", 0) - c0, 0 in m2.town.opened])
+	ok = ok and not Jr.back and m2.drops.size() == d0 and m2.inventory.get("dollars", 0) - c0 > 50 and 0 in m2.town.opened
 	if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

@@ -599,6 +599,8 @@ func _process(dt: float) -> void:
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	var fb = null
 	for b in bosses:
+		b.day_now = sky.day
+		if sky.time > 0.25 and b.maybe_return(sky.day): _boss_board(); hud.toast("Word from the hills: %s is back, and meaner than ever." % b.title())
 		b.update(dt, player, b.hooks)
 		if fb == null and b.fighting(): fb = b
 	hud.set_boss(fb.title() if fb != null else "", fb.hp_frac() if fb != null else 0.0)
@@ -1228,7 +1230,7 @@ func _wanted_sheet(g: Node3D, lines: Array) -> MeshInstance3D:
 var boss_board: Node3D
 func _boss_board() -> void:
 	if boss_board: boss_board.queue_free(); boss_board = null
-	var left: Array = bosses.filter(func(b): return not b.beaten)
+	var left: Array = bosses.filter(func(b): return not b.beaten or b.back)
 	if left.is_empty() or not town.doors.has("assay"): return
 	var ab := Town.find_b("assay")
 	var outw: Vector3 = -town.toward * float(ab.side)
@@ -1335,12 +1337,13 @@ func _town_doors() -> bool:
 	if _at_door("jail"):
 		# the bosses: a reward on each one's head, paid once he's beaten (on top of the assayer's fee for his prize)
 		var owed = null
-		for bo in bosses: if bo.beaten and not bo.bounty_paid: owed = bo; break
+		for bo in bosses: if bo.beaten and not bo.back and not bo.bounty_paid: owed = bo; break
 		if owed != null:
-			beast_prompt = "[E] Claim the sheriff's $%d reward for %s" % [owed.spec.bounty, owed.title()]
+			var due: int = roundi(float(owed.spec.bounty) * (1.0 + 0.25 * owed.returns))
+			beast_prompt = "[E] Claim the sheriff's $%d reward for %s" % [due, owed.title()]
 			if input.hit("KeyE"):
-				owed.bounty_paid = true; inv.dollars = inv.get("dollars", 0) + int(owed.spec.bounty); sound.craft(); journal.record("bounty")
-				hud.toast("The sheriff whistles low. \"%s? Folks'll sleep easier.\" +$%d" % [owed.title(), owed.spec.bounty])
+				owed.bounty_paid = true; inv.dollars = inv.get("dollars", 0) + due; sound.craft(); journal.record("bounty")
+				hud.toast(("The sheriff whistles low. \"%s? Folks'll sleep easier.\" +$%d" if owed.returns == 0 else "\"%s again? You're making a habit of it.\" +$%d") % [owed.title(), due])
 			return true
 		beast_prompt = ("[E] See the sheriff about the $%d bounty" % bounty.pay) if bounty != null else "[E] Ask the sheriff if there's a bounty posted"
 		if input.hit("KeyE"):
@@ -2898,6 +2901,8 @@ func _boss_hooks(b: Boss) -> Dictionary:
 				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark."}[b.spec.weapon] % nm.to_upper()),
 		"on_fall": func(at: Vector3) -> void:
 			sound.tear(); journal.record("boss")
+			if b.returns > 0 and b.delivered: # (a rematch: nothing more to take home but the sheriff's reward)
+				_boss_board(); hud.toast("%s goes down again. The sheriff will want to hear of it." % nm); return
 			_drop_prize(b, at + Vector3(1.2, 0, 0.6)); _boss_board() # (his poster comes down)
 			hud.toast("%s crashes down like a felled pine. %s spills from his coat." % [nm, b.spec.prize.capitalize()]),
 	}
@@ -2964,7 +2969,7 @@ const SPOILS := {"jebediah": ["Work Jebediah's old diggings", {"gold": 2}], "ang
 func _boss_spoils(active: bool) -> bool:
 	if not active or player.dead or build.active: return false
 	for b in bosses:
-		if not b.beaten or Vector2(player.pos.x - b.mouth.x, player.pos.z - b.mouth.z).length() > 4.0: continue
+		if not b.beaten or b.back or Vector2(player.pos.x - b.mouth.x, player.pos.z - b.mouth.z).length() > 4.0: continue
 		var sp: Array = SPOILS[b.id]
 		if b.spoils_day == sky.day: beast_prompt = "Nothing more here today: come back tomorrow"; return true
 		beast_prompt = "[E] %s" % sp[0]
