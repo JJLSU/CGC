@@ -20,7 +20,7 @@ const BUILDINGS := [
 	{"id": "livery", "name": "livery barn", "cost": 20, "w": 7.4, "h": 4.4, "d": 8.0, "side": 1, "s": -1.0, "barn": true},
 	{"id": "smithy", "name": "blacksmith's", "cost": 20, "w": 5.0, "h": 3.4, "d": 5.5, "side": 1, "s": 8.0},
 ]
-const STREETS := [
+static var STREETS := [ # (a static var, not a const: the dance hall's side and place are set as the town is laid out)
 	{"id": "second", "name": "Second Street", "buildings": [
 		{"id": "bank", "name": "Miners' bank", "model": "hotel", "cost": 40, "w": 6.4, "h": 5.2, "d": 6.5, "side": -1, "s": -12.0},
 		{"id": "barber", "name": "barber shop", "model": "assay", "cost": 15, "w": 4.6, "h": 3.2, "d": 5.0, "side": -1, "s": -3.0},
@@ -34,7 +34,7 @@ const STREETS := [
 		{"id": "drygoods", "name": "dry goods", "model": "store", "cost": 30, "w": 7.0, "h": 3.6, "d": 7.0, "side": -1, "s": 8.0},
 		{"id": "cooper", "name": "cooperage", "model": "blacksmith", "cost": 25, "w": 5.0, "h": 3.4, "d": 5.5, "side": 1, "s": -11.0},
 		{"id": "stable2", "name": "stage stables", "model": "livery", "cost": 30, "w": 7.4, "h": 4.4, "d": 8.0, "side": 1, "s": -1.0, "barn": true},
-		{"id": "dance", "name": "dance hall", "model": "saloon", "cost": 45, "w": 6.6, "h": 4.0, "d": 7.0, "side": 1, "s": 9.0}]},
+		{"id": "dance", "name": "dance hall", "model": "saloon", "cost": 45, "w": 8.6, "h": 4.4, "d": 13.4, "side": 1, "s": 9.4}]},
 ]
 const MODEL_OF := {"smithy": "blacksmith", "saloon": "saloon", "store": "store", "boarding": "hotel", "church": "church", "assay": "assay", "livery": "livery"}
 const NIGHT_OWLS := ["saloon", "hotel2"]
@@ -193,6 +193,19 @@ func _init(w: World, home: Vector3) -> void:
 		return true
 	var sides := [1, -1].filter(func(sd): return ok_side.call(sd))
 	for i in STREETS.size(): street_offs.append(float(sides[i] if i < sides.size() else ((-sides[0]) if sides.size() else (-1 if i else 1))) * STREET_OFF)
+	# the dance hall (the player's big open-fronted hall, ~17 m deep) goes on the side of its street that backs onto open
+	# country, never onto Main Street's backs: 10.6 m along where that's side 1, else 18 m along on the other side
+	var dh := find_b("dance"); var dk := street_of("dance")
+	if not dh.is_empty() and dk >= 0:
+		if street_offs[dk] > 0.0: dh.side = 1; dh.s = 9.4
+		else: dh.side = -1; dh.s = 16.8
+		# (its whole footprint levelled and kept clear of trees and rocks: it reaches past the street's own flats)
+		var hc: Vector3 = at + along * float(dh.s) + toward * (street_offs[dk] + float(dh.side) * (HALF + float(dh.d) / 2.0))
+		Terrain.add_flat_area(hc.x, hc.z, 11.0, 17.0)
+		for u in [-0.5, -0.17, 0.17, 0.5]:
+			for v in [-0.5, -0.17, 0.17, 0.5]:
+				var q: Vector3 = hc + along * (u * float(dh.w)) + toward * (float(dh.side) * v * float(dh.d))
+				world.exclusions.append({"x": q.x, "z": q.z, "r": 4.2})
 	for off in street_offs:
 		for sv in [-16, 0, 16]:
 			var q: Vector3 = at + along * sv + toward * off
@@ -249,6 +262,7 @@ func place(obj: Node3D, s: float, side: int, offset := 0.0, street_off := 0.0) -
 	return p
 
 func _colliders(b: Dictionary, off: float, two: bool) -> void:
+	if b.id == "dance" and ResourceLoader.exists("res://assets/models/props/bldg_saloon2_ruined.glb"): _hall_colliders(b, off); return
 	var n := ceili(b.w / 2.4)
 	for i in n:
 		var t := (i + 0.5) / n - 0.5
@@ -266,7 +280,9 @@ func street_sheet(tex: String) -> Node3D:
 ## The building in its tier: the model (its own, or a Main Street one in a new trade) on the boardwalk planks.
 func building(b: Dictionary, tier: int) -> Node3D:
 	var own_name: String = b.id if (b.has("model") and ResourceLoader.exists("res://assets/models/props/bldg_%s_ruined.glb" % b.id)) else b.get("model", MODEL_OF.get(b.id, ""))
+	if b.id == "dance" and ResourceLoader.exists("res://assets/models/props/bldg_saloon2_ruined.glb"): own_name = "saloon2" # (the player's open-fronted hall with its stage: the dance hall)
 	var g := model_building(own_name, tier, b.w + 0.4, b.h + (1.8 if b.get("barn", false) else 1.5))
+	if own_name == "saloon2": for c in g.get_children(): (c as Node3D).position.y -= HALL_SINK * hall_k() # (its floor at the ground you walk on)
 	var walk := box(b.w + 0.6, 0.14, 1.8, 0xa8845a if tier else 0x8a7458); walk.position = Vector3(0, 0.07, 0.95); g.add_child(walk)
 	return g
 
@@ -880,12 +896,13 @@ func update_people(night: float, dt: float) -> void:
 		if revue == null:
 			revue = []
 			for i in 3:
-				var nw: String = ["cgc_saloon_pink", "cgc_saloon_daisy", "cgc_saloon_orange"][i]
-				var f := ModelFigure.new(nw if ModelFigure.has_folk(nw) else ["saloon_2", "saloon_3", "saloon_4"][i]); f.t = i * 0.35
+				var nw: String = "" if ResourceLoader.exists("res://assets/models/props/bldg_saloon2_ruined.glb") else ["cgc_saloon_pink", "cgc_saloon_daisy", "cgc_saloon_orange"][i] # (the player's three dance on the hall's stage; the saloon's boardwalk has its own)
+				var f := ModelFigure.new(nw if nw != "" and ModelFigure.has_folk(nw) else ["saloon_2", "saloon_3", "saloon_4"][i]); f.t = i * 0.35
 				parts.saloon.add_child(f.root); f.root.position = Vector3(-2 + i * 2, 0.14, 1.1); revue.append(f)
 		for f in revue: f.root.visible = true; f.update(dt, 0.0, "cancan")
 	elif revue != null:
 		for f in revue: if is_instance_valid(f.root): f.root.visible = false
+	_hall_life(dt, night)
 
 # ------------------------------------------------------------------ part three (16c): the stage, the opera, the dance
 var PLAYBILL: Array = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/town/playbill.json"))
@@ -1063,7 +1080,7 @@ func set_trophies(ids: Array) -> void:
 const SIGN_BOARDS := {"bakery": [0.43, 3.55, -0.40, 1.85, 0.72, "BAKERY"], "bank": [0.03, 3.08, -0.42, 2.21, 0.60, "MINERS' BANK"],
 	"barber": [0.27, 3.01, -0.37, 2.41, 0.44, "BARBER"], "cooper": [0.23, 2.36, 0.01, 1.62, 0.34, "COOPERAGE"],
 	"hotel2": [-0.01, 5.40, -0.50, 2.41, 0.71, "GRAND HOTEL"], "opera": [0.30, 4.09, -0.71, 1.95, 0.50, "OPERA HOUSE"],
-	"telegraph": [0.56, 2.41, -0.17, 1.16, 0.47, "TELEGRAPH"], "dance": [0.18, 4.18, -0.44, 2.12, 0.43, "DANCE HALL"],
+	"telegraph": [0.56, 2.41, -0.17, 1.16, 0.47, "TELEGRAPH"],
 	"drygoods": [0.20, 3.52, -0.34, 2.42, 0.73, "DRY GOODS"], "jail": [0.10, 3.43, -0.63, 2.24, 0.54, "SHERIFF"]}
 static var _sign_font: Font
 func _sign(id: String, g: Node3D) -> void:
@@ -1079,3 +1096,54 @@ func _sign(id: String, g: Node3D) -> void:
 	L.pixel_size = minf(float(e[3]) * 0.8 / text_w, float(e[4]) * 0.6 / text_h)
 	L.position = Vector3(e[0], e[1], float(e[2]) + 0.025) # (just proud of the board, facing the street: the model's +z)
 	g.add_child(L)
+
+# ------------------------------------------------------------------ the dance hall (the player's open-fronted hall)
+## The hall's layout in its own frame (a height map of the model, ray-cast every 0.4 m: tools notes in PORT.md): its
+## front open to the street (z 0), the bar down the left (the counter at x -2.4, the bottle shelf at -3.4; z -3.4 to -10), tables on the right, the stage
+## across the back (from z -11 to -15, 0.3 up), walls each side at x +-6.1. Walk in at the front.
+const HALL_SINK := 0.06 # (just: its floor sits 0.16-0.26 up, the ground at the street; deeper and the ground shows through)
+const HALL_STAGE_Y := 0.30 - HALL_SINK
+## (the layout above was measured with the hall 11.4 m wide; at its size now everything scales by this)
+static func hall_k() -> float: return (float(find_b("dance").w) + 0.4) / 11.4
+func _hall_colliders(b: Dictionary, off: float) -> void:
+	var o: Vector3 = at + along * float(b.s) + toward * (off + float(b.side) * HALF)
+	var ry := atan2(-float(b.side) * toward.x, -float(b.side) * toward.z); var basis := Basis(Vector3.UP, ry)
+	var k := hall_k()
+	var add := func(x: float, z: float, r: float) -> void:
+		var q: Vector3 = o + basis * Vector3(x * k, 0, z * k); world.colliders.append({"x": q.x, "z": q.z, "r": r * maxf(k, 0.8)})
+	var z := -0.8
+	while z > -15.4: add.call(-6.0, z, 0.35); add.call(6.0, z, 0.35); z -= 0.7 # (the side walls)
+	for x in [-5.9, -5.3, -4.7, 4.7, 5.3, 5.9]: add.call(x, -0.7, 0.35) # (the front's corner rooms, the gates between open)
+	z = -3.4
+	while z > -10.4: add.call(-2.4, z, 0.4); z -= 0.6 # (the bar counter; the bottle shelf behind it at x -3.4, the aisle between)
+	var x := -5.6
+	while x < 5.7: add.call(x, -11.0, 0.4); x += 0.6 # (the stage's front edge: the stage is the girls')
+	add.call(3.0, -3.4, 1.0); add.call(3.4, -8.0, 1.0) # (the two tables)
+
+## Its people: the bartender behind the bar from mid-morning till late, and three girls kicking on the stage from dusk.
+var hall_girls = null
+var hall_barman = null
+func _hall_life(dt: float, night: float) -> void:
+	var g = parts.get("dance")
+	if g == null or not tiers.get("dance", 0) or far or not ResourceLoader.exists("res://assets/models/props/bldg_saloon2_ruined.glb"):
+		if hall_barman != null and is_instance_valid(hall_barman.root): hall_barman.root.visible = false
+		if hall_girls != null: for f in hall_girls: if is_instance_valid(f.root): f.root.visible = false
+		return
+	if hall_barman == null or not is_instance_valid(hall_barman.root) or hall_barman.root.get_parent() != g:
+		var nm := "townsfolk_3"
+		hall_barman = ModelFigure.new(nm, {"hue": 0.8}); g.add_child(hall_barman.root)
+		var k := hall_k(); hall_barman.root.position = Vector3(-2.85 * k, (0.16 - HALL_SINK) * k, -6.6 * k); hall_barman.root.rotation.y = PI / 2.0 # (behind the bar, facing the room)
+		hall_girls = null
+	var open := clock > 0.4 or clock < 0.08
+	hall_barman.root.visible = open
+	if open: hall_barman.update(dt, 0.0, "work" if fmod(_t * 0.3, 3.0) < 1.0 else null)
+	var show := night > 0.3
+	if hall_girls == null:
+		hall_girls = []
+		for i in 3:
+			var nw: String = ["cgc_saloon_pink", "cgc_saloon_daisy", "cgc_saloon_orange"][i] # (the can-can three, on the hall's stage now)
+			var f := ModelFigure.new(nw if ModelFigure.has_folk(nw) else ["saloon_2", "saloon_3", "saloon_4"][i]); f.t = i * 0.35
+			var k := hall_k(); g.add_child(f.root); f.root.position = Vector3((-2.4 + i * 2.4) * k, HALL_STAGE_Y * k, -13.0 * k); hall_girls.append(f)
+	for f in hall_girls:
+		f.root.visible = show
+		if show: f.update(dt, 0.0, "cancan")

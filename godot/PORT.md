@@ -1703,3 +1703,16 @@ for N frames, then saves the viewport; needs a window, not --headless).
   test_newgame, test_place_sliced, test_horse_terrain PASS.
 - Shop-sign lettering where the models' boards were blank (the player's ask): Town.SIGN_BOARDS (bakery, Miners' bank, barber, cooperage, Grand Hotel, opera house, telegraph, dance hall, dry goods, sheriff), each board's centre and size in the building's frame, found by ray-casting the board's on-screen corners (tools/shot_facades.gd views) into the model's meshes; a dark serif Label3D just proud of the board, sized to fit, added when the building's mended (gone with it if raided). Looked at all ten. test_boss, test_raids PASS.
 - The signs centred (the player: they weren't): each board's centre now the midpoint of its four measured edges (re-cast), the bakery's set onto its oval (its rod had been measured in). Looked at all ten.
+- The dance hall is the player's new hall (bldg_saloon2_restored / _ruined, from their two drawings through Meshy):
+  open-fronted, the bar down the left, tables on the right, the stage across the back with its staircase and balcony.
+  8.6 m wide by 13.4 deep (at 11 m the furniture dwarfed the folk: the bar stood over the bartender's head), on the
+  side of Third Street that backs onto open country (never onto Main Street's backs, which it ran into), its footprint
+  levelled and kept clear of trees; set 0.06 m down so its floor meets the ground (deeper and the ground showed through).
+  Walk in at the front: colliders only for its walls, the front's corner rooms, the bar counter, the stage's front edge
+  and the two tables (Town._hall_colliders, from a ray-cast height map of the model in its own frame, scaled by
+  Town.hall_k). A bartender stands behind the counter from mid-morning till late; from dusk the can-can three (the
+  player's pink, daisy and orange girls) dance on the stage (the saloon's boardwalk revue went back to its own three).
+  Town.STREETS is a static var now so the hall's side and place can be set as the town is laid out.
+  tools/test_dancehall.gd: walked in to the middle; the stage front and the counter stop you; 3 girls on the stage
+  and the bartender in after dark: PASS x2. test_raids, test_boss, test_newgame, test_saloon PASS. Looked at it ruined,
+  mended by day, and from the door at night (tools/shot_saloon2.gd [inside] [night] [top]).
