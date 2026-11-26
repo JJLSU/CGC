@@ -608,6 +608,7 @@ func _process(dt: float) -> void:
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	forts.update(dt, sky.day, player, fort_hooks)
 	forts.patrols_update(dt, sky.time, player)
+	_escort_update(dt)
 	wayfarers.update(dt, player, sky.day)
 	var fb = null
 	for b in bosses:
@@ -3130,12 +3131,20 @@ func _fort_officer(active: bool) -> bool:
 				f.job = -1; inv.dollars = inv.get("dollars", 0) + 30; inv.cartridges = inv.get("cartridges", 0) + 10; sound.craft(); journal.record("bounty")
 				hud.toast("\"Good work. The territory's obliged to you.\" +$30, +10 cartridges")
 			return true
-		beast_prompt = "[E] Buy six cartridges from the sutler ($3)"
+		if escort_day != sky.day and input.hit("KeyR"):
+			if inv.get("dollars", 0) < ESCORT_COST: hud.toast("\"A detail's $%d a day, citizen.\"" % ESCORT_COST)
+			else: inv.dollars -= ESCORT_COST; _hire_escort(f); sound.craft(); hud.toast("Two troopers fall in behind you. They'll ride with you till sundown.")
+			return true
+		beast_prompt = "[E] Buy six cartridges from the sutler ($3)" + ("   [R] Hire an escort ($%d)" % ESCORT_COST if escort_day != sky.day else "")
 		if input.hit("KeyE"):
 			if inv.get("dollars", 0) < 3: hud.toast("\"Three dollars, citizen. Army doesn't give credit.\"")
 			else: inv.dollars -= 3; inv.cartridges = inv.get("cartridges", 0) + 6; sound.pick(); hud.toast("Six rounds in a paper box (+6 cartridges). Those jumpers are still out there.")
 		return true
-	beast_prompt = "[E] Ask the officer if there's work"
+	if escort_day != sky.day and input.hit("KeyR"):
+		if inv.get("dollars", 0) < ESCORT_COST: hud.toast("\"A detail's $%d a day, citizen.\"" % ESCORT_COST)
+		else: inv.dollars -= ESCORT_COST; _hire_escort(f); sound.craft(); hud.toast("Two troopers fall in behind you. They'll ride with you till sundown.")
+		return true
+	beast_prompt = "[E] Ask the officer if there's work   [R] Hire an escort ($%d)" % ESCORT_COST if escort_day != sky.day else "[E] Ask the officer if there's work"
 	if input.hit("KeyE"):
 		var best := -1; var bd := INF
 		for i in jumpers.camps.size():
@@ -3163,3 +3172,59 @@ func _update_boss_chip() -> void:
 	var cam := rig.camera; var a := cam.unproject_position(player.pos); var e := cam.unproject_position(player.pos + Vector3(h.x / d, 0, h.y / d) * 4.0)
 	var what: String = ("%s's camp (%s)" % [b.title(), b.spec.prize.trim_prefix("the ")]) if b.beaten and not b.back else b.title()
 	hud.set_boss_chip(true, rad_to_deg(atan2(e.x - a.x, -(e.y - a.y))), "%s, %d paces" % [what, roundi(d * 1.3 / 10.0) * 10])
+
+# ------------------------------------------------------------------ an escort (the fort's troopers, for hire)
+## Two of the fort's troopers for the day, $20: they keep a few paces behind you at whatever pace you go and fire on
+## what's fighting you (a boss, claim jumpers, a treasure guardian or a night prowler): a rifle ball (6) every couple of
+## seconds within 25 m. They don't fire on the native camps' people. At sundown (or if you strike one) they ride home.
+const ESCORT_COST := 20
+var escort: Array = []
+var escort_day := -1
+func _hire_escort(f: Dictionary) -> void:
+	_dismiss_escort()
+	escort_day = sky.day
+	for i in 2:
+		var nm: String = ArmyForts.SOLDIERS[(i + 2) % ArmyForts.SOLDIERS.size()]
+		if not ModelFigure.has_folk(nm): nm = ArmyForts.STAND_INS[i]
+		var fig := ModelFigure.new(nm); fig.borrow_clip("run", "folk_native_warrior")
+		var rifle := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); rifle.mesh = rm
+		rifle.material_override = PaperMats.paper(Color("4a3a2c")); rifle.rotation.x = PI / 2.0; rifle.position = Vector3(0, 0.05, 0.1); fig.hands[1].add_child(rifle)
+		var p0: Vector3 = player.pos + Vector3((i - 0.5) * 2.0, 0, 2.0); p0.y = Terrain.get_height(p0.x, p0.z)
+		fig.root.position = p0; add_child(fig.root)
+		escort.append({"fig": fig, "cool": 1.0 + i * 0.8, "speed": 0.0, "side": (i - 0.5) * 2.4})
+func _dismiss_escort() -> void:
+	for m in escort: (m.fig as ModelFigure).root.queue_free()
+	escort = []
+## What the escort will fire on: anything fighting you, never the native camps.
+func _escort_targets() -> Array:
+	var out := []
+	for b in bosses: if b.fighting(): out.append_array(b.targets())
+	for c in jumpers.camps:
+		for m in c.men: if not m.dead and m.state == "chase": out.append({"pos": m.fig.root.position, "j": m})
+	for e in enemies.list: if not e.dying and Enemies.pos(e).distance_to(player.pos) < 20.0: out.append({"pos": Enemies.pos(e), "enemy": e})
+	return out
+func _escort_update(dt: float) -> void:
+	if escort.is_empty(): return
+	if sky.day != escort_day or sky.time > 0.8 or sky.time < 0.2:
+		_dismiss_escort(); hud.toast("Your escort tips their hats and rides back to the fort."); return
+	var tg := _escort_targets()
+	var f := player.forward()
+	for m in escort:
+		var fig: ModelFigure = m.fig; var r := fig.root; var pos := r.position
+		var want: Vector3 = player.pos - f * 3.0 + Vector3(-f.z, 0, f.x) * m.side
+		var to := Vector3(want.x - pos.x, 0, want.z - pos.z); var d := to.length()
+		var spd := 0.0
+		if d > 0.6: spd = clampf(d * 2.2, 1.5, 12.0); var stp := to / d * minf(d, spd * dt); pos.x += stp.x; pos.z += stp.z
+		if d > 60.0: pos = want # (left far behind: they catch up off-screen)
+		pos.y = Terrain.get_height(pos.x, pos.z); r.position = pos
+		m.speed = lerpf(m.speed, spd, minf(1.0, dt * 8.0))
+		m.cool -= dt
+		var best = null; var bd := 25.0
+		for t in tg: var dd: float = (t.pos as Vector3).distance_to(pos); if dd < bd: bd = dd; best = t
+		if best != null:
+			r.rotation.y = lerp_angle(r.rotation.y, atan2(best.pos.x - pos.x, best.pos.z - pos.z), minf(1.0, dt * 8.0))
+			if m.cool <= 0.0:
+				m.cool = 2.0 + randf() * 0.8; sound.bang()
+				if randf() < 0.75: hunting.on_target.call(best, {"dmg": 6})
+		elif spd > 0.3: r.rotation.y = lerp_angle(r.rotation.y, atan2(to.x, to.z), minf(1.0, dt * 6.0))
+		fig.update(dt, m.speed, null)

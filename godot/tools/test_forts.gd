@@ -83,6 +83,29 @@ func _initialize() -> void:
 		await _wait(0.2); main.input.pressed["KeyE"] = true; await _wait(0.2)
 		print("reported: +$%d, job now %d" % [main.inventory.get("dollars", 0) - c0, f2.job])
 		ok = ok and main.inventory.get("dollars", 0) - c0 == 30 and f2.job == -1
+	# hire an escort ($20, R at the officer); into a claim jumpers' camp, they fire on the men chasing you
+	main.inventory.dollars = 40; main.sky.time = 0.45
+	var op2: Vector3 = off.fig.root.position; p.pos = Vector3(op2.x + 1.0, Terrain.get_height(op2.x + 1.0, op2.z), op2.z)
+	await _wait(0.3); main.input.pressed["KeyR"] = true; await _wait(0.3)
+	print("escort hired: %d troopers, $%d left" % [main.escort.size(), main.inventory.dollars])
+	ok = ok and main.escort.size() == 2 and main.inventory.dollars == 20
+	var jc: Dictionary = main.jumpers.camps[0]; jc.cleared_day = -999
+	var jst: Vector3 = jc.at + Vector3(22, 0, 0)
+	var hp0 := 0; var hit_by_escort := false
+	t0 = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 9000:
+		p.pos = Vector3(jst.x, Terrain.get_height(jst.x, jst.z), jst.z); p.health = maxf(p.health, 60.0); p.dead = false; main.death_timer = 0.0
+		if jc.built and hp0 == 0: for m2 in jc.men: hp0 += m2.hp
+		if jc.built and hp0 > 0:
+			var now := 0
+			for m2 in jc.men: now += maxi(0, m2.hp)
+			if now < hp0: hit_by_escort = true
+		await process_frame
+	print("escort followed (nearest %.1f m), jumpers hurt by their fire %s" % [main.escort.map(func(e2): return e2.fig.root.position.distance_to(p.pos)).min(), hit_by_escort])
+	ok = ok and hit_by_escort and main.escort.map(func(e2): return e2.fig.root.position.distance_to(p.pos)).min() < 8.0
+	main.sky.time = 0.85; await _wait(0.2)
+	print("at sundown the escort's gone: %s" % main.escort.is_empty())
+	ok = ok and main.escort.is_empty()
 	var sv: Array = F.save()
 	ok = ok and sv.size() == F.forts.size()
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

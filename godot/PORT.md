@@ -1683,3 +1683,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
   rematch, or a fallen one whose prize still lies at his camp; hidden in his fight, within 35 m, or while you carry his
   prize (the homeward chip has the assay office then). The rumour note is the landmarks' again. Looked at both
   (tools/shot_yard.gd); test_boss, _save, yard, homestead_build x2, newgame PASS.
+- A hired escort (main._hire_escort/_escort_update): R at a fort's officer, $20 for the day: two of the player's troopers keep a few paces behind you at any pace (catching up if left far behind) and fire on what's fighting you (a boss in his fight, claim jumpers chasing you, a guardian or night prowler within 20 m of you): a ball of 6 every 2-2.8 s within 25 m, 75% sure. Never on the native camps. They go home at sundown. test_forts: hired, following within 3.2 m, the jumpers hurt by their fire, gone at sundown: PASS; looked at (tools/shot_escort.gd).
