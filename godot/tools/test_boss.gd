@@ -17,6 +17,7 @@ func _initialize() -> void:
 	main.force_active = true; main.weather.rain = 0.0; main.sky.time = 0.45
 	await _wait(1.5)
 	var B: Boss = main.boss; var p: Player = main.player; var T: Town = main.town
+	var posters0: int = main.boss_board.get_child_count() if main.boss_board else 0
 	var dist := Vector2(B.at.x - T.at.x, B.at.z - T.at.z).length()
 	print("lair %.0f m from town, water %s" % [dist, Terrain.is_water(B.at.x, B.at.z)])
 	var ok := dist > 250.0 and dist < 520.0 and not Terrain.is_water(B.at.x, B.at.z)
@@ -159,6 +160,8 @@ func _initialize() -> void:
 	print("mortgage handed in %s, +$%d, holding now %s" % [C.delivered, main.inventory.get("dollars", 0) - cash0, main._boss_holding()])
 	ok = ok and C.delivered and main.inventory.get("dollars", 0) - cash0 == 150 and main._boss_holding() == null
 	print("trophies over the assay office: %d" % T.trophies.get_child_count())
+	print("wanted board: %d parts at the start, gone at the end %s" % [posters0, main.boss_board == null])
+	ok = ok and posters0 >= 6 and main.boss_board == null
 	print("rank at the end: %s (shown: %s)" % [main.town_rank(), main.hud.town_rank.text])
 	ok = ok and main.town_rank() == "a free town"
 	var al: Array = main.journal.almanac_lines(func(i): return i, func(i): return i)

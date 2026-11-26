@@ -1200,10 +1200,18 @@ func _set_poster(b) -> void:
 	var jb := Town.find_b("jail"); var off: float = town.street_offs[Town.street_of("jail")]
 	var p: Vector3 = town.at + town.along * (jb.s + 2.6) + town.toward * (off + jb.side * (Town.HALF - 1.2))
 	var g := Node3D.new(); g.add_child(Town.posts([0.0]))
+	var sheet := _wanted_sheet(g, [["WANTED", 0.53, 40, 0x2a201a, true, false], [b.name, 0.36, 21, 0x2a201a, false, true], ["DEAD OR DRIVEN OFF", 0.2, 22, 0x2a201a, true, false], ["$%d REWARD" % b.pay, 0.08, 30, 0x8a2a1e, true, false]])
+	sheet.position = Vector3(0, 1.15, -0.15); sheet.rotation.z = 0.03
+	g.position = Vector3(p.x, town.y0, p.z); g.rotation.y = atan2(jb.side * town.toward.x, jb.side * town.toward.z) + PI
+	town.add_child(g); poster = g
+
+## A printed poster sheet (parented to g, which holds its little viewport): lines [text, height 0-0.65, size, ink,
+## bold, italic], as the sheriff's WANTED bill is laid out.
+func _wanted_sheet(g: Node3D, lines: Array) -> MeshInstance3D:
 	var vp := SubViewport.new(); vp.size = Vector2i(256, 192); vp.render_target_update_mode = SubViewport.UPDATE_ONCE; vp.transparent_bg = false
 	var bg := ColorRect.new(); bg.color = Color.hex(0xe8d8a8ff); bg.size = Vector2(256, 192); vp.add_child(bg)
 	var font := SystemFont.new(); font.font_names = PackedStringArray(["Georgia", "Times New Roman", "serif"])
-	for L in [["WANTED", 0.53, 40, 0x2a201a, true, false], [b.name, 0.36, 21, 0x2a201a, false, true], ["DEAD OR DRIVEN OFF", 0.2, 22, 0x2a201a, true, false], ["$%d REWARD" % b.pay, 0.08, 30, 0x8a2a1e, true, false]]:
+	for L in lines:
 		var lab := Label.new(); lab.text = L[0]; lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; lab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		var f := font.duplicate() as SystemFont; f.font_weight = 700 if L[4] else 400; f.font_italic = L[5]
 		lab.add_theme_font_override("font", f); lab.add_theme_font_size_override("font_size", L[2]); lab.add_theme_color_override("font_color", Color.hex((L[3] << 8) | 0xff))
@@ -1212,9 +1220,29 @@ func _set_poster(b) -> void:
 	var pts := PackedVector2Array([Vector2(-0.42, 0), Vector2(0.4, 0.03), Vector2(0.43, 0.62), Vector2(0.02, 0.6), Vector2(-0.41, 0.63)])
 	var sheet := MeshInstance3D.new(); sheet.mesh = CardMesh.build(pts, 0.02)
 	var mat := PaperMats.card(vp.get_texture(), {"flip": true, "snow": 0.0}); sheet.material_override = mat
-	sheet.position = Vector3(0, 1.15, -0.15); sheet.rotation.z = 0.03; g.add_child(sheet)
-	g.position = Vector3(p.x, town.y0, p.z); g.rotation.y = atan2(jb.side * town.toward.x, jb.side * town.toward.z) + PI
-	town.add_child(g); poster = g
+	g.add_child(sheet)
+	return sheet
+
+## The bosses' wanted board on Main Street, by the assay office: a poster for each boss still at large (his name,
+## what he holds, the sheriff's reward), torn down as each falls. Remade on load and whenever one falls.
+var boss_board: Node3D
+func _boss_board() -> void:
+	if boss_board: boss_board.queue_free(); boss_board = null
+	var left: Array = bosses.filter(func(b): return not b.beaten)
+	if left.is_empty() or not town.doors.has("assay"): return
+	var ab := Town.find_b("assay")
+	var outw: Vector3 = -town.toward * float(ab.side)
+	var q: Vector3 = town.doors.assay + town.along * 3.6 - outw * 0.2 # (on the boardwalk past the scales, against the shopfront: the placard has the other side)
+	var g := Node3D.new(); g.add_child(Town.posts([-1.25, 1.25]))
+	var plank := Town.box(2.9, 0.9, 0.06, 0x7a5a3a); plank.position = Vector3(0, 1.2, -0.08); g.add_child(plank)
+	var i := 0
+	for b in left:
+		var sh := _wanted_sheet(g, [["WANTED", 0.55, 38, 0x2a201a, true, false], [b.title(), 0.38, 22, 0x2a201a, false, true],
+			["for %s" % b.spec.prize, 0.22, 18, 0x2a201a, false, false], ["$%d REWARD" % b.spec.bounty, 0.07, 28, 0x8a2a1e, true, false]])
+		sh.scale = Vector3.ONE * 0.95; sh.position = Vector3((i - (left.size() - 1) / 2.0) * 0.88, 0.95, -0.03); sh.rotation.z = [0.04, -0.03, 0.02][i % 3]
+		i += 1
+	g.position = Vector3(q.x, town.y0, q.z); g.rotation.y = atan2(outw.x, outw.z) # (its posters toward the street)
+	town.add_child(g); boss_board = g
 
 ## The depot's freight office, a whistle-stop's trading post, and the train: board her where she stands ($1; from
 ## the depot she leaves at once), ride on the back platform, step off at any stop she draws up at.
@@ -2846,6 +2874,7 @@ func _make_boss() -> void:
 		b.blocker = func(q: Vector3) -> Vector3: return build.collide(q, 1.1)
 		bosses.append(b)
 	boss = bosses[0]
+	_boss_board.call_deferred() # (the wanted board up from the first day; remade on load)
 	town.gate = func(n: int) -> bool: return not bosses.any(func(b): return b.spec.street == n and not b.delivered)
 	town.on_gate = func(n: int) -> void:
 		for b in bosses:
@@ -2868,7 +2897,7 @@ func _boss_hooks(b: Boss) -> Dictionary:
 				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark."}[b.spec.weapon] % nm.to_upper()),
 		"on_fall": func(at: Vector3) -> void:
 			sound.tear(); journal.record("boss")
-			_drop_prize(b, at + Vector3(1.2, 0, 0.6))
+			_drop_prize(b, at + Vector3(1.2, 0, 0.6)); _boss_board() # (his poster comes down)
 			hud.toast("%s crashes down like a felled pine. %s spills from his coat." % [nm, b.spec.prize.capitalize()]),
 	}
 
@@ -2910,7 +2939,9 @@ func _hand_in(b: Boss) -> void:
 	celebrate_day = sky.day if sky.time < 0.85 else sky.day + 1
 	hud.toast("Folks are saying there'll be fireworks tonight.")
 
-func _trophies() -> void: town.set_trophies(bosses.filter(func(b): return b.delivered).map(func(b): return b.id))
+func _trophies() -> void:
+	town.set_trophies(bosses.filter(func(b): return b.delivered).map(func(b): return b.id))
+	_boss_board()
 
 ## While a boss holds the town back (or his prize lies where he fell, not yet picked up), the rumour note tells where
 ## his lair is, with the arrow and the paces; gone once you're at the lair or carrying the prize.

@@ -17,6 +17,7 @@ func _initialize() -> void:
 	if id.begins_with("row"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
 	var d: Vector3 = T.doors.get(id, T.at)
 	if id == "overview": f = {"fig": {"root": {"position": T.at}, "name": "the town"}, "face": atan2(T.toward.x, T.toward.z)} # (the whole town from on high)
+	if id == "board": f = {"fig": {"root": {"position": main.boss_board.global_position}, "name": "the wanted board"}, "face": main.boss_board.rotation.y} # (the bosses' wanted board)
 	if id == "assay": f = {"fig": T.assayer, "face": T.assayer.root.rotation.y} # (the assayer, under the trophies)
 	var keeper: Vector3 = f.fig.root.position if f != null else d
 	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
