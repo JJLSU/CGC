@@ -2628,6 +2628,7 @@ func _pets(dt: float, active: bool) -> void:
 	if _drops_tick(active): return
 	if _boss_spoils(active): return
 	if _wayfarer(active): return
+	if _fort_officer(active): return
 	if jar_count and sky.night < 0.15: jar_count = 0; hud.toast("First light: you unscrew the lid and the lightning bugs drift off home.") # (the jar let go at dawn)
 	dog.day = sky.day
 	dog.update(dt, player, rig.camera, {"rocker": {"seat": extras.seat, "facing": extras.seat_facing} if extras.sitting else null, "colliders": world.colliders, "track": calf.pos if calf.state == "lost" else null, "prey": tumbleweeds.list[0].mesh if tumbleweeds.list.size() else ducks.lead_group(), "danger": enemies.list.any(func(e): return not e.dying and not enemies.is_calm(e, sky.day + sky.time) and Vector2(Enemies.pos(e).x - player.pos.x, Enemies.pos(e).z - player.pos.z).length() < 14.0) or crows.state == "pecking" and Vector2(crows.birds[0].to.x - player.pos.x, crows.birds[0].to.z - player.pos.z).length() < 25.0})
@@ -3109,4 +3110,40 @@ func _wayfarer(active: bool) -> bool:
 				inv[meal] -= 1; inv.silver = inv.get("silver", 0) + 1; sound.lullaby()
 				hud.toast("The children fall on it. She presses her late husband's silver into your hand (+1 silver).")
 	if done: c.day = sky.day
+	return true
+
+## The fort's officer (the player's ask: the forts' troopers as task givers): he'll pay to have the nearest claim
+## jumpers' camp cleared out (marked on your map); back at the fort once it's done, $30 and a box of cartridges; in
+## between, the sutler's cartridges through him, six for $3.
+func _fort_officer(active: bool) -> bool:
+	if not active or player.dead or build.active: return false
+	var f = forts.officer_near(player.pos)
+	if f == null: return false
+	var inv := inventory
+	if f.job >= 0 and f.job < jumpers.camps.size():
+		var jc: Dictionary = jumpers.camps[f.job]
+		if jc.cleared_day >= f.job_day:
+			beast_prompt = "[E] Report the claim jumpers cleared out"
+			if input.hit("KeyE"):
+				f.job = -1; inv.dollars = inv.get("dollars", 0) + 30; inv.cartridges = inv.get("cartridges", 0) + 10; sound.craft(); journal.record("bounty")
+				hud.toast("\"Good work. The territory's obliged to you.\" +$30, +10 cartridges")
+			return true
+		beast_prompt = "[E] Buy six cartridges from the sutler ($3)"
+		if input.hit("KeyE"):
+			if inv.get("dollars", 0) < 3: hud.toast("\"Three dollars, citizen. Army doesn't give credit.\"")
+			else: inv.dollars -= 3; inv.cartridges = inv.get("cartridges", 0) + 6; sound.pick(); hud.toast("Six rounds in a paper box (+6 cartridges). Those jumpers are still out there.")
+		return true
+	beast_prompt = "[E] Ask the officer if there's work"
+	if input.hit("KeyE"):
+		var best := -1; var bd := INF
+		for i in jumpers.camps.size():
+			var c: Dictionary = jumpers.camps[i]
+			if sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS: continue
+			var d := Vector2(c.at.x - f.at.x, c.at.z - f.at.z).length()
+			if d < bd: bd = d; best = i
+		if best < 0: hud.toast("\"Quiet out there just now. Come back in a few days.\"")
+		else:
+			f.job = best; f.job_day = sky.day; var jc: Dictionary = jumpers.camps[best]
+			hud.county_map.reveal(jc.at.x, jc.at.z, 30.0); sound.place()
+			hud.toast("\"Claim jumpers, %d paces off. Clear 'em out and there's $30 in it.\" (marked on your map)" % (roundi(bd * 1.3 / 10.0) * 10))
 	return true

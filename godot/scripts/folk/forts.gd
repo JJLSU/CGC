@@ -49,7 +49,7 @@ func setup(home: Vector3, avoid: Array, world: World = null) -> void:
 		var face := atan2(home.x - x, home.z - z) # (the gate looks toward the farm and the town)
 		var nm: String = names.pop_at(int(rng.next() * names.size()))
 		forts.append({"at": at, "face": face, "seed": int(rng.next() * 1e6), "name": nm, "built": false, "nodes": [], "men": [],
-			"angry": false, "angry_day": -99, "cleared_day": -999, "walls": []})
+			"angry": false, "angry_day": -99, "cleared_day": -999, "walls": [], "job": -1, "job_day": -1})
 		if world:
 			world.exclusions.append({"x": x, "z": z, "r": SIDE * 0.75})
 			# the stockade stops you as a wall does (the world's colliders: posts every 1.4 m along it), the gate open
@@ -70,12 +70,14 @@ static func _wall_point(at: Vector3, fx: Vector3, fz: Vector3, side: int, u: flo
 		2: return at + fx * h + fz * u
 		_: return at - fx * h + fz * u
 
-func save() -> Array: return forts.map(func(f): return [f.cleared_day, f.angry_day])
+func save() -> Array: return forts.map(func(f): return [f.cleared_day, f.angry_day, f.job, f.job_day])
 func load_state(d) -> void:
 	if d == null: return
 	for i in mini(d.size(), forts.size()):
 		var e = d[i]
-		if e is Array: forts[i].cleared_day = int(e[0]); forts[i].angry_day = int(e[1])
+		if e is Array:
+			forts[i].cleared_day = int(e[0]); forts[i].angry_day = int(e[1])
+			if e.size() > 3: forts[i].job = int(e[2]); forts[i].job_day = int(e[3])
 
 ## Every live trooper, for the hunting: [{pos, r, h, s}]
 func targets() -> Array:
@@ -261,3 +263,11 @@ static func _box(w: float, h: float, d: float, hex: int) -> MeshInstance3D:
 
 static func _turn(cur: float, want: float, k: float) -> float:
 	var dd := want - cur; dd = atan2(sin(dd), cos(dd)); return cur + dd * minf(1.0, k)
+
+## The fort's officer, if the farmer is within a few paces of him and the fort isn't riled (for his jobs and stores).
+func officer_near(p: Vector3, r := 3.0):
+	for f in forts:
+		if f.angry: continue
+		for m in f.men:
+			if m.role == "officer" and not m.dead and Vector2(m.fig.root.position.x - p.x, m.fig.root.position.z - p.z).length() < r: return f
+	return null

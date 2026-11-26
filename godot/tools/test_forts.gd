@@ -67,6 +67,22 @@ func _initialize() -> void:
 	main.sky.day += 1; await _wait(0.3)
 	print("far off, all stood down %s; next day still angry %s" % [settled, f.angry])
 	ok = ok and settled and not f.angry
+	# the officer's job: the nearest jumpers' camp; cleared, $30 at the fort
+	var f2: Dictionary = F.forts[1]; var fz2 := Vector3(sin(f2.face), 0, cos(f2.face))
+	var ins2: Vector3 = f2.at + fz2 * 8.0; p.pos = Vector3(ins2.x, Terrain.get_height(ins2.x, ins2.z), ins2.z); p.health = p.max_health; p.dead = false; main.death_timer = 0.0
+	await _wait(0.6)
+	var off = f2.men.filter(func(q): return q.role == "officer")[0]
+	var op: Vector3 = off.fig.root.position; p.pos = Vector3(op.x + 1.0, Terrain.get_height(op.x + 1.0, op.z), op.z)
+	await _wait(0.3); var prompt1: String = main.beast_prompt
+	main.input.pressed["KeyE"] = true; await _wait(0.2)
+	print("officer: '%s' -> job camp %d" % [prompt1, f2.job])
+	ok = ok and f2.job >= 0
+	if f2.job >= 0:
+		main.jumpers.camps[f2.job].cleared_day = main.sky.day # (as though you'd beaten them all)
+		var c0: int = main.inventory.get("dollars", 0)
+		await _wait(0.2); main.input.pressed["KeyE"] = true; await _wait(0.2)
+		print("reported: +$%d, job now %d" % [main.inventory.get("dollars", 0) - c0, f2.job])
+		ok = ok and main.inventory.get("dollars", 0) - c0 == 30 and f2.job == -1
 	var sv: Array = F.save()
 	ok = ok and sv.size() == F.forts.size()
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

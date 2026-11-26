@@ -1667,3 +1667,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
 - The new folk elsewhere: the claim jumpers' camps draw on four of the new rough men and three new women (re-dyed);
   four settlers (Hattie, Ada, Clementine, Nell) wear the player's four newest women once made. test_jumpers PASS
   (now expecting the camps' nine warriors).
+- The fort's officer gives work (main._fort_officer, ArmyForts.officer_near; job saved): asked, he names the nearest claim jumpers' camp still manned and marks it on your map; once it's cleared, $30 and 10 cartridges at the fort; meanwhile he sells the sutler's cartridges, six for $3. Not while the fort's riled. test_forts: a job given, reported, paid: PASS.
