@@ -12,6 +12,10 @@ const GUARDS := {
 	"boar": {"name": "Old bramble boar", "hp": 12, "dmg": 16, "speed": 5.4, "aggro": 8.0, "leash": 11.0, "reach": 1.7, "cooldown": 1.6, "pelt": [2, 3], "scale": 1.15, "top": 1.25},
 	"hodag": {"name": "Hodag", "hp": 16, "dmg": 18, "speed": 4.6, "aggro": 7.0, "leash": 12.0, "reach": 1.9, "cooldown": 1.8, "pelt": [2, 3], "scale": 1.3, "top": 1.6, "lurk": "flat"},
 	"wampus": {"name": "Wampus cat", "hp": 10, "dmg": 14, "speed": 7.6, "aggro": 10.0, "leash": 15.0, "reach": 1.7, "cooldown": 1.1, "pelt": [2, 3], "scale": 1.2, "top": 1.25, "lurk": "flat"},
+	# the bears (the player's black bear and grizzly): a black bear at many a wild-hive grove (they come for the honey),
+	# a grizzly at the groves up in the pines; slower than you on the flat, but they hit hard and take some felling
+	"bear": {"name": "Black bear", "hp": 18, "dmg": 18, "speed": 5.0, "aggro": 8.0, "leash": 13.0, "reach": 1.9, "cooldown": 1.7, "pelt": [3, 4], "scale": 1.0, "top": 1.5},
+	"grizzly": {"name": "Grizzly", "hp": 28, "dmg": 26, "speed": 5.4, "aggro": 9.0, "leash": 14.0, "reach": 2.1, "cooldown": 1.9, "pelt": [4, 5], "scale": 1.0, "top": 1.8},
 	"gouger": {"name": "Sidehill gouger", "hp": 9, "dmg": 11, "speed": 5.0, "aggro": 8.0, "leash": 11.0, "reach": 1.6, "cooldown": 1.4, "pelt": [1, 2], "scale": 1.05, "top": 1.35},
 	"hidebehind": {"name": "Hidebehind", "hp": 8, "dmg": 15, "speed": 6.6, "aggro": 6.0, "leash": 10.0, "reach": 1.6, "cooldown": 1.3, "pelt": [1, 2], "scale": 1.0, "top": 2.5, "lurk": "unseen"},
 }
@@ -43,7 +47,7 @@ func _init(w: World) -> void:
 	world.on_site_unload = despawn_site
 
 func spawn_site(site: Dictionary) -> void:
-	var kind: String = site.get("guard", "") if site.get("guard", "") != "" else ("boar" if site.kind == "grove" else "coyote")
+	var kind: String = site.get("guard", "") if site.get("guard", "") != "" else (Enemies.grove_guard(site) if site.kind == "grove" else "coyote")
 	if site.kind == "landmark" or not GUARDS.has(kind): return
 	for i in int(site.get("guards", 0)):
 		var key := "%s:g%d" % [site.key, i]
@@ -67,6 +71,14 @@ func spawn_site(site: Dictionary) -> void:
 			if spec.lurk == "flat": pup.set_fold(0.0)
 			else: pup.group.visible = false
 		list.append(e)
+
+## Who keeps a wild-hive grove: a grizzly up in the pines; elsewhere a black bear at about half of them (by the
+## site, so it's always the same one), else the old bramble boar.
+static func grove_guard(site: Dictionary) -> String:
+	if not ResourceLoader.exists("res://assets/models/animals/animal_bear_black.glb"): return "boar"
+	Terrain.land_at(site.x, site.z)
+	if Terrain.L_w.get("pines", 0.0) > 0.5 and ResourceLoader.exists("res://assets/models/animals/animal_grizzly.glb"): return "grizzly"
+	return "bear" if absi(hash(String(site.key))) % 2 == 0 else "boar"
 
 func despawn_site(site: Dictionary) -> void:
 	for e in list.duplicate(): if e.site.key == site.key: remove(e)

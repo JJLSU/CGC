@@ -179,8 +179,14 @@ const KEEPER_LORE := {
 	"gouger": "A sidehill gouger! It lists along on its short uphill legs, and it doesn't like company near its silver.",
 	"hidebehind": "Something was behind you all along: the HIDEBEHIND, tall and grey as birch shadow!",
 	"coyote": "Coyotes! A whole pack, out of the long grass. They keep the thunder eggs.",
+	"bear": "A BLACK BEAR rears up out of the brambles, honey on its muzzle. This grove's hives are its!",
+	"grizzly": "A GRIZZLY! Big as a woodshed, silver-tipped, and between you and the hives.",
 }
 const PEACE := {
+	"bear": {"cost": {"honey": 2}, "give": "Leave the bear 2 combs of honey (a peace offering)", "hint": "The bear might be bought off with 2 combs of honey",
+		"lore": "Every child knows a bear will sleep a day off for a little honey (2 combs).", "thanks": "The bear licks the combs clean, rolls on its back in the clover and falls asleep. The hives are yours till morning."},
+	"grizzly": {"cost": {"fish": 4}, "give": "Toss the grizzly 4 fish (a peace offering)", "hint": "The grizzly might take 4 fish instead of you",
+		"lore": "Trappers say a grizzly will trade a night's peace for a good mess of fish (4).", "thanks": "The grizzly swallows the fish whole, huffs at you once, and lies down like a hill. The hives are yours till morning."},
 	"coyote": {"cost": {"fish": 2}, "give": "Toss the coyotes 2 fish (a peace offering)", "hint": "The coyotes might doze off for 2 fish",
 		"lore": "Folks say the dust-devil coyotes will doze off for a couple of fish.", "thanks": "The coyotes gulp the fish, circle three times and curl up in the sun. What they keep is yours till morning."},
 	"boar": {"cost": {"apples": 3}, "give": "Toss the old boar 3 apples (a peace offering)", "hint": "The old boar might take kindly to 3 apples",
@@ -1393,7 +1399,7 @@ func _town_doors() -> bool:
 					if d < bd: bd = d; best = st
 				if best == null: hud.toast("\"Quiet as a churchyard out there, thanks to you. Nothing on the board today.\"")
 				else:
-					var kind: String = best.get("guard", "") if best.get("guard", "") != "" else ("boar" if best.kind == "grove" else "coyote")
+					var kind: String = best.get("guard", "") if best.get("guard", "") != "" else (Enemies.grove_guard(best) if best.kind == "grove" else "coyote")
 					var spec: Dictionary = Enemies.GUARDS[kind]
 					bounty = {"key": best.key, "guards": best.guards, "x": best.x, "z": best.z, "name": spec.name, "pay": maxi(12, roundi(spec.hp * best.guards * 1.4))}
 					_set_poster(bounty); sound.place(); hud.county_map.reveal(best.x, best.z, 14.0) # (marked on your county map)
