@@ -53,9 +53,9 @@ func update(dt: float, speed: float, air: bool, swim: bool) -> bool:
 # ------------------------------------------------------------------ the tools in his fist (avatar.js)
 var tools_by := {}        ## id -> Node3D (axe, pick, hammer, spear, rod, bow, revolver, rifle)
 var grip := Node3D.new()
-var grip_along := 0.035  ## the fist's middle, this far down the hand bone from the wrist (was 0.06: the handle sat past his fingertips)
-var grip_palm := 0.035   ## and this far across it, toward the palm (was -0.025, on the back of the hand)
-var fist: MeshInstance3D
+var grip_along := 0.075  ## the haft crosses the hand this far down the hand bone from the wrist (mid-palm; the rigs have no fingers to curl)
+var grip_palm := -0.035  ## and this far across it, into the palm (the hand's -z: +0.035 had it lying on the back of his hand)
+var fist: Node3D
 var quiver := Node3D.new()
 var has_bow := false
 var aiming := false
@@ -117,8 +117,9 @@ func _build_tools() -> void:
 	# the six-shooter and the buffalo rifle ride in the body's own frame at the hand, barrel along the way he faces
 	root.add_child(_tool("revolver", [_piece(_box(0.045, 0.13, 0.06), Transform3D(_rx(0.3), Vector3(0, -0.06, -0.01)), 0x6a4428), _piece(_cyl(0.042, 0.042, 0.08, 8), Transform3D(_rx(PI / 2), Vector3(0, 0.025, 0.04)), 0x5a5a60), _piece(_cyl(0.017, 0.017, 0.24, 6), Transform3D(_rx(PI / 2), Vector3(0, 0.035, 0.19)), 0x3e3e44)]))
 	root.add_child(_tool("rifle", [_piece(_box(0.06, 0.11, 0.42), Transform3D(Basis(), Vector3(0, -0.03, -0.24)), 0x7a4a26), _piece(_box(0.05, 0.05, 0.42), Transform3D(Basis(), Vector3(0, 0, 0.18)), 0x8a5a30), _piece(_cyl(0.02, 0.022, 1.0, 8), Transform3D(_rx(PI / 2), Vector3(0, 0.035, 0.45)), 0x3e3e44)]))
-	# his curled fingers round the haft, in his skin tone
-	fist = _piece(_cyl(0.042, 0.04, 0.095, 7), Transform3D(_rx(PI / 2), Vector3.ZERO), 0xd49a76); grip.add_child(fist)
+	# his fist closed round the haft, in his skin tone: the four fingers' block wrapped round it (the haft through its
+	# middle, along z), the knuckles a step proud, and the thumb across the front
+	fist = Node3D.new(); grip.add_child(fist) # (nothing drawn: the haft lies in his own open hand, across the palm)
 	# the quiver across his back once he has a bow: a stitched leather tube with three arrows' fletchings peeping out
 	var tube := _cyl(0.08, 0.068, 0.62, 10); tube.cap_top = false
 	quiver.add_child(_piece(tube, Transform3D.IDENTITY, 0x7a4a26))
