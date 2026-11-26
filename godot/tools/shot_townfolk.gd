@@ -12,8 +12,9 @@ func _initialize() -> void:
 	for b in Town.BUILDINGS: T.mend(b.id)
 	T.mend("church")
 	for st in Town.STREETS: for b in st.buildings: T.mend(b.id)
-	var d: Vector3 = T.doors[id]
 	var f = T.folk.get(id)
+	if id.begins_with("row"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
+	var d: Vector3 = T.doors.get(id, T.at)
 	var keeper: Vector3 = f.fig.root.position if f != null else d
 	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
 	main.player.avatar.root.visible = false # (stood just in front of the keeper, out of the way)
@@ -22,7 +23,7 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 5000:
 		var stand: Vector3 = keeper + Vector3(sin(f.face if f != null else 0.0), 0, cos(f.face if f != null else 0.0)) * 1.2
 		main.player.pos = Vector3(stand.x, Terrain.get_height(stand.x, stand.z), stand.z)
-		main.rig.yaw = (f.face if f != null else 0.0) + PI + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
+		main.rig.yaw = (f.face if f != null else 0.0) + (0.0 if id.begins_with("row") else PI) + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
 		await process_frame
 	if T.revue != null: print("revue: ", T.revue.map(func(r): return r.name))
 	await RenderingServer.frame_post_draw

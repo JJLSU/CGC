@@ -1,0 +1,15 @@
+{
+  "name": "cgc_woman_patched",
+  "height": 1.68,
+  "tris": 20154,
+  "tris_before": 20154,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
