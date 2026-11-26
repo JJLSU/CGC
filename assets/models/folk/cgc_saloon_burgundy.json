@@ -1,0 +1,15 @@
+{
+  "name": "cgc_saloon_burgundy",
+  "height": 1.68,
+  "tris": 20417,
+  "tris_before": 20417,
+  "clips": [
+    "dance",
+    "idle",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
