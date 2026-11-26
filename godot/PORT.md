@@ -1608,3 +1608,4 @@ for N frames, then saves the viewport; needs a window, not --headless).
   Crane rings you with dynamite (one where you stand, three round you at 3.2 m). Every one marked on the ground first;
   the marks are now a darker brown stain (they were faint on the pale dirt). tools/test_boss_special.gd PASS
   (3 / 3 / 4 thrown, each hurts); test_boss PASS; looked at the rockfall (tools/shot_boss.gd ... special).
+- A boss's prize brought home sets off the town's fireworks that night (main.celebrate_day, saved), whether or not the town is all mended; a note says so at the hand-in. test_boss: the rockets go up that night: PASS.

@@ -20,6 +20,7 @@ func _initialize() -> void:
 	var keeper: Vector3 = f.fig.root.position if f != null else d
 	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
 	main.player.avatar.root.visible = false # (stood just in front of the keeper, out of the way)
+	if args.has("party"): main.celebrate_day = main.sky.day; main.sky.time = 0.83 # (a boss's prize home: rockets tonight)
 	if args.has("night"): main.sky.time = 0.9 # (the can-can revue on the saloon's boardwalk)
 	var t0 := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 5000:

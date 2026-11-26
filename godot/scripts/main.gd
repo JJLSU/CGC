@@ -133,6 +133,7 @@ const DIRS8 := ["east", "south-east", "south", "south-west", "west", "north-west
 var dance: BarnDance
 var dance_t := 0.0
 var fireworks: Fireworks
+var celebrate_day := -1   ## the night the town fires off rockets for a boss beaten and his prize brought home
 var fire_smoke: FireSmoke
 var fw_day := -1
 var raid_day := 3 + randi() % 3
@@ -1149,9 +1150,12 @@ func _fires_and_fireworks(dt: float) -> void:
 	fires.sort_custom(func(a, b): return a.d < b.d)
 	fire_smoke.update(dt, fires, rig.camera, sky.night, weather.rain)
 	var all_done := town.street_done(-1) and town.street_done(0) and town.street_done(1)
-	var show := not town.far and sky.day % 7 == 6 and sky.time > 0.79 and sky.time < 0.9 and all_done
-	town.fireworks_on = sky.day % 7 == 6 and sky.time > 0.7 and sky.time < 0.9 and all_done # (the Row walks over after supper)
-	if show and fw_day != sky.day: fw_day = sky.day; hud.toast("Saturday night, and the whole town is mended. From the field behind the church the first rocket goes up: fireworks!")
+	var party := sky.day == celebrate_day # (a boss beaten and his prize home: the town celebrates that night, mended or not)
+	var show := not town.far and (sky.day % 7 == 6 and all_done or party) and sky.time > 0.79 and sky.time < 0.9
+	town.fireworks_on = (sky.day % 7 == 6 and all_done or party) and sky.time > 0.7 and sky.time < 0.9 # (the Row walks over after supper)
+	if show and fw_day != sky.day:
+		fw_day = sky.day
+		hud.toast("The town celebrates tonight: from the field behind the church the first rocket goes up!" if party else "Saturday night, and the whole town is mended. From the field behind the church the first rocket goes up: fireworks!")
 	if show or fireworks.mm.visible_instance_count: fireworks.update(dt, show, Vector3(town.church_at.x + town.along.x * 14.0, town.y0, town.church_at.z + town.along.z * 14.0), rig.camera, func(q: Vector3) -> void:
 		var d := Vector2(q.x - player.pos.x, q.z - player.pos.z).length()
 		if d < 140.0: sound.pop(maxf(0.05, 1.0 - d / 140.0)))
@@ -2243,6 +2247,7 @@ func _apply_save(d: Dictionary) -> void:
 	dog.found_day = int(d.get("dogDay", 0)) # (he's already been digging today, if the save says so)
 	camp.load_state(d.get("campPeace")) # (days of peace bought with gifts)
 	jumpers.load_state(d.get("jumpers")) # (camps cleared, and when)
+	celebrate_day = int(d.get("celebrateDay", -1))
 	var bs = d.get("bosses")
 	if bs is Dictionary:
 		for b in bosses: b.load_state(bs.get(b.id))
@@ -2290,7 +2295,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "bosses": _bosses_save(), "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -2897,6 +2902,8 @@ func _hand_in(b: Boss) -> void:
 	else: hud.toast("The assayer files %s. \"Cold Glitter Creek grows again.\" +$%d" % [b.spec.prize, pay])
 	town.grow()
 	_trophies()
+	celebrate_day = sky.day if sky.time < 0.85 else sky.day + 1
+	hud.toast("Folks are saying there'll be fireworks tonight.")
 
 func _trophies() -> void: town.set_trophies(bosses.filter(func(b): return b.delivered).map(func(b): return b.id))
 

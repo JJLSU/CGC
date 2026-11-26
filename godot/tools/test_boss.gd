@@ -85,6 +85,11 @@ func _initialize() -> void:
 	await _wait(0.3)
 	print("handed in: deed %d, delivered %s, Second Street opened %s" % [main.inventory.get("deed", 0), B.delivered, 0 in T.opened])
 	ok = ok and main.inventory.get("deed", 0) == 0 and B.delivered and 0 in T.opened
+	# the town celebrates that night: rockets over the church
+	var tm0: float = main.sky.time; main.sky.time = 0.82; await _wait(0.4)
+	print("celebration day %d (today %d), fireworks shown tonight %s" % [main.celebrate_day, main.sky.day, main.fw_day == main.sky.day])
+	ok = ok and main.celebrate_day == main.sky.day and main.fw_day == main.sky.day
+	main.sky.time = tm0
 	# the sheriff's reward for him, at the jail (Second Street's up now)
 	T.mend("jail"); var jd: Vector3 = T.doors.jail; var cash1: int = main.inventory.get("dollars", 0)
 	p.pos = Vector3(jd.x, Terrain.get_height(jd.x, jd.z), jd.z); await _wait(0.3); main.input.pressed["KeyE"] = true; await _wait(0.3)
