@@ -238,7 +238,13 @@ func _init(w: World, home: Vector3) -> void:
 		var o := omin - 8.0
 		while o <= omax + 8.0:
 			var q: Vector3 = at + along * cs + toward * o
-			Terrain.add_flat_area(q.x, q.z, 9, 9); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
+			Terrain.add_flat_area(q.x, q.z, 7, 13); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
+	var mo := -38.0
+	while mo <= 38.0: # (the market row's ground, beyond the north cross street: level, and kept clear of brush and trees)
+		for ds in [-3.0, 1.5]:
+			var q: Vector3 = at + along * (MARKET_S + ds) + toward * mo
+			Terrain.add_flat_area(q.x, q.z, 6, 13); world.exclusions.append({"x": q.x, "z": q.z, "r": 4.5})
+		mo += 5.0
 	for off in street_offs:
 		for sv in [-16, 0, 16]:
 			var q: Vector3 = at + along * sv + toward * off
@@ -300,6 +306,7 @@ func _init(w: World, home: Vector3) -> void:
 	sign_at = at + along * -34.5 + toward * 5.5 # (at the corner, clear of the cross street)
 	make_sign()
 	dress_street()
+	market_refresh()
 
 ## The cross streets (the player: cross streets at each end): at CROSS_N beyond the church's back and CROSS_S
 ## before Squatters' Row, run across the town; each new street adds its stretch out from its neighbour, and the
@@ -490,6 +497,7 @@ func mend(id: String) -> void:
 	tiers[id] = 1; raided.erase(id); dress_up(id)
 	rebuild(id, 1, k)
 	grow()
+	market_refresh()
 
 ## The town grows: Main Street all mended puts up Second Street; that all mended puts up Third Street. A street may be
 ## held back (gate: the player's boss battles: Second Street waits for the townsite deed Mad Jebediah stole); then
@@ -1230,3 +1238,38 @@ func _hall_life(dt: float, night: float) -> void:
 	for f in hall_girls:
 		f.root.visible = show
 		if show: f.update(dt, 0.0, "cancan")
+
+# ------------------------------------------------------------------ the market row (the player's market stalls)
+## Along the far side of the north cross street: stalls, tents and wagons of the market, each from its own model pair.
+## Wrecked and bare while the town is run-down; once Main Street is all mended they stand restored, stocked, a
+## stallkeeper at each by day and baskets of food beside.
+const MARKET_S := CROSS_N + CROSS_HW + 4.2
+const MARKET_O := [-30.0, -18.0, -6.0, 6.0, 18.0, 30.0]
+const MARKET := ["mkt_stall_green", "mkt_tent_ochre", "mkt_wagon_burgundy", "mkt_stall_red", "mkt_tent_blue", "mkt_wagon_ochre"]
+const MARKET_FOLK := ["cgc_woman_blueapron", "cgc_man_youth", "cgc_woman_greenapron", "cgc_man_suspenders", "cgc_woman_patched", "cgc_woman_calico"]
+var market_tier := -1
+var market_parts: Array = []
+func market_refresh() -> void:
+	var tier := 1 if street_done(-1) else 0
+	if tier == market_tier or not ResourceLoader.exists("res://assets/models/props/bldg_mkt_stall_green_ruined.glb"): return
+	market_tier = tier
+	for n in market_parts: if is_instance_valid(n): n.queue_free()
+	market_parts = []
+	for k in folk.keys(): if String(k).begins_with("mkt_"): folk[k].fig.root.queue_free(); folk.erase(k)
+	var face := atan2(-along.x, -along.z) # (their fronts to the cross street)
+	for i in MARKET.size():
+		var p: Vector3 = at + along * MARKET_S + toward * MARKET_O[i]
+		var wagon: bool = String(MARKET[i]).contains("wagon")
+		var g := model_building(MARKET[i], tier, 4.2 if wagon else 4.6, 3.6)
+		g.position = Vector3(p.x, y0, p.z); g.rotation.y = face + (0.12 if wagon else 0.0); add_child(g); market_parts.append(g)
+		world.colliders.append({"x": p.x, "z": p.z, "r": 1.8})
+		if tier:
+			var bq: Vector3 = p + toward * (2.9 if i % 2 else -2.9) - along * 1.4
+			var bk := model("prop_food_baskets", 1.3, 1)
+			if bk: bk.position = Vector3(bq.x, y0, bq.z); bk.rotation.y = face + i; add_child(bk); market_parts.append(bk)
+			var nm: String = MARKET_FOLK[i]
+			if ModelFigure.has_folk(nm):
+				var f := ModelFigure.new(nm, {"hue": 0.5 + i * 0.7}); f.t = i * 0.9
+				var fp: Vector3 = p - along * 2.6 + toward * 0.6
+				f.root.position = Vector3(fp.x, y0, fp.z); f.root.rotation.y = face; add_child(f.root) # (facing out to the street, the stall at their back)
+				folk["mkt_%d" % i] = {"fig": f, "pose": null, "face": face}

@@ -87,6 +87,7 @@ static func set_seed(seed: int, ring := Vector2(130, 210)) -> void:
 static func set_range_center(x: float, z: float) -> void:
 	RC = Vector2(x, z); lat_cache.clear(); full_cache.clear(); e_memo.clear()
 static func set_flat_area(x: float, z: float, r0: float, r1: float) -> void: flat = [x, z, r0, r1]; e_memo.clear()
+## (r0: level right out to here; r1: eased back to the land by here. r1 must be past r0, or nothing is levelled.)
 static func add_flat_area(x: float, z: float, r0: float, r1: float) -> void: extra_flats.append([x, z, r0, r1]); e_memo.clear()
 
 static func ss(a: float, b: float, x: float) -> float: return PNoise.smoothstep(a, b, x)

@@ -1,0 +1,14 @@
+{
+  "name": "bldg_mkt_wagon_ochre_restored",
+  "size": {
+    "x": 1.47,
+    "y": 1.132,
+    "z": 0.956
+  },
+  "tris": 19808,
+  "body": {
+    "x": 1.472,
+    "z": 0.932,
+    "cx": 0.26
+  }
+}

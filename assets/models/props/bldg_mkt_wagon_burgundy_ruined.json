@@ -1,0 +1,14 @@
+{
+  "name": "bldg_mkt_wagon_burgundy_ruined",
+  "size": {
+    "x": 1.898,
+    "y": 1.12,
+    "z": 0.914
+  },
+  "tris": 20261,
+  "body": {
+    "x": 1.804,
+    "z": 0.914,
+    "cx": 0.093
+  }
+}

@@ -29,5 +29,13 @@ func _initialize() -> void:
 	cam.global_position = d - T.along * 8.0 + Vector3(0, T.y0 + 3.0 - d.y, 0); cam.look_at(d + Vector3(0, T.y0 + 1.5 - d.y, 0), Vector3.UP); cam.fov = 55.0
 	await process_frame; await process_frame; await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_church.png"))
+	# the market row beyond the north cross street
+	var mc: Vector3 = T.at + T.along * Town.MARKET_S
+	main.set_process(true)
+	for i in 60: main.player.pos = mc - T.along * 12.0; await process_frame
+	main.set_process(false); main.player.avatar.root.visible = false
+	cam.global_position = mc - T.along * 16.0 + T.toward * 4.0 + Vector3(0, T.y0 + 7.0 - mc.y, 0); cam.look_at(mc + Vector3(0, T.y0 + 1.0 - mc.y, 0), Vector3.UP); cam.fov = 70.0
+	await process_frame; await process_frame; await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_market.png"))
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	quit()

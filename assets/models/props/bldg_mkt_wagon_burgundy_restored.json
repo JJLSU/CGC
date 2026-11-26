@@ -1,0 +1,14 @@
+{
+  "name": "bldg_mkt_wagon_burgundy_restored",
+  "size": {
+    "x": 1.39,
+    "y": 1.083,
+    "z": 0.888
+  },
+  "tris": 19952,
+  "body": {
+    "x": 1.475,
+    "z": 0.866,
+    "cx": -0.264
+  }
+}

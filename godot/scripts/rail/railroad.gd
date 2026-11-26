@@ -50,12 +50,12 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	# the right-of-way and the depot's ground level and clear; the yard's too; the cross street's last stretch out to it
 	for i in range(0, 260, 8):
 		var q: Vector3 = depot - dout * 90.0 + dout * i
-		Terrain.add_flat_area(q.x, q.z, 7, 7)
-	Terrain.add_flat_area(yard.x, yard.z, 12, 12); world.exclusions.append({"x": yard.x, "z": yard.z, "r": 12.0})
+		Terrain.add_flat_area(q.x, q.z, 6, 12)
+	Terrain.add_flat_area(yard.x, yard.z, 13, 20); world.exclusions.append({"x": yard.x, "z": yard.z, "r": 12.0})
 	var o := 30.0
 	while o < TRACK_O:
 		var q: Vector3 = A + along * Town.CROSS_N + toward * far * o
-		Terrain.add_flat_area(q.x, q.z, 9, 9); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
+		Terrain.add_flat_area(q.x, q.z, 7, 13); world.exclusions.append({"x": q.x, "z": q.z, "r": 6.5}); o += 8.0
 	# (wide of the whole town, streets and all, and of the farm)
 	var omin := 0.0; var omax := 0.0
 	for so in town.street_offs: omin = minf(omin, so); omax = maxf(omax, so)
