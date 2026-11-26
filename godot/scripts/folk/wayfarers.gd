@@ -104,7 +104,11 @@ func _build(c: Dictionary) -> void:
 		var o := Vector2(dx, dz).rotated(turn); var q := Vector3(at.x + o.x, 0, at.z + o.y)
 		n.position = Vector3(q.x, Terrain.get_height(q.x, q.z), q.z); n.rotation.y = turn + yaw; add_child(n); c.nodes.append(n); return n
 	place.call("prop_cookfire", 1.0, 0.0, 0.0)
-	if k.get("tent", false): place.call("prop_tent", 3.0, 0.0, -4.0, PI)
+	# (the widow's family travel and sleep in their covered Conestoga; the drover cooks off the back of his own,
+	# its canvas long gone: the player's wagons)
+	if k.id == "widow" and ResourceLoader.exists("res://assets/models/props/veh_conestoga_covered.glb"): place.call("veh_conestoga_covered", 6.0, 0.0, -5.0, PI / 2.0)
+	elif k.get("tent", false): place.call("prop_tent", 3.0, 0.0, -4.0, PI)
+	if k.id == "drover" and ResourceLoader.exists("res://assets/models/props/veh_conestoga_bare.glb"): place.call("veh_conestoga_bare", 5.6, -0.5, -4.6, PI / 2.0)
 	else: place.call("prop_bedroll", 1.2, -1.8, -1.2, 0.6)
 	if k.get("cart", false): place.call("veh_handcart", 2.2, 3.2, -1.5, 1.2)
 	if k.id == "surveyor": place.call("prop_toolbench", 1.6, 2.6, 1.6, -0.8)
