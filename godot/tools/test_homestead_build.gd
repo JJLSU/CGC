@@ -6,9 +6,12 @@ func _wait(sec: float) -> void:
 	var t := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t < sec * 1000.0: await process_frame
 func _e(main: Node) -> void:
+	main.dog.pos = main.player.pos + Vector3(40, 0, 40) # (Old Blue sent off: at your heel his scratch takes the E)
 	main.input.pressed["KeyE"] = true
 	await process_frame; await process_frame
 func _initialize() -> void:
+	var sp := OS.get_environment("CGC_SAVE_PATH") # (a fresh throwaway each run: an old one would load the pieces already built)
+	if sp != "" and FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
