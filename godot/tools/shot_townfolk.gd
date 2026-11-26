@@ -16,6 +16,7 @@ func _initialize() -> void:
 	var f = T.folk.get(id)
 	if id.begins_with("row"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
 	var d: Vector3 = T.doors.get(id, T.at)
+	if id == "overview": f = {"fig": {"root": {"position": T.at}, "name": "the town"}, "face": atan2(T.toward.x, T.toward.z)} # (the whole town from on high)
 	if id == "assay": f = {"fig": T.assayer, "face": T.assayer.root.rotation.y} # (the assayer, under the trophies)
 	var keeper: Vector3 = f.fig.root.position if f != null else d
 	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
@@ -26,7 +27,7 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 5000:
 		var stand: Vector3 = keeper + Vector3(sin(f.face if f != null else 0.0), 0, cos(f.face if f != null else 0.0)) * 1.2
 		main.player.pos = Vector3(stand.x, Terrain.get_height(stand.x, stand.z), stand.z)
-		main.rig.yaw = (f.face if f != null else 0.0) + (0.0 if id.begins_with("row") or args.has("flip") else PI) + 0.35; main.rig.pitch = 0.22 if not args.has("high") else 0.05; main.rig.dist = 7.0 if not args.has("far") else 11.0
+		main.rig.yaw = (f.face if f != null else 0.0) + (0.0 if id.begins_with("row") or args.has("flip") else PI) + 0.35; main.rig.pitch = (0.22 if not args.has("high") else 0.05) if id != "overview" else 1.0; main.rig.dist = (7.0 if not args.has("far") else 11.0) if id != "overview" else 70.0
 		await process_frame
 	if T.revue != null: print("revue: ", T.revue.map(func(r): return r.name))
 	await RenderingServer.frame_post_draw
