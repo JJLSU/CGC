@@ -36,6 +36,7 @@ func _put(mname: String, size: float, x: float, z: float, turn := 0.0, by_height
 	var hold := Node3D.new(); hold.add_child(m)
 	hold.scale = Vector3.ONE * (size / (bb.size.y if by_height else maxf(bb.size.x, bb.size.z)))
 	hold.position = Vector3(x, 0, z); hold.rotation.y = turn; group.add_child(hold)
+	if mname == "prop_tent": hold.add_to_group("tents") # (a twister can carry it off)
 	return hold
 
 static func _boxes(list: Array, hex: int) -> MeshInstance3D:

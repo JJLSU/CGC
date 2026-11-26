@@ -54,6 +54,7 @@ static func prop(model_name: String, length: float, lodge := false) -> Node3D:
 	var path := "res://assets/models/props/%s.glb" % model_name
 	if not ResourceLoader.exists(path): return null
 	var hold := PaperMats.seated(load(path), length, false, false)
+	if model_name == "prop_tent": hold.add_to_group("tents") # (a twister can carry it off)
 	if lodge:
 		for mi in PaperMats._meshes(hold):
 			var m := mi as MeshInstance3D

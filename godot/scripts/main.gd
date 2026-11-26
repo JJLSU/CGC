@@ -3301,7 +3301,9 @@ func _boss_known(b: Boss) -> bool:
 # ------------------------------------------------------------------ twisters (the player's paper tornado frames)
 ## About one thunderstorm in two brings a twister: it drops out of the clouds ~170 m off and wanders across the open
 ## land, mostly passing you by at a distance, now and then coming straight on (Twister). Caught in it you're thrown
-## clear with a knock (12, less in a coat); near it you're drawn in, so run crosswise or ride. Never in town.
+## clear with a knock (12, less in a coat); near it you're drawn in, so run crosswise or ride. What it crosses it
+## wrecks (the player's ask): trees snapped and felled, tents torn up and carried off, a mended town building
+## battered back to run-down (mend it again), and your own built pieces knocked apart, a piece at a time.
 var twister: Twister = null
 var twister_storm := false            ## this storm has had its chance
 var twister_fling := Vector3.ZERO
@@ -3314,8 +3316,7 @@ func _twister_update(dt: float) -> void:
 		player.pos += twister_fling * dt; twister_fling = twister_fling.lerp(Vector3.ZERO, minf(1.0, dt * 2.2))
 	if twister == null: return
 	var r := twister.update(dt, rig.camera, player.pos, func(at: Vector3, cols: Array) -> void: confetti.burst(at + Vector3(randf_range(-2, 2), randf() * 3.0, randf_range(-2, 2)), cols, 6, 1.6))
-	if town.at.distance_to(twister.pos) < 80.0: # (it skirts the town)
-		twister.dir = Vector3(twister.pos.x - town.at.x, 0, twister.pos.z - town.at.z).normalized(); twister.aim = twister.pos + twister.dir * 200.0
+	if twister.drop < 0.3: _twister_wreck(dt)
 	if r.thrown and not player.dead:
 		var away := Vector3(player.pos.x - twister.pos.x, 0, player.pos.z - twister.pos.z).normalized()
 		if away.length_squared() < 0.5: away = Vector3(-twister.dir.z, 0, twister.dir.x)
@@ -3339,3 +3340,47 @@ func spawn_twister() -> void:
 	twister.start(p, player.pos + Vector3(-to.z, 0, to.x) * miss)
 	sound.thunder(0.9)
 	hud.toast("A twister's touched down out on the prairie! Run crosswise to it, or ride.")
+
+const TWISTER_FELL_R := 7.0
+const TWISTER_BUILD_R := 6.5
+const TWISTER_TOWN_R := 7.5
+var _wreck_t := 0.0
+var _flying_tents: Array = []
+func _twister_wreck(dt: float) -> void:
+	_wreck_t -= dt
+	for f in _flying_tents: # (tents tumbling up and away on the wind, then gone)
+		var n: Node3D = f.node
+		if not is_instance_valid(n): continue
+		f.t += dt; n.position += (f.vel as Vector3) * dt; f.vel.y += 2.0 * dt; n.rotation += (f.spin as Vector3) * dt
+	for f in _flying_tents: if f.t > 5.0 and is_instance_valid(f.node): f.node.queue_free()
+	_flying_tents = _flying_tents.filter(func(f): return f.t <= 5.0 and is_instance_valid(f.node))
+	if _wreck_t > 0.0: return
+	_wreck_t = 0.25
+	var at: Vector3 = twister.pos
+	# trees: snapped and thrown down away from its foot
+	for r in world.resources_near(at.x, at.z, TWISTER_FELL_R):
+		if Res.TYPES[r.type].get("falls", false):
+			world.hit(r, at.x, at.z, 999)
+			if (r.x - player.pos.x) * (r.x - player.pos.x) + (r.z - player.pos.z) * (r.z - player.pos.z) < 3600.0: sound.tree_fall()
+	# tents: torn up and carried off
+	for n in get_tree().get_nodes_in_group("tents"):
+		var tn := n as Node3D
+		if tn == null or not tn.is_visible_in_tree() or _flying_tents.any(func(f): return f.node == tn): continue
+		var p := tn.global_position
+		if Vector2(p.x - at.x, p.z - at.z).length() < TWISTER_FELL_R + 1.5:
+			var out := Vector3(p.x - at.x, 0, p.z - at.z).normalized()
+			_flying_tents.append({"node": tn, "t": 0.0, "vel": out * 6.0 + Vector3(-out.z, 0, out.x) * 8.0 + Vector3(0, 9.0, 0), "spin": Vector3(randf_range(-3, 3), randf_range(-5, 5), randf_range(-3, 3))})
+			tn.remove_from_group("tents"); sound.tear()
+			if tn.global_position.distance_to(player.pos) < 120.0: hud.toast("The twister tears a tent up by its pegs and carries it off!")
+	# your own building: knocked apart a piece at a time (nothing back: it's scattered over the county)
+	for pc in build.nearby(at.x, at.z, TWISTER_BUILD_R):
+		var hit: Dictionary = build.damage(pc, 1, {})
+		confetti.burst(Vector3(pc.x, pc.get("y", 0.0) + 1.0, pc.z), build.chips_for(pc.type), 10, 1.4)
+		if hit.destroyed: sound.tear()
+	# the town: a mended building it crosses is battered back to run-down
+	for id in town.tiers.keys():
+		if not town.tiers[id] or id == "church" or not town.parts.has(id): continue
+		var g: Vector3 = (town.parts[id] as Node3D).global_position
+		if Vector2(g.x - at.x, g.z - at.z).length() < TWISTER_TOWN_R + 3.0 and town.unmend(id):
+			confetti.burst(g + Vector3(0, 3, 0), [0x8a6038, 0xb5473a, 0xefe3c4], 40, 1.6); sound.tear(); sound.knock()
+			hud.toast("The twister tears through the %s! It'll need mending again." % String(Town.find_b(id).get("name", id)))
