@@ -38,10 +38,32 @@ var discovered := {}
 var loading := false
 var glow := 0.0
 
+## The port's own pieces (the player's ask: more to build), beyond the web's: a Homestead shelf of buildings that do
+## something, made from the reference art's models, and a palisade for the Yard. makes: what one morning brings
+## (gathered with E; cap mornings' worth wait); use: what E does. Their solid boxes come from the model itself.
+const EXTRA := {
+	"henhouse": {"name": "Chicken coop", "cost": {"wood": 10, "fiber": 4}, "model": "bldg_coop", "size": 3.6, "makes": {"egg": 3}, "cap": 3, "verb": "Gather the eggs", "hp": 5},
+	"haybarn": {"name": "Hay barn", "cost": {"wood": 24, "stone": 6, "rope": 2}, "model": "bldg_barn", "size": 8.0, "makes": {"fiber": 5}, "cap": 3, "verb": "Fork out the straw", "hp": 10},
+	"shaft": {"name": "Prospect shaft", "cost": {"wood": 10, "stone": 6, "rope": 2}, "model": "mine_entrance", "size": 4.2, "makes": {"ore": 2, "stone": 3}, "cap": 3, "verb": "Haul up the ore", "hp": 8},
+	"well": {"name": "Well", "cost": {"stone": 8, "wood": 4, "rope": 2}, "model": "mine_windlass", "size": 2.0, "use": "drink", "hp": 6},
+	"leanto": {"name": "Lean-to", "cost": {"wood": 12, "fiber": 6}, "model": "bldg_leanto", "size": 5.0, "use": "sleep", "hp": 6},
+	"palisade": {"name": "Palisade", "cost": {"wood": 4}, "snap": "edge", "solid": [1.0, 0.16, 2.6], "foot": [1.0, 0.16, 2.6], "hp": 9},
+}
+const EXTRA_SHELF := ["Homestead", ["henhouse", "haybarn", "shaft", "well", "leanto"]]
+
 static func load_data() -> void:
 	if not DATA.is_empty(): return
 	DATA = JSON.parse_string(FileAccess.open("res://assets/baked/data/building.json", FileAccess.READ).get_as_text())
 	PIECES = DATA.PIECES; ORDER = DATA.PIECE_ORDER
+	for t in EXTRA:
+		var e: Dictionary = EXTRA[t]
+		PIECES[t] = {"name": e.name, "cost": e.cost, "snap": e.get("snap", "free"), "free": not e.has("snap")}
+		if e.has("solid"): PIECES[t].solid = e.solid
+		DATA.PIECE_HP[t] = e.hp
+		DATA.FOOT[t] = e.get("foot", [1.2, 1.2, 2.0]) # (a model piece's real box is measured when it's first made)
+		if not ORDER.has(t): ORDER.append(t)
+	DATA.PIECE_GROUPS.append(EXTRA_SHELF)
+	for g in DATA.PIECE_GROUPS: if g[0] == "Yard" and not g[1].has("palisade"): g[1].insert(1, "palisade")
 	var pj: Dictionary = JSON.parse_string(FileAccess.open("res://assets/baked/pieces/pieces.json", FileAccess.READ).get_as_text())
 	LAMP_AT = pj.LAMP_AT
 	for t in pj.pieces: _model_place[t] = pj.pieces[t].models
@@ -75,6 +97,7 @@ static func to_world_dir(p: Dictionary, lx: float, lz: float) -> Vector2:
 
 ## A piece's mesh: the baked paper build re-skinned, with any reference-art model placed where the web put it.
 func make_mesh(t: String, as_ghost := false) -> Node3D:
+	if EXTRA.has(t): return _extra_mesh(t, as_ghost)
 	if not _meshes.has(t): _meshes[t] = load("res://assets/baked/pieces/%s.glb" % t)
 	var root := (_meshes[t] as PackedScene).instantiate() as Node3D
 	if as_ghost: _ghostify(root)
@@ -93,6 +116,33 @@ func make_mesh(t: String, as_ghost := false) -> Node3D:
 				for s in src.mesh.get_surface_count(): mi.set_surface_override_material(s, src.get_surface_override_material(s))
 			root.add_child(mi)
 		inst.free()
+	return root
+
+## A Homestead piece from its model (seated, its floor at y 0), or the palisade's stakes; its solid box and footprint
+## measured from what's made, the first time.
+func _extra_mesh(t: String, as_ghost: bool) -> Node3D:
+	var e: Dictionary = EXTRA[t]
+	var root := Node3D.new()
+	if e.has("model"):
+		var scene: PackedScene = load("res://assets/models/props/%s.glb" % e.model)
+		if scene != null:
+			var m := PaperMats.seated(scene, e.size, false, true); root.add_child(m)
+			if not PIECES[t].has("solid"):
+				var bb := PaperMats._aabb(m, Transform3D.IDENTITY)
+				var hx := maxf(0.4, bb.size.x * 0.5 * 0.85); var hz := maxf(0.4, bb.size.z * 0.5 * 0.85)
+				PIECES[t].solid = [hx, hz, bb.size.y]; DATA.FOOT[t] = [hx, hz, bb.size.y]
+	else: # the palisade: pointed stakes side by side along the edge, a rail behind
+		var wood := PaperMats.paper(Color("8a6040"))
+		for i in 8:
+			var x := -0.875 + i * 0.25; var h := 2.3 + (0.12 if i % 2 else 0.0)
+			var c := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.12; cm.bottom_radius = 0.13; cm.height = h; cm.radial_segments = 6; c.mesh = cm
+			c.position = Vector3(x, h / 2.0, 0); c.material_override = wood; root.add_child(c)
+			var tip := MeshInstance3D.new(); var tm := CylinderMesh.new(); tm.top_radius = 0.0; tm.bottom_radius = 0.12; tm.height = 0.32; tm.radial_segments = 6; tip.mesh = tm
+			tip.position = Vector3(x, h + 0.16, 0); tip.material_override = wood; root.add_child(tip)
+		for y in [0.6, 1.7]:
+			var r := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(2.0, 0.12, 0.08); r.mesh = bm
+			r.position = Vector3(0, y, -0.16); r.material_override = PaperMats.paper(Color("6e4a30")); root.add_child(r)
+	if as_ghost: _ghostify(root)
 	return root
 
 func _skin(n: Node) -> void:
@@ -300,6 +350,12 @@ func validate(pl: Dictionary, inventory: Dictionary, player_pos: Vector3) -> Str
 		if inventory.get(k, 0) < def.cost[k]: return "Needs " + Crafting.cost_text(_ints(def.cost))
 	if not def.get("free", false) and not has_workbench_near(pl.x, pl.z): return "Needs a workbench within 20 m"
 	if def.get("needsSnow", false) and not (snow > 0.4): return "Needs snow on the ground"
+	if EXTRA.has(pl.type) and EXTRA[pl.type].has("model"): # (a building wants dry, level-ish ground under it)
+		var f: Array = DATA.FOOT[pl.type]
+		for k in 8:
+			var a := k * TAU / 8.0
+			if Terrain.is_water(pl.x + cos(a) * f[0], pl.z + sin(a) * f[1]): return "Not in the water: build it on dry ground"
+		if Terrain.impassable(pl.x, pl.z): return "Too steep here for a building"
 	if def.has("work") and not discovered.has(def.work): return "Gather some %s yourself first" % def.work
 	if def.get("needsWater", false):
 		var wet := false
@@ -491,6 +547,23 @@ func feeder_near(pos: Vector3, r := 2.2): return _near_type("feeder", pos, r)
 ## Snowmen melt when the snow does: each folds down onto the page and is gone.
 func melt_snowmen() -> void:
 	for p in pieces.duplicate(): if p.type == "snowman": fold_away(p)
+## Each morning every Homestead producer fills another morning's worth (up to its cap waiting).
+func tend_producers(day: int, time: float) -> void:
+	for p in pieces:
+		if not EXTRA.has(p.type) or not EXTRA[p.type].has("makes"): continue
+		if p.stock == null: p.stock = 0
+		if p.day == null: p.day = day
+		if day != p.day and time >= 0.25: p.day = day; p.stock = mini(int(EXTRA[p.type].cap), int(p.stock) + 1)
+
+## The Homestead piece the farmer stands at (within its footprint and a step), or null.
+func extra_near(pos: Vector3):
+	for p in pieces:
+		if not EXTRA.has(p.type) or p.type == "palisade": continue
+		var f: Array = DATA.FOOT[p.type]
+		var l := piece_local(p, pos.x, pos.z)
+		if absf(l.x) < f[0] + 1.6 and absf(l.y) < f[1] + 1.6 and absf(p.y - pos.y) < 2.5: return p
+	return null
+
 ## Each morning every skep's bees fill another comb (up to 3 waiting).
 func tend_skeps(day: int, time: float) -> void:
 	for p in pieces:

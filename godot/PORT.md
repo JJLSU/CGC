@@ -1517,3 +1517,21 @@ for N frames, then saves the viewport; needs a window, not --headless).
   most 58 characters ("…" past that). Hud.heard keeps the last 40 in full; the tests read those.
 - tools/test_brief.gd prints samples. test_raids, test_toasts23c, test_dev PASS against heard; smoke_actions clean.
   The exe rebuilt.
+
+### More to build: a Homestead shelf and a palisade (2026-11-25; the player's ask)
+- BuildSystem.EXTRA (the port's own, merged into the build data on load): a sixth shelf, Homestead, of buildings made
+  from the reference art's models, each with a use, and a Palisade on the Yard shelf.
+  - Chicken coop (bldg_coop; 10 wood, 4 fibre): 3 eggs a morning, up to 3 mornings waiting; E gathers.
+  - Hay barn (bldg_barn, 8 m; 24 wood, 6 stone, 2 rope): 5 fibre (straw) a morning.
+  - Prospect shaft (mine_entrance; 10 wood, 6 stone, 2 rope): 2 ore and 3 stone a morning.
+  - Well (mine_windlass; 8 stone, 4 wood, 2 rope): E for a drink: full stamina, +10 health.
+  - Lean-to (bldg_leanto; 12 wood, 6 fibre): a bed away from home (E after dark sleeps till morning).
+  - Palisade (4 wood): a 2 m run of pointed stakes on two rails, edge-snapped like a wall, solid and tough (9 hp).
+- The model pieces are seated from their GLBs, and their solid boxes and footprints measured from the model the first
+  time one's made (the ghost); they want dry ground (none of their footprint in water) and not steep (validate).
+  Daily stock: tend_producers each morning, as the skeps; extra_near finds the one you stand at; the prompts and E in
+  main's yard code. Claim jumpers are now stopped by what you build (ClaimJumpers.blocker -> build.collide): a
+  palisade keeps them out.
+- tools/test_homestead_build.gd (the shelf; each placed; two mornings gathered from coop, barn and shaft; the well's
+  drink; a night in the lean-to; the palisade pushing a body out): PASS. Looked at them built in a row
+  (tools/shot_newbuilds.gd). test_jumpers, test_craft_press PASS; smoke_actions clean but the known first-dusk line.

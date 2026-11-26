@@ -28,6 +28,7 @@ const WOMEN := ["trades_2", "trades_5", "folk_calico_01", "folk_calico_02", "fol
 var camps: Array = []      ## {at, seed, cleared_day, built, nodes: [], men: []}
 var day := 0
 var told_first := false
+var blocker: Callable ## (pos) -> pos pushed out of anything built (main: build.collide)
 
 ## Pick the camps' spots for this world. avoid: points to keep well clear of (the town, the native camps).
 func setup(home: Vector3, avoid: Array, world: World = null) -> void:
@@ -203,6 +204,7 @@ func _camp_update(c: Dictionary, dt: float, player: Player, hooks: Dictionary) -
 		if spd > 0.0:
 			var nx := pos.x + want.x * spd * dt; var nz := pos.z + want.z * spd * dt
 			if not Terrain.is_water(nx, nz): pos.x = nx; pos.z = nz
+			if blocker.is_valid(): pos = blocker.call(pos) # (your walls and palisades stop them)
 		m.speed = lerpf(m.speed, spd, minf(1.0, dt * 8.0))
 		pos.y = Terrain.get_height(pos.x, pos.z); r.position = pos
 		r.rotation.x = sin(m.hurt * 40.0) * 0.06 if m.hurt > 0.0 else 0.0 # (a flinch when struck)

@@ -426,6 +426,7 @@ func _ready() -> void:
 	# claim jumpers (the player's addition): their ragged camps out in the county, clear of the town and the lodges
 	jumpers = ClaimJumpers.new(); add_child(jumpers)
 	jumpers.setup(center, [town.at] + camp.list.map(func(c): return c.at), world)
+	jumpers.blocker = func(q: Vector3) -> Vector3: return build.collide(q, 0.4)
 	jumper_hooks = {
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
@@ -1699,6 +1700,7 @@ var cider_t := 0.0
 func _yard(dt: float, active: bool) -> void:
 	yard_prompt = ""
 	build.tend_skeps(sky.day, sky.time)
+	build.tend_producers(sky.day, sky.time)
 	build.tend_feeders(sky.day, sky.time)
 	build.tend_trees(sky.day, sky.time, func(_t: Dictionary) -> void: journal.record("growtree"); hud.toast("Your apple sapling has grown into a fine young apple tree!"))
 	if weather.snow < 0.15:
@@ -1710,6 +1712,19 @@ func _yard(dt: float, active: bool) -> void:
 	var sleepy := sky.time > 0.8 or sky.time < 0.24
 	var evening := sky.time > 0.78 or sky.time < 0.22
 	var bed = build.bed_near(player.pos) if can else null
+	var ex = build.extra_near(player.pos) if can else null # (a Homestead piece: coop, hay barn, shaft, well, lean-to)
+	if bed == null and ex != null and BuildSystem.EXTRA[ex.type].get("use") == "sleep": bed = ex
+	if ex != null and e and beast_prompt == "":
+		var xd: Dictionary = BuildSystem.EXTRA[ex.type]
+		if xd.has("makes"):
+			if int(ex.stock if ex.stock != null else 0) > 0:
+				var got := []
+				for k in xd.makes: var n: int = int(xd.makes[k]) * int(ex.stock); inventory[k] = inventory.get(k, 0) + n; got.append("%d %s" % [n, k])
+				ex.stock = 0; sound.pick(); hud.toast("%s: %s." % [xd.name, ", ".join(got)]); e = false
+			else: hud.toast("Nothing yet at the %s. Come back in the morning." % String(xd.name).to_lower()); e = false
+		elif xd.get("use") == "drink":
+			player.stamina = player.max_stamina; player.health = minf(player.max_health, player.health + 10.0); sound.plop()
+			hud.toast("A cold dipper from the well. Fresh as morning."); e = false
 	var at_fire: bool = can and bed == null and build.fire_distance(player.pos) < 3.0
 	# tall tales: sit by a campfire after dark; an hour slips by and the fire mends you
 	if story_kind == "tale" and (e or not at_fire): story_kind = ""; hud.story_hide(); e = false
@@ -1832,6 +1847,11 @@ func _yard(dt: float, active: bool) -> void:
 	elif bed != null: yard_prompt = "[E] Sleep till morning" if sleepy else "A quilted bed: sleep here once night falls"
 	elif at_fire: yard_prompt = "[E] Sit by the fire and tell a tall tale" if evening else "A good fire. Tall tales are for after dark."
 	elif skep != null: yard_prompt = ("[E] Take %d honey from the bee skep" % skep.stock) if skep.stock else "The bees are busy filling the comb"
+	elif ex != null:
+		var xd: Dictionary = BuildSystem.EXTRA[ex.type]
+		if xd.has("makes"): yard_prompt = ("[E] %s" % xd.verb) if int(ex.stock if ex.stock != null else 0) > 0 else "%s: more in the morning" % xd.name
+		elif xd.get("use") == "drink": yard_prompt = "[E] Draw a drink from the well"
+		elif xd.get("use") == "sleep": yard_prompt = "[E] Sleep in the lean-to till morning" if (sky.time > 0.8 or sky.time < 0.24) else "A lean-to: shelter for the night"
 	elif gp != null: yard_prompt = "[E] Cut your prize giant pumpkin" if (gp.stage if gp.stage != null else 0) >= GIANT_STAGES else ("Your giant pumpkin (%d/%d): tended today" % [gp.stage if gp.stage != null else 0, GIANT_STAGES] if gp.tendDay == sky.day else "[E] Tend the giant pumpkin (%d/%d)" % [gp.stage if gp.stage != null else 0, GIANT_STAGES])
 	elif pile != null:
 		var st: int = pile.stock if pile.stock != null else 0
