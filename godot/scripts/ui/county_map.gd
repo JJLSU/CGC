@@ -249,6 +249,12 @@ func _draw() -> void:
 			draw_arc(p, 15.0, 0, TAU, 20, col, 2.0, true)
 			_label("Claim Jumpers" + (" (cleared)" if site.cleared else ""), p + Vector2(0, 31), 15, serif_b, col)
 			continue
+		if site.kind == "boss": # a boss's lair: a skull-pale ring and crossed picks in red, his name under it
+			var col := Color("8a2a20") if not site.beaten else Color(INK, 0.45)
+			draw_line(p + Vector2(-9, -9), p + Vector2(9, 9), col, 3.0, true); draw_line(p + Vector2(9, -9), p + Vector2(-9, 9), col, 3.0, true)
+			draw_arc(p, 17.0, 0, TAU, 24, col, 2.5, true); draw_arc(p, 21.0, 0, TAU, 24, col, 1.0, true)
+			_label(String(site.name) + (" (beaten)" if site.beaten else ""), p + Vector2(0, 36), 15, serif_b, col)
+			continue
 		if site.kind == "vein": # crossed picks; inked faint from the assayer's say-so till you've seen it
 			iron_on = true; var c := Color(INK, 1.0 if known else 0.55)
 			draw_line(p + Vector2(-8, -8), p + Vector2(8, 8), c, 2.5, true); draw_line(p + Vector2(8, -8), p + Vector2(-8, 8), c, 2.5, true)

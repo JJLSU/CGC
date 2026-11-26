@@ -144,6 +144,9 @@ var climbs: Climbs
 var jumpers: ClaimJumpers
 var jumper_hooks := {}
 var jumper_t = null
+var boss: Boss            ## Mad Jebediah, who stole the townsite deed (the player's boss battles)
+var boss_hooks := {}
+var boss_t = null
 const JUMPER_LOOT := [{"dollars": 6}, {"dollars": 11}, {"gold": 1, "dollars": 3}, {"cartridges": 4, "dollars": 2}, {"silver": 1}, {"dollars": 4, "rope": 1}]
 var camp_t = null        ## a warrior in front, this frame (for a blow)
 var camp_hooks := {}
@@ -392,12 +395,14 @@ func _ready() -> void:
 	hunting.targets = func() -> Array: # (the guardians and the camps' warriors)
 		var out := camp.targets()
 		if jumpers: out.append_array(jumpers.targets())
+		if boss: out.append_array(boss.targets())
 		for e in enemies.list: if not e.dying: out.append({"pos": Enemies.pos(e), "r": 0.65 * e.spec.scale, "h": e.spec.top * e.spec.scale, "enemy": e})
 		return out
 	hunting.on_target = func(t: Dictionary, a: Dictionary) -> void:
 		if t.has("enemy"): guardian_hit(t.enemy, a.get("dmg", 6))
 		elif t.has("w"): camp.damage(t.w, a.get("dmg", 6), camp_hooks, raid_hooks); sound.land()
 		elif t.has("j"): jumpers.damage(t.j, a.get("dmg", 6), jumper_hooks); sound.land()
+		elif t.has("boss"): boss.damage(a.get("dmg", 6), boss_hooks); sound.land()
 	hunting.on_hit = func(c: Dictionary) -> void:
 		if not hunt_told: hunt_told = true; hud.toast("A clean shot. The %s folds down in the grass: walk up to it to dress it." % c.type)
 	hunting.on_wound = func(c: Dictionary) -> void:
@@ -438,6 +443,7 @@ func _ready() -> void:
 		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
 		"on_spotted": func(_c) -> void: hud.toast("Claim jumpers! A ragged camp of hard cases, and they've seen you. They come at you swinging. Fight, or run for it."),
 	}
+	_make_boss()
 	camp_hooks = {
 		"on_warn": func() -> void: hud.toast("A warrior blocks your way and signals you back. This is their land: the painted poles mark it. An arrow thuds into the ground at your feet."),
 		"on_fight": func() -> void: hud.toast("You stayed. The warriors come for you, bows drawn: get back over the poles!"),
@@ -589,6 +595,8 @@ func _process(dt: float) -> void:
 	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle")
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
+	boss.update(dt, player, boss_hooks)
+	hud.set_boss("Mad Jebediah" if boss.fighting() else "", boss.hp_frac())
 	_pm("camp.update")
 	_raid_tick()
 	_pm("_raid_tick")
@@ -1251,6 +1259,10 @@ func _rail_doors() -> bool:
 func _town_doors() -> bool:
 	var inv := inventory
 	# the assay office: gold dust at $4 the pinch, silver at $5 the lump (a tenth more for a well-groomed man)
+	if town.near_assay(player.pos) and inv.get("deed", 0) > 0:
+		beast_prompt = "[E] Hand the townsite deed to the assayer"
+		if input.hit("KeyE"): _hand_in_deed()
+		return true
 	if town.near_assay(player.pos):
 		var g: int = inv.get("gold", 0); var sv: int = inv.get("silver", 0)
 		beast_prompt = ("[E] Sell to the assayer: %s (about $%d)" % [", ".join(PackedStringArray([("%d gold" % g) if g else "", ("%d silver" % sv) if sv else ""].filter(func(x): return x != ""))), g * 4 + sv * 5]) if g > 0 or sv > 0 else "The assay office: bring gold here to be weighed"
@@ -1514,7 +1526,8 @@ func _gather(active: bool, connected: bool) -> void:
 	enemy_t = enemies.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if active and not player.dead and not build.active else null
 	camp_t = camp.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and active and not player.dead and not build.active else null
 	jumper_t = jumpers.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and camp_t == null and active and not player.dead and not build.active else null
-	target = player.find_target(world) if active and not player.dead and enemy_t == null and jumper_t == null else null
+	boss_t = boss.find_target(player, Player.REACH + (0.9 if held == "spear" else 0.0)) if enemy_t == null and camp_t == null and jumper_t == null and active and not player.dead and not build.active else null
+	target = player.find_target(world) if active and not player.dead and enemy_t == null and jumper_t == null and boss_t == null else null
 	piece_t = null
 	if active and not player.dead and enemy_t == null and not build.active:
 		var f := player.forward(); piece_t = build.find_target(player.pos, f.x, f.z, Player.REACH)
@@ -1541,6 +1554,9 @@ func _gather(active: bool, connected: bool) -> void:
 	if e_pick: connected = true
 	if connected and enemy_t != null:
 		guardian_hit(enemy_t.enemy, edge("enemy")); blow()
+	elif connected and boss_t != null:
+		blow(); sound.chop(); boss.damage(maxi(2, edge("enemy")), boss_hooks)
+		confetti.burst(boss.pos() + Vector3(0, 2.6, 0), [0xa8352a, 0xefe2c4], 10, 0.9)
 	elif connected and jumper_t != null:
 		blow(); sound.chop(); jumpers.damage(jumper_t, maxi(2, edge("enemy")), jumper_hooks)
 		confetti.burst(jumper_t.fig.root.position + Vector3(0, 1.1, 0), [0xa8352a, 0xefe2c4], 8, 0.6)
@@ -1606,6 +1622,7 @@ func _gather(active: bool, connected: bool) -> void:
 	if enemy_t != null:
 		var e: Dictionary = enemy_t.enemy; var hp := maxi(0, ceili(e.hp))
 		lmb = "[LMB] Fight the %s  %s%s" % [String(e.spec.name).to_lower(), "■".repeat(hp), "□".repeat(maxi(0, int(e.spec.hp) - hp))]
+	if boss_t != null: lmb = "[LMB] Fight Mad Jebediah"
 	if fish_r.engaged: lmb = fish_r.hint
 	var lines := PackedStringArray()
 	if build.active: return # (in build mode the build bar and its reasons speak instead)
@@ -2034,10 +2051,12 @@ func _update_next(dt: float) -> void:
 		urgent = true
 		say = "Hungry! Press F to eat" if FOODS.any(func(k): return I.get(k, 0) > 0) else ("Hungry! Get food from the root cellar" if extras.cellar_stocked(sky.day) else "Hungry! Pick berries or apples")
 	elif glint != null: say = "Pick up the gold glint by the cabin (E)"
+	elif I.get("deed", 0) > 0: say = "Take the townsite deed to the assay office"
 	elif (I.get("gold", 0) > 0 or I.get("silver", 0) > 0) and not town.near_assay(player.pos, 20.0): say = "Sell your gold at the assay office" if I.get("gold", 0) > 0 else "Sell your silver at the assay office"
 	elif not extras.cellar_built and I.get("dollars", 0) >= FarmExtras.CELLAR_COST: say = "Buy a root cellar by the house ($%d)" % FarmExtras.CELLAR_COST
 	elif extras.cellar_built and not extras.bunk_built and settlers.hired.size() and I.get("dollars", 0) >= FarmExtras.BUNK_COST: say = "Build a bunkhouse for your hands ($%d)" % FarmExtras.BUNK_COST
 	elif mend != null: say = "Mend the %s in town ($%d)" % [mend.name, mend.cost]
+	elif town.street_done(-1) and not 0 in town.opened and not boss.delivered: say = "Beat Mad Jebediah for the stolen deed (see M)" if not boss.beaten else "Pick up the deed at Mad Jebediah's diggings"
 	elif not owns("pick") and not has.call("workbench"): say = "Build a workbench (B)"
 	elif not owns("pick"): say = "Make a pickaxe at the workbench (C)"
 	elif not iron and I.get("iron", 0) >= 3: say = "Make an iron pickaxe at the forge (C)" if has.call("forge") else "Build a forge (B): 10 stone, 6 clay"
@@ -2054,14 +2073,14 @@ func _update_next(dt: float) -> void:
 ## gold, it points to the assayer instead (once you're out of sight of his door).
 func _update_homeward() -> void:
 	var ad: Vector3 = town.doors.assay
-	var to_assay: bool = inventory.get("gold", 0) > 0 and Vector2(ad.x - player.pos.x, ad.z - player.pos.z).length() > 20.0
+	var to_assay: bool = (inventory.get("gold", 0) > 0 or inventory.get("deed", 0) > 0) and Vector2(ad.x - player.pos.x, ad.z - player.pos.z).length() > 20.0
 	var goal: Vector3 = ad if to_assay else homestead.spawn
 	var h := Vector2(goal.x - player.pos.x, goal.z - player.pos.z); var d := h.length()
 	var show := (to_assay or d > 90.0) and not player.dead
 	if not show: hud.set_homeward(false); return
 	var cam := rig.camera; var a := cam.unproject_position(player.pos); var b := cam.unproject_position(player.pos + Vector3(h.x / d, 0, h.y / d) * 4.0)
 	var g: int = inventory.get("gold", 0)
-	var text := "%s, %d paces" % [("Assay office (%d pinch%s)" % [g, "es" if g > 1 else ""]) if to_assay else "Home", roundi(d * 1.3 / 10.0) * 10]
+	var text := "%s, %d paces" % [(("Assay office (%d pinch%s)" % [g, "es" if g > 1 else ""]) if g > 0 else "Assay office (the deed)") if to_assay else "Home", roundi(d * 1.3 / 10.0) * 10]
 	hud.set_homeward(true, "gold" if to_assay else "home", rad_to_deg(atan2(b.x - a.x, -(b.y - a.y))), text)
 
 ## The soundscape each frame (main.js): how much water lies round you, how near a fire is, rain (muffled under a
@@ -2207,6 +2226,8 @@ func _apply_save(d: Dictionary) -> void:
 	dog.found_day = int(d.get("dogDay", 0)) # (he's already been digging today, if the save says so)
 	camp.load_state(d.get("campPeace")) # (days of peace bought with gifts)
 	jumpers.load_state(d.get("jumpers")) # (camps cleared, and when)
+	boss.load_state(d.get("boss"))
+	if boss.beaten and not boss.delivered and inventory.get("deed", 0) <= 0: _drop_deed(boss.mouth + (boss.at - boss.mouth).normalized() * 3.0) # (left lying at his diggings)
 	var rr = d.get("railroad")
 	if rr != null and rr.get("built", false):
 		railroad.build()
@@ -2247,7 +2268,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "boss": boss.save(), "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -2299,6 +2320,7 @@ func _open_map(rewash := true) -> void:
 				var o = L.orchard
 				if o != null and not orchards.any(func(q): return Vector2(q.x - o.x, q.z - o.y).length() < 25.0): orchards.append({"x": o.x, "z": o.y})
 	for c in camp.list: sites.append({"kind": "camp", "x": c.at.x, "z": c.at.z, "rumour": true, "r": 46.0, "peace": maxi(0, c.peace_until - sky.day)})
+	sites.append({"kind": "boss", "x": boss.at.x, "z": boss.at.z, "rumour": true, "name": "Mad Jebediah", "beaten": boss.beaten})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
 	var mended := 0
 	for k in town.tiers: if town.tiers[k]: mended += 1
@@ -2730,16 +2752,16 @@ const NATIVE_LOOT := [{"pelt": 2}, {"leather": 1, "rope": 1}, {"venison": 2}, {"
 func drop_native(w: Dictionary) -> void:
 	var p: Vector3 = w.fig.root.position
 	add_drop("prop_parfleche", 0.7, Vector3(p.x + 0.6, 0, p.z + 0.4), "his painted parfleche", NATIVE_LOOT[randi() % NATIVE_LOOT.size()])
-func add_drop(model: String, length: float, at: Vector3, what: String, loot: Dictionary) -> void:
+func add_drop(model: String, length: float, at: Vector3, what: String, loot: Dictionary, keep := false) -> void:
 	var n: Node3D = NativeCamps.prop(model, length)
 	if n == null: var b := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.4, 0.25, 0.3); b.mesh = bm; b.material_override = PaperMats.paper(Color("8a5a30")); n = b
 	at.y = Terrain.get_height(at.x, at.z); n.position = at; n.rotation.y = randf() * TAU
 	add_child(n)
-	drops.append({"node": n, "pos": at, "what": what, "loot": loot, "day": sky.day, "t": randf() * 6.0})
+	drops.append({"node": n, "pos": at, "what": what, "loot": loot, "day": sky.day, "t": randf() * 6.0, "keep": keep})
 func _drops_tick(active: bool) -> bool:
 	var near = null
 	for d in drops.duplicate():
-		if sky.day > d.day + 1 or (sky.day > d.day and sky.time > 0.25): (d.node as Node3D).queue_free(); drops.erase(d); continue
+		if not d.keep and (sky.day > d.day + 1 or (sky.day > d.day and sky.time > 0.25)): (d.node as Node3D).queue_free(); drops.erase(d); continue
 		d.t += get_process_delta_time(); (d.node as Node3D).position.y = d.pos.y + 0.04 + sin(d.t * 2.2) * 0.03
 		if near == null and Vector2(player.pos.x - d.pos.x, player.pos.z - d.pos.z).length() < 1.8: near = d
 	if near == null or not active or player.dead or build.active: return false
@@ -2778,3 +2800,44 @@ func _livestock(dt: float, active: bool) -> void:
 	for c in critters.list:
 		if c.shornDay and sky.day - c.shornDay >= 2: c.shornDay = 0; critters.set_shorn(c, false)
 	if beast != null: beast_prompt = ("[E] Milk the cow" if beast.type == "cow" else "[E] Shear the sheep") if ready else ("Already milked today" if beast.type == "cow" else "Fleece still growing back")
+
+# ------------------------------------------------------------------ the bosses (the player's ask)
+## Mad Jebediah: his diggings out in the county, his hooks, and the gate he holds on the town. Second Street won't go
+## up till the townsite deed he stole is back at the assay office.
+func _make_boss() -> void:
+	boss = Boss.new(); add_child(boss)
+	boss.setup(town.at, [homestead.spawn] + camp.list.map(func(c): return c.at) + jumpers.camps.map(func(c): return c.at), world)
+	boss_hooks = {
+		"on_hit": func(dmg: int) -> void:
+			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
+			if out: death_timer = 3.0; hud.toast("Mad Jebediah cackles over you. You come to a long while later, far from his diggings."),
+		"on_throw": func() -> void: sound.tear(),
+		"on_land": func(_at: Vector3) -> void: sound.chop(),
+		"on_slam": func(at: Vector3) -> void: sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2),
+		"on_spotted": func() -> void: hud.toast("MAD JEBEDIAH! The giant prospector roars and hefts a pickaxe. Watch where they land."),
+		"on_fall": func(at: Vector3) -> void:
+			sound.tear(); journal.record("boss")
+			_drop_deed(at + Vector3(1.2, 0, 0.6))
+			hud.toast("Mad Jebediah crashes down like a felled pine. The town's deed spills from his coat."),
+	}
+	town.gate = func(n: int) -> bool: return n != 0 or boss.delivered
+	town.on_gate = func(n: int) -> void:
+		if n == 0: hud.toast("Main Street's mended, but Second Street can't go up: Mad Jebediah stole the townsite deed. Get it back (M).")
+
+## The deed: a roll of parchment tied with a red ribbon, lying in the dirt (it never spoils like a poke does).
+func _drop_deed(at: Vector3) -> void:
+	var n := Node3D.new()
+	var roll := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.07; cm.bottom_radius = 0.07; cm.height = 0.62; cm.radial_segments = 10
+	roll.mesh = cm; roll.material_override = PaperMats.paper(Color("efe0b8")); roll.rotation.z = PI / 2.0; roll.position.y = 0.08; n.add_child(roll)
+	var rib := MeshInstance3D.new(); var rm := CylinderMesh.new(); rm.top_radius = 0.075; rm.bottom_radius = 0.075; rm.height = 0.06; rm.radial_segments = 10
+	rib.mesh = rm; rib.material_override = PaperMats.paper(Color("a8352a")); rib.rotation.z = PI / 2.0; rib.position.y = 0.08; n.add_child(rib)
+	at.y = Terrain.get_height(at.x, at.z); n.position = at; n.rotation.y = randf() * TAU; n.scale = Vector3.ONE * 1.4
+	add_child(n)
+	drops.append({"node": n, "pos": at, "what": "the townsite deed", "loot": {"deed": 1}, "day": sky.day, "t": randf() * 6.0, "keep": true})
+
+## The deed, back at the assay office: Second Street goes up for good (and the assayer pays a finder's fee).
+func _hand_in_deed() -> void:
+	inventory.deed = 0; boss.delivered = true; inventory.dollars = inventory.get("dollars", 0) + 40
+	sound.craft(); journal.record("deed")
+	hud.toast("The assayer files the deed. \"Cold Glitter Creek is ours again.\" +$40")
+	town.grow()

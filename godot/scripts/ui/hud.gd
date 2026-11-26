@@ -93,6 +93,7 @@ func _ready() -> void:
 	_build_settlers()
 	_build_overlay()
 	_build_dev()
+	_build_boss()
 
 # ------------------------------------------------------------------ building blocks
 func paper_box(pad := Vector4(12, 4, 12, 4), bg := PAPER, left_border := 0, border_col := EDGE) -> StyleBoxFlat:
@@ -940,3 +941,24 @@ func set_settlers(store_line: String, larder: String, rows: Array) -> void:
 		var st := label(r.status, 15); st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; m.add_child(st); _settlers_box.add_child(m)
 	_settlers_box.add_child(label("J to fold it away", 13, INK_SOFT))
 	_settlers_scroll.custom_minimum_size = Vector2(484, minf(_settlers_box.get_combined_minimum_size().y, 900.0 - 320.0 - 22.0))
+
+# ------------------------------------------------------------------ a boss's health (the player's boss battles)
+var boss_card: PanelContainer
+var _boss_name: Label
+var _boss_fill: ColorRect
+const BOSS_W := 420.0
+## A torn-paper strip at the top centre while a boss is fighting you: his name over a red bar.
+func _build_boss() -> void:
+	boss_card = card(-0.4, Vector4(14, 4, 14, 8)); boss_card.visible = false
+	boss_card.anchor_left = 0.5; boss_card.anchor_right = 0.5; boss_card.offset_top = 14.0
+	boss_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 2); v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boss_name = label("", 20); _boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(_boss_name)
+	var pair := bar(BOSS_W, 14.0, Color("a8352a")); _boss_fill = pair[1]; v.add_child(pair[0])
+	boss_card.add_child(v); root.add_child(boss_card)
+## who: "" hides it.
+func set_boss(who: String, frac: float) -> void:
+	boss_card.visible = who != ""
+	if who == "": return
+	if _boss_name.text != who: _boss_name.text = who
+	_boss_fill.size.x = (BOSS_W - 4.0) * clampf(frac, 0.0, 1.0)

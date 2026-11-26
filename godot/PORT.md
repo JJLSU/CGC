@@ -1546,3 +1546,21 @@ for N frames, then saves the viewport; needs a window, not --headless).
   save's beaten list. A first toast warns of them. test: two came; six seconds standing among them cost 42 of 100;
   beaten and gone; none left at dawn.
 - tools/test_night_iron.gd PASS; test_place_sliced (40 of 40 the same) PASS; smoke_actions: no errors. The exe rebuilt.
+
+### Boss battles: Mad Jebediah and the stolen deed (2026-11-25; the player's ask)
+- Town.grow (the street-opening loop out of Town.mend) asks a gate first: Second Street waits till the townsite deed
+  is back at the assay office (main: town.gate, n != 0 or boss.delivered); on_gate tells you once, and NEXT then
+  says to beat Mad Jebediah (see M). Grown again on the hand-in. Streets already open in a save stay open.
+- Boss (scripts/folk/boss.gd): Mad Jebediah, prospectors_6 (the white-bearded one with the bedroll pack) at 2.4x,
+  at his diggings 300-450 m from town on dry, level ground clear of home, the lodges and the jumpers' camps (seeded);
+  a mine mouth, windlass, tool rack, ore cart, tent, fire, boulders and a heap of picks. Built within 170 m.
+  54 health. From 4.6-32 m he lobs a pickaxe every 2.5-3.1 s at where you're headed (a dark mark where it lands;
+  within 1.5 m: 20); up close a 0.9 s wind-up (a red ring spreading) and a slam (within 4.2 m: 25). Below half health
+  two picks at a time, quicker. Lead him 85 m from his fire and he goes home and gets his wind back. Blows, arrows
+  and bullets all reach him. A boss bar (name and red strip) shows at top centre while he fights.
+- Beaten, he drops the deed (a parchment roll with a red ribbon), a drop that never spoils; E picks it up; E at the
+  assay office hands it in: Second Street goes up and the assayer pays $40. The homeward chip points to the assay
+  office while you carry it. Saved: beaten, delivered (a beaten boss's deed not yet picked up lies at his diggings
+  again on load). On the county map: crossed red picks in a double ring, "Mad Jebediah" ("beaten" after).
+- tools/test_boss.gd PASS (lair 405 m out; Second Street held then opened; picks thrown and landing hurt; a slam;
+  the deed dropped, kept past two days, picked up, handed in; flags saved). Looked at mid-fight (tools/shot_boss.gd).

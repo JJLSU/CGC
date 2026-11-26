@@ -104,6 +104,9 @@ var raining := false
 var clock := 0.5
 var day := 0
 var on_street: Callable
+var gate: Callable    ## (street index) -> may it go up now?
+var on_gate: Callable ## (street index): it's ready but held back
+var gated: Array = []
 static var tent_mats: Array = []
 static var glass_mat: StandardMaterial3D
 static var lamp_glass: Array = []
@@ -393,9 +396,18 @@ func mend(id: String) -> void:
 	if k >= 0 and not k in opened: open_street(k) # (a saved game: put the street up first)
 	tiers[id] = 1; raided.erase(id); dress_up(id)
 	rebuild(id, 1, k)
-	# the town grows: Main Street all mended puts up Second Street; that all mended puts up Third Street
+	grow()
+
+## The town grows: Main Street all mended puts up Second Street; that all mended puts up Third Street. A street may be
+## held back (gate: the player's boss battles: Second Street waits for the townsite deed Mad Jebediah stole); then
+## on_gate is told, once a street, and grow() is called again once the gate lifts.
+func grow() -> void:
 	for n in STREETS.size():
-		if not n in opened and street_done(n - 1): open_street(n); break
+		if not n in opened and street_done(n - 1):
+			if gate.is_valid() and not gate.call(n):
+				if not n in gated: gated.append(n); if on_gate.is_valid(): on_gate.call(n)
+				return
+			open_street(n); return
 
 ## The mended buildings a war party could fall on (never the church).
 func raidable() -> Array: return projects().filter(func(pr): return pr.id != "church" and tiers.get(pr.id, 0))
