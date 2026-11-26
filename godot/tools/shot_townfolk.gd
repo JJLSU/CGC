@@ -1,0 +1,29 @@
+extends SceneTree
+## The new townsfolk in place: every street mended and open, standing before <door id> (after --, default "bank"),
+## looking at its keeper: <out.png>. Windowed. Run with CGC_SAVE_PATH set to a throwaway.
+func _initialize() -> void:
+	var args := OS.get_cmdline_user_args(); var out: String = args[0]; var id: String = args[1] if args.size() > 1 else "bank"
+	var main: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	root.add_child(main)
+	await process_frame
+	main.force_active = true; main.sky.time = 0.45; main.weather.rain = 0.0
+	var T: Town = main.town
+	for b in main.bosses: b.delivered = true
+	for b in Town.BUILDINGS: T.mend(b.id)
+	T.mend("church")
+	for st in Town.STREETS: for b in st.buildings: T.mend(b.id)
+	var d: Vector3 = T.doors[id]
+	var f = T.folk.get(id)
+	var keeper: Vector3 = f.fig.root.position if f != null else d
+	print("keeper of %s: %s" % [id, f.fig.name if f != null else "none"])
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 5000:
+		var away: Vector3 = keeper + (keeper - T.at).normalized() * -0.0 + T.toward * 0.0
+		var stand: Vector3 = keeper + Vector3(sin(f.face if f != null else 0.0), 0, cos(f.face if f != null else 0.0)) * 6.0
+		main.player.pos = Vector3(stand.x, Terrain.get_height(stand.x, stand.z), stand.z)
+		main.rig.yaw = (f.face if f != null else 0.0) + PI + 0.35; main.rig.pitch = 0.22; main.rig.dist = 7.0
+		await process_frame
+	main.player.avatar.root.visible = false
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out)
+	quit()
