@@ -76,6 +76,27 @@ static func rifle() -> Node3D:
 	return r
 
 ## A point on the stockade: side 0 faces the gate's way (toward home), then round; u along it from -SIDE/2.
+## The Meshy palisade section (a light copy of it) as one mesh to draw many times: its mesh, its card, the transform
+## that stands it WALL_H tall on its foot, centred, and its width along the wall then.
+const WALL_H := 3.5
+static var _kit = null
+static func _wall_kit():
+	if _kit != null: return _kit if _kit is Dictionary else null
+	var path := "res://assets/models/props/prop_fort_wall_short_lo.glb"
+	if not ResourceLoader.exists(path): _kit = false; return null
+	var inst := (load(path) as PackedScene).instantiate() as Node3D
+	PaperMats.paperize(inst)
+	var mis := PaperMats._meshes(inst).filter(func(m): return (m as MeshInstance3D).mesh.get_faces().size() > 30)
+	if mis.is_empty(): inst.free(); _kit = false; return null
+	var mi: MeshInstance3D = mis[0]
+	var xf := Railroad._rel(mi, inst)
+	var bb := xf * mi.mesh.get_aabb()
+	var k := WALL_H / bb.size.y
+	var local := Transform3D(Basis().scaled(Vector3.ONE * k), Vector3.ZERO) * Transform3D(Basis(), -Vector3(bb.get_center().x, bb.position.y, bb.get_center().z)) * xf
+	_kit = {"mesh": mi.mesh, "mat": mi.get_active_material(0), "local": local, "w": bb.size.x * k * 0.66} # (overlapped: the section's outer poles lean out past its body)
+	inst.free()
+	return _kit
+
 static func _wall_point(at: Vector3, fx: Vector3, fz: Vector3, side: int, u: float) -> Vector3:
 	var h := SIDE / 2.0
 	match side:
@@ -166,9 +187,30 @@ func _build(f: Dictionary) -> void:
 		var q: Vector3 = spots[i]; var y := Terrain.get_height(q.x, q.z); var hh := 3.0 + rng.next() * 0.45
 		shafts.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3(1, hh / 3.2, 1)), Vector3(q.x, y + hh / 2.0 - 0.15, q.z)))
 		tips.set_instance_transform(i, Transform3D(Basis(), Vector3(q.x, y + hh - 0.15 + 0.27, q.z)))
-	for pair in [[shafts, "7a5634"], [tips, "a88458"]]:
-		var mi := MultiMeshInstance3D.new(); mi.multimesh = pair[0]; mi.material_override = PaperMats.paper(Color(pair[1]))
+	var kit = _wall_kit()
+	if kit != null:
+		# (the player's Meshy palisade, a section at a time end to end along each side, the gate left open; the
+		# colliders as before)
+		var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.mesh = kit.mesh
+		var xfs := []
+		for side in 4:
+			var along_v: Vector3 = fx if side < 2 else fz; var out_v: Vector3 = (fz if side == 0 else -fz) if side < 2 else (fx if side == 2 else -fx)
+			var n := int(SIDE / kit.w)
+			for k in n:
+				var u := -SIDE / 2.0 + (k + 0.5) * (SIDE / n)
+				if side == 0 and absf(u) < 3.2: continue
+				var q: Vector3 = _wall_point(at, fx, fz, side, u); var y := Terrain.get_height(q.x, q.z) - 0.25 # (sunk a little, as the poles are)
+				var hh := 1.0 + (rng.next() - 0.5) * 0.12
+				var b := Basis(along_v, Vector3.UP * hh, out_v) # (its x along the wall, a touch taller or shorter section to section)
+				xfs.append(Transform3D(b, Vector3(q.x, y, q.z)) * kit.local)
+		mm.instance_count = xfs.size()
+		for i in xfs.size(): mm.set_instance_transform(i, xfs[i])
+		var mi := MultiMeshInstance3D.new(); mi.multimesh = mm; mi.material_override = kit.mat
 		mi.custom_aabb = AABB(at - Vector3(SIDE, 5, SIDE), Vector3(SIDE * 2, 20, SIDE * 2)); add.call(mi)
+	else:
+		for pair in [[shafts, "7a5634"], [tips, "a88458"]]:
+			var mi := MultiMeshInstance3D.new(); mi.multimesh = pair[0]; mi.material_override = PaperMats.paper(Color(pair[1]))
+			mi.custom_aabb = AABB(at - Vector3(SIDE, 5, SIDE), Vector3(SIDE * 2, 20, SIDE * 2)); add.call(mi)
 	# the gate posts, a little taller, and a sign over the way in
 	for s in [-1.0, 1.0]:
 		var gp := _box(0.5, 4.4, 0.5, 0x5e4228); var q: Vector3 = at + fz * (SIDE / 2.0) + fx * (3.4 * s)
