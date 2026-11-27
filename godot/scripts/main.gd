@@ -344,6 +344,11 @@ func _ready() -> void:
 	homestead.set_fortune(0.0)
 	extras = FarmExtras.new(world, center); add_child(extras)
 	critters = Critters.new(); add_child(critters)
+	critters.in_town = func(x: float, z: float) -> bool: # (the streets, the cross streets, the market and Squatters' Row, with a margin)
+		var rel := Vector3(x - town.at.x, 0, z - town.at.z); var s_: float = rel.dot(town.along); var o_: float = rel.dot(town.toward)
+		var o0 := -14.0; var o1 := 14.0
+		for off in town.street_offs: o0 = minf(o0, off - 14.0); o1 = maxf(o1, off + 14.0)
+		return s_ > -80.0 and s_ < Town.CROSS_N + 22.0 and o_ > minf(o0, -36.0) and o_ < maxf(o1, 36.0)
 	critters.on_spotted = func(_c) -> void: journal.record("deer")
 	critters.on_gobble = func(d: float) -> void: sound.gobble(maxf(0.15, 1.0 - d / 35.0))
 	critters.setup(Vector3(center.x - 20, 0, center.z - 1.5), Vector3(center.x - 5, 0, center.z + 17)) # hens by their coop round the far side of the barn (moved out of the way: the player), cow & sheep in the pasture

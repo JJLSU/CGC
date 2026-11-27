@@ -26,6 +26,7 @@ var on_spotted: Callable
 var on_dressed: Callable
 var on_herd: Callable
 var on_gobble: Callable
+var in_town: Callable      ## (x, z) -> bool: the town's streets and lots (the player: deer shouldn't wander into town)
 
 func setup(yard: Vector3, pasture = null) -> void:
 	for i in 5:
@@ -37,6 +38,7 @@ func setup(yard: Vector3, pasture = null) -> void:
 
 func spawn(type: String, x: float, z: float, home = null, kit := ""):
 	if kit == "": kit = type
+	if not (type in FARM) and in_town.is_valid() and in_town.call(x, z): return null # (the wild ones keep out of town)
 	var scale: float
 	match type:
 		"turkey": scale = 1.55 + rng.next() * 0.2
@@ -179,7 +181,9 @@ func update(dt: float, player_pos: Vector3, camera: Camera3D) -> void:
 		c.speed += (speed - c.speed) * minf(1.0, dt * 6.0)
 		if c.speed > 0.01:
 			var nx: float = g.position.x + c.dir.x * c.speed * dt; var nz: float = g.position.z + c.dir.z * c.speed * dt
-			if Terrain.is_water(nx, nz): c.dir = -c.dir; c.state = "idle"; c.timer = 0.5
+			if Terrain.is_water(nx, nz) or (not (c.type in FARM) and in_town.is_valid() and in_town.call(nx, nz)):
+				c.dir = -c.dir; c.state = "idle"; c.timer = 0.5 # (water, or the edge of town: it turns back)
+				if not (c.type in FARM): c.home = g.position
 			else: g.position.x = nx; g.position.z = nz
 		# far ones (lost in the haze) hidden; mid-distance ones cast no shadow
 		var cd2 := (cam.x - g.position.x) * (cam.x - g.position.x) + (cam.z - g.position.z) * (cam.z - g.position.z)
