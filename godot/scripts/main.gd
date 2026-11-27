@@ -206,7 +206,7 @@ const PEACE := {
 		"lore": "They say if you leave honey behind you (2 jars), the Hidebehind is too busy with it to follow.", "thanks": "You set the honey down and do not look back. Something behind you sighs, and sticky slurping follows. The sang is yours till morning."},
 }
 var fishing: Fishing
-var guns := {"revolver": {"size": 6, "loaded": 6, "reload": 0.0, "time": 2.4}, "rifle": {"size": 1, "loaded": 1, "reload": 0.0, "time": 1.6}} ## (rounds in the gun; reload seconds)
+var guns := {"revolver": {"size": 6, "loaded": 6, "reload": 0.0, "time": 2.4}, "rifle": {"size": 1, "loaded": 1, "reload": 0.0, "time": 1.6}, "shotgun": {"size": 2, "loaded": 2, "reload": 0.0, "time": 2.0}} ## (rounds in the gun; reload seconds)
 var fish_r := {"engaged": false, "hint": ""}
 var hunt_told := false
 var jump_told := false
@@ -627,7 +627,7 @@ func _process(dt: float) -> void:
 	_pm("_landmark_reached")
 	NativeCamps.set_lodge_glow(sky.night, Time.get_ticks_msec() / 1000.0, sky.time > 0.9 or sky.time < 0.22 or (weather.kind == "rain" and weather.rain > 0.5), sky.day) # (camp folk abed late at night, and in their lodges out of a downpour)
 	_pm("NativeCamps.set_lodge_glow")
-	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle")
+	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle") or tools.has("shotgun")
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
 	forts.clock = sky.time; forts.update(dt, sky.day, player, fort_hooks)
@@ -1084,6 +1084,7 @@ func pick_tool(id: String) -> void:
 			"bow": hud.toast("No bow yet: make a hunting bow at a workbench (C).")
 			"revolver": hud.toast("No six-shooter yet: the general store in town sells one.")
 			"rifle": hud.toast("No rifle yet: the general store in town sells one.")
+			"shotgun": hud.toast("No shotgun yet: the general store in town sells one.")
 			"rod": hud.toast("No fishing pole yet: make one at a workbench (C).")
 		sound.denied(); return
 	if held != id: sound.click()
@@ -1096,7 +1097,7 @@ func _hunt_and_fish(active: bool) -> void:
 	var can_act := active and not build.active and not player.dead
 	fishing.rain = weather.rain; fishing.night = sky.night
 	fish_r = fishing.update(dt, player, input, can_act, fishing.spot(player, held == "rod" and tools.has("rod")) if can_act and not player.ice_on else null) # (no fishing through the ice)
-	var W: Dictionary = Hunting.REVOLVER if held == "revolver" else ((Hunting.LEVER if tools.has("leverrifle") else Hunting.RIFLE) if held == "rifle" else Hunting.BOW)
+	var W: Dictionary = Hunting.REVOLVER if held == "revolver" else Hunting.SHOTGUN if held == "shotgun" else ((Hunting.LEVER if tools.has("leverrifle") else Hunting.RIFLE) if held == "rifle" else Hunting.BOW)
 	var gun := W != Hunting.BOW
 	if gun:
 		var g: Dictionary = guns[held]
@@ -1117,10 +1118,10 @@ func _hunt_and_fish(active: bool) -> void:
 		if bow_up and gun_ready and hunting.loose(Vector3(player.pos.x + ad.x * 0.5, player.pos.y + h, player.pos.z + ad.z * 0.5), critters, W):
 			player.avatar.start_cast()
 			if gun:
-				var g: Dictionary = guns[held]; g.loaded -= 1; sound.bang(held == "rifle")
+				var g: Dictionary = guns[held]; g.loaded -= 1; sound.bang(held != "revolver")
 				if g.loaded == 0:
 					if inventory.get("cartridges", 0) > 0: g.reload = g.time
-					else: hud.toast("That was your last cartridge: buy a box at the general store." if held == "rifle" else "The cylinder's empty and so is your cartridge box: buy more at the general store.")
+					else: hud.toast("That was your last cartridge: buy a box at the general store." if held != "revolver" else "The cylinder's empty and so is your cartridge box: buy more at the general store.")
 		else: hunting.ease()
 	else: player.aiming = false
 	hunting.update(dt, critters, world)
@@ -1678,7 +1679,7 @@ func _gather(active: bool, connected: bool) -> void:
 	player.avatar.has_bow = tools.has("bow"); player.avatar.aiming = player.aiming # (his quiver; a gun comes up level while he aims)
 	player.avatar.jar_update(get_process_delta_time(), tools.has("jar"), jar_count, sky.night)
 	_hunt_and_fish(active)
-	if active and not player.dead and not build.active and not fish_r.engaged and held != "rod" and held != "bow" and held != "revolver" and held != "rifle" and (input.clicked or input.mouse_down):
+	if active and not player.dead and not build.active and not fish_r.engaged and held != "rod" and held != "bow" and held != "revolver" and held != "rifle" and held != "shotgun" and (input.clicked or input.mouse_down):
 		player.avatar.start_swing() # (hold to keep swinging; never with the pole)
 	elif active and not player.dead and not build.active and not fish_r.engaged and held == "rod" and input.clicked:
 		hud.toast("Stand on the bank facing open water to cast (or pick up another tool with the number keys).")

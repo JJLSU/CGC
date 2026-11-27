@@ -120,6 +120,7 @@ func _build_tools() -> void:
 	# the six-shooter and the buffalo rifle ride in the body's own frame at the hand, barrel along the way he faces
 	root.add_child(_tool("revolver", [_piece(_box(0.045, 0.13, 0.06), Transform3D(_rx(0.3), Vector3(0, -0.06, -0.01)), 0x6a4428), _piece(_cyl(0.042, 0.042, 0.08, 8), Transform3D(_rx(PI / 2), Vector3(0, 0.025, 0.04)), 0x5a5a60), _piece(_cyl(0.017, 0.017, 0.24, 6), Transform3D(_rx(PI / 2), Vector3(0, 0.035, 0.19)), 0x3e3e44)]))
 	root.add_child(_tool("rifle", [_piece(_box(0.06, 0.11, 0.42), Transform3D(Basis(), Vector3(0, -0.03, -0.24)), 0x7a4a26), _piece(_box(0.05, 0.05, 0.42), Transform3D(Basis(), Vector3(0, 0, 0.18)), 0x8a5a30), _piece(_cyl(0.02, 0.022, 1.0, 8), Transform3D(_rx(PI / 2), Vector3(0, 0.035, 0.45)), 0x3e3e44)]))
+	root.add_child(_tool("shotgun", [_piece(_box(0.06, 0.11, 0.38), Transform3D(Basis(), Vector3(0, -0.03, -0.22)), 0x7a4a26), _piece(_cyl(0.018, 0.018, 0.75, 8), Transform3D(_rx(PI / 2), Vector3(-0.02, 0.03, 0.35)), 0x3e3e44), _piece(_cyl(0.018, 0.018, 0.75, 8), Transform3D(_rx(PI / 2), Vector3(0.02, 0.03, 0.35)), 0x3e3e44)])) # (in case the model's missing)
 	# his fist closed round the haft, in his skin tone: the four fingers' block wrapped round it (the haft through its
 	# middle, along z), the knuckles a step proud, and the thumb across the front
 	fist = Node3D.new(); grip.add_child(fist)
@@ -189,7 +190,7 @@ func _aim_guns() -> void:
 	var palm: Vector3 = hx.origin + hq.y * grip_along + hq.z * grip_palm # (the middle of his palm, as for a haft)
 	# carried: the six-shooter pointing a little down; the rifle upright (the player: held vertical till he's ready to
 	# shoot), its stock down by his hip; raised level to aim
-	var rifle_like: bool = gun == tools_by.rifle or (gun == _made_on and (made.get("rifle") == _made_on or made.get("rifle_lever") == _made_on))
+	var rifle_like: bool = gun == tools_by.rifle or (gun == _made_on and (made.get("rifle") == _made_on or made.get("rifle_lever") == _made_on or made.get("shotgun") == _made_on))
 	gun.rotation = Vector3(-0.05 if aiming else (-1.4 if rifle_like else 0.35), 0, 0) # (the rifle stood upright in his fist, muzzle skyward, till he aims: the player's ask)
 	# the gun's own grip set in his palm (the player: it rode at his wrist, the hand hanging open below it)
 	var made_gun: bool = gun == _made_on
@@ -205,7 +206,7 @@ const MADE := {
 	"axe_stone": ["prop_tool_axe_stone", 0.9, 0.26], "axe_iron": ["prop_tool_axe_iron", 0.9, 0.3], "axe_steel": ["prop_tool_axe_steel", 0.9, 0.27],
 	"pick_stone": ["prop_tool_pick_stone", 0.9, 0.1], "pick_iron": ["prop_tool_pick_iron", 0.9, 0.0], "pick_steel": ["prop_tool_pick_steel", 0.9, 0.0],
 	"spear": ["prop_tool_spear", 1.65, 0.0], "revolver": ["prop_gun_revolver", 0.46, 0.72], "rifle": ["prop_gun_rifle_single", 1.2, 0.95],
-	"rifle_lever": ["prop_gun_rifle_lever", 1.15, 0.95]}
+	"rifle_lever": ["prop_gun_rifle_lever", 1.15, 0.95], "shotgun": ["prop_gun_shotgun", 1.05, 0.95]}
 var lever := false    ## the repeater in place of the buffalo rifle
 var axe_tier := ""    ## "", "stone", "iron" or "steel" (the old hatchet when "")
 var pick_tier := "stone"
@@ -220,9 +221,9 @@ func _made(key: String) -> Node3D:
 	var m := (load(path) as PackedScene).instantiate() as Node3D
 	var k: float = float(spec[1]) / 1.9 # (the models come 1.9 m along their long side)
 	var g := Node3D.new(); g.add_child(m); g.visible = false
-	if key in ["revolver", "rifle", "rifle_lever"]:
+	if key in ["revolver", "rifle", "rifle_lever", "shotgun"]:
 		# along the body's forward, muzzle first: model -x to +z, y up; the grip at the hand
-		m.transform = Transform3D(Basis(Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)) * k, Vector3(0, 0.02, float(spec[2]) * k - (0.45 if key.begins_with("rifle") else 0.0)))
+		m.transform = Transform3D(Basis(Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)) * k, Vector3(0, 0.02, float(spec[2]) * k - (0.45 if key.begins_with("rifle") or key == "shotgun" else 0.0)))
 		root.add_child(g)
 	else:
 		# in the fist: the handle (model y) along the grip's z, the head's blade (model +x) up its y; the foot of the handle at the fist
@@ -241,7 +242,7 @@ func _made_key() -> String:
 		"axe": return "axe_" + axe_tier if axe_tier != "" else ""
 		"pick": return "pick_" + pick_tier
 		"rifle": return "rifle_lever" if lever else "rifle"
-		"spear", "revolver": return tool
+		"spear", "revolver", "shotgun": return tool
 	return ""
 
 func _show_tools(swim: bool) -> void:

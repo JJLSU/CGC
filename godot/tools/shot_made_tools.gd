@@ -13,7 +13,7 @@ func _initialize() -> void:
 	var base: Vector3 = main.spawn + Vector3(6, 0, 9)
 	var shown := 0
 	var cases := [["axe", [], "hatchet"], ["axe", ["stoneaxe"], "axe_stone"], ["axe", ["ironaxe"], "axe_iron"], ["axe", ["steelaxe"], "axe_steel"], ["pick", ["pickaxe"], "pick_stone"],
-		["pick", ["ironpick"], "pick_iron"], ["pick", ["steelpick"], "pick_steel"], ["spear", ["spear"], "spear"], ["revolver", ["revolver"], "revolver"], ["rifle", ["rifle"], "rifle"], ["rifle", ["rifle", "leverrifle"], "rifle_lever"]]
+		["pick", ["ironpick"], "pick_iron"], ["pick", ["steelpick"], "pick_steel"], ["spear", ["spear"], "spear"], ["revolver", ["revolver"], "revolver"], ["rifle", ["rifle"], "rifle"], ["rifle", ["rifle", "leverrifle"], "rifle_lever"], ["shotgun", ["shotgun"], "shotgun"]]
 	for c in cases:
 		main.tools = {}
 		for t in c[1]: main.tools[t] = true
@@ -28,7 +28,7 @@ func _initialize() -> void:
 		main.set_process(false)
 		var cam: Camera3D = main.rig.camera; var p: Vector3 = av.root.global_position
 		var side: Vector3 = av.root.global_basis.x.normalized(); var fwd: Vector3 = av.root.global_basis.z.normalized()
-		var g: Vector3 = av.fist.global_position if c[0] in ["revolver", "rifle"] else av.grip.global_position if av._made_on == null or av._made_on.get_parent() == av.grip else av._made_on.global_position
+		var g: Vector3 = av.fist.global_position if c[0] in ["revolver", "rifle", "shotgun"] else av.grip.global_position if av._made_on == null or av._made_on.get_parent() == av.grip else av._made_on.global_position
 		cam.global_position = g + side * -1.3 + fwd * 0.9 + Vector3(0, 0.45, 0); cam.look_at(g + Vector3(0, 0.15, 0), Vector3.UP); cam.fov = 45.0
 		await process_frame; await process_frame
 		await RenderingServer.frame_post_draw

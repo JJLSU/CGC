@@ -13,6 +13,8 @@ const ROCKS := ["rock", "ore", "quartz", "silver", "geode", "amber"]
 const BOW := {"draw": 0.9, "range0": 12.0, "range1": 26.0, "spread": 0.07, "speed0": 13.0, "speed1": 15.0, "dmg": 6, "bullet": false}
 const REVOLVER := {"draw": 0.35, "range0": 18.0, "range1": 14.0, "spread": 0.05, "speed0": 70.0, "speed1": 20.0, "dmg": 5, "bullet": true}
 const RIFLE := {"draw": 1.1, "range0": 30.0, "range1": 45.0, "spread": 0.06, "speed0": 90.0, "speed1": 50.0, "dmg": 12, "bullet": true}
+## the double-barrel shotgun: up quick, short, and five pellets in a spread each shot
+const SHOTGUN := {"draw": 0.3, "range0": 11.0, "range1": 7.0, "spread": 0.1, "speed0": 60.0, "speed1": 15.0, "dmg": 4, "bullet": true, "pellets": 5}
 ## the lever-action repeater: up quicker, a lighter ball, seven in the tube (main.guns)
 const LEVER := {"draw": 0.7, "range0": 28.0, "range1": 42.0, "spread": 0.07, "speed0": 90.0, "speed1": 50.0, "dmg": 9, "bullet": true}
 ## the wild game: chest height h, width to an arrow (r, hit), how tall (top), how much it takes (hp)
@@ -182,10 +184,12 @@ func loose(from: Vector3, critters: Critters, W := BOW) -> bool:
 		var t := maxf(0.08, vel.length() / speed)
 		vel = vel.normalized() * speed; vel.y = (to.y - from.y) / t + 0.5 * G * t
 	else: vel = dir * speed; vel.y = 2.0 + 3.0 * k # (aimed at the sky: a long arc)
-	var mesh := bullet_mesh() if W.bullet else arrow_mesh()
-	add_child(mesh); mesh.position = from
-	if W.bullet: puff(from, vel, 1.4 if W.dmg > 8 else 1.0)
-	arrows.append({"mesh": mesh, "vel": vel, "age": 0.0, "stuck": false, "bullet": W.bullet, "dmg": W.dmg, "rest": Basis(), "still": false})
+	if W.bullet: puff(from, vel, 1.4 if W.dmg > 8 or W.has("pellets") else 1.0)
+	for pk in int(W.get("pellets", 1)): # (a shotgun's shot spreads: each pellet turned a little off the aim)
+		var v2 := vel if pk == 0 else vel.rotated(Vector3.UP, randf_range(-0.09, 0.09)) + Vector3(0, randf_range(-1.0, 1.0), 0)
+		var mesh := bullet_mesh() if W.bullet else arrow_mesh()
+		add_child(mesh); mesh.position = from
+		arrows.append({"mesh": mesh, "vel": v2, "age": 0.0, "stuck": false, "bullet": W.bullet, "dmg": W.dmg, "rest": Basis(), "still": false})
 	return true
 
 ## A cough of powder smoke at the muzzle (big for the rifle).

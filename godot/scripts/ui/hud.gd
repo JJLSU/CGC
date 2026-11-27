@@ -11,7 +11,7 @@ const PAPER := Color("f4ecd8")
 const INK := Color("3a2f25")
 const INK_SOFT := Color("6b5b49")
 const EDGE := Color("d8c9a8")
-const TOOL_NAMES := {"hands": "Hands", "spear": "Ash spear", "rod": "Fishing pole", "bow": "Hunting bow", "revolver": "Six-shooter", "rifle": "Buffalo rifle"}
+const TOOL_NAMES := {"hands": "Hands", "spear": "Ash spear", "rod": "Fishing pole", "bow": "Hunting bow", "revolver": "Six-shooter", "rifle": "Buffalo rifle", "shotgun": "Shotgun"}
 
 var font: Font
 var icons := {}           ## item -> svg body
