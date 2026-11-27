@@ -73,7 +73,10 @@ var mouth := Vector3.ZERO
 var seed_n := 0
 var built := false
 var nodes: Array = []
-var gang: Array = []          ## Cole's two men at the fire: {fig, horse, dir, run} (they ride off when the fight starts)
+var gang: Array = []
+var mule: Puppet = null       ## Jebediah's mule at the diggings
+var mule_dir := Vector3.ZERO
+var mule_run := 0.0          ## Cole's two men at the fire: {fig, horse, dir, run} (they ride off when the fight starts)
 var fig: ModelFigure
 var hand_pick: Node3D
 var act := ""             ## a one-off clip playing (throw, slam), and how long it has left
@@ -216,7 +219,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	if dt > 0.0: vel = vel.lerp((p - last_p) / dt, minf(1.0, dt * 4.0))
 	last_p = p
 	_picks_update(dt, player, hooks)
-	_gang_update(dt)
+	_gang_update(dt); _mule_update(dt)
 	if fig == null: return
 	var r := fig.root
 	if dead > 0.0:
@@ -287,6 +290,15 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 const SCATTER := {"hideout": ["Every man for himself!", "You're on your own, boss!"], "logging": ["Run for it!", "I ain't paid enough for this!"],
 	"mansion": ["Somebody fetch the sheriff!", "Not in my good suit!"]}
 var gang_card: SayCard
+func _mule_update(dt: float) -> void:
+	if mule == null or not is_instance_valid(mule.group): return
+	if state != "fight" and mule_run <= 0.0: mule.update(dt, 0.0, "idle", false, 0.0, 0.0); return
+	if mule_run == 0.0 and hooks.has("on_mule"): hooks.on_mule.call(mule.group.position)
+	mule_run += dt
+	var q: Vector3 = mule.group.position + mule_dir * 7.0 * dt; q.y = Terrain.get_height(q.x, q.z); mule.group.position = q
+	mule.update(dt, 7.0, "flee", false, 0.0, 0.0)
+	if mule_run > 10.0: mule.group.visible = false
+
 func _gang_update(dt: float) -> void:
 	if not gang.is_empty() and gang[0].run == 0.0 and state == "fight" and SCATTER.has(spec.lair): # (the first of them shouts as they scatter)
 		if gang_card == null: gang_card = SayCard.make(); add_child(gang_card); nodes.append(gang_card)
@@ -432,6 +444,11 @@ func _build() -> void:
 func _build_diggings(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:
 	place.call("mine_entrance", 7.0, mouth, face)
 	place.call("mine_windlass", 2.6, mouth + side * 6.5 + outw * 1.5, face + 0.3)
+	# his old mule, tied by the windlass: she brays and bolts when the fight starts (and is back next visit)
+	if not beaten or back:
+		var mq: Vector3 = mouth + side * 9.0 + outw * 3.0
+		mule = Puppet.new("donkey", 1.0); mule.group.position = Vector3(mq.x, Terrain.get_height(mq.x, mq.z), mq.z); add_child(mule.group)
+		mule_dir = (side + outw).normalized(); mule_run = 0.0
 	place.call("mine_toolrack", 2.0, mouth - side * 5.5 + outw * 1.0, face - 0.4)
 	place.call("mine_orecart", 1.8, mouth + side * 3.2 + outw * 3.5, face + 1.3)
 	place.call("prop_cookfire", 1.1, at, 0.0)
@@ -529,6 +546,8 @@ func _unbuild() -> void:
 		if is_instance_valid(g.fig.root): g.fig.root.queue_free()
 		if g.horse != null and is_instance_valid(g.horse.group): g.horse.group.queue_free()
 	gang = []; gang_card = null
+	if mule and is_instance_valid(mule.group): mule.group.queue_free()
+	mule = null
 	say_card = null
 
 func _weapon(length: float) -> Node3D:
