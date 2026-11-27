@@ -153,6 +153,7 @@ var jumper_hooks := {}
 var robbers: TrainRobbers ## the gang that rides up alongside the train while you're aboard
 var rob_hooks := {}
 var rob_run := false
+var cole_told := false    ## word of Cottonmouth Cole has come (his poster up), once the last street's built
 var race: HorseRace       ## Dusty Jake's horse race round the flags south of town
 var race_hooks := {}      ## this run's chance of a hold-up already rolled
 var jumper_t = null
@@ -1139,6 +1140,17 @@ func _race_door() -> bool:
 		else: inventory.dollars -= st; race.begin(); hud.toast("You each put $%d on the post. Dusty Jake grins and lines up his paint horse beside you..." % st)
 	return true
 
+## Once the last street is built, word comes down the line of the man behind the robberies: his poster goes up on
+## the wanted board (no street is held back for it to go up with), once.
+func _cole_word() -> void:
+	if cole_told or bosses.size() < 4: return
+	var c: Boss = bosses[3]
+	if not _boss_known(c): return
+	cole_told = true
+	if c.beaten or c.delivered: return
+	_boss_board()
+	hud.toast("The station agent pins up a new poster: COTTONMOUTH COLE, the man behind every robbery on the line and the road, holed up somewhere out past town with the railroad's payroll. $%d reward." % c.spec.bounty)
+
 ## Cottonmouth Cole beaten and the payroll home: his gang is broken, and robs no more trains or banks.
 func gang_broken() -> bool: return bosses.any(func(b): return b.id == "cole" and b.delivered)
 
@@ -1617,6 +1629,7 @@ func _rail(dt: float) -> void:
 				railroad.build(); hud.toast("Cold Glitter Creek has come up in the world: the Overland & Western has laid a rail line out past the church, with a depot at its head and a whistle-stop in each of the wild lands.")
 	train.update(dt, sky.time, rig.camera, player)
 	_robbers_update(dt)
+	_cole_word()
 	race.update(dt, player, riding, sky.time, race_hooks)
 	railroad.update(dt, player, sky.time > 0.24 and sky.time < 0.86) # (the trading-post keepers: out front by day)
 	if train.passenger: # (in the open car: walk about it while she runs, held in by its sides)
@@ -2421,7 +2434,7 @@ func _apply_save(d: Dictionary) -> void:
 	gang_paid = []
 	for x in d.get("gangPaid", []): gang_paid.append(int(x))
 	holdup_day = int(d.get("holdupDay", -1))
-	race.wins = int(d.get("raceWins", 0)); robbers.last_day = int(d.get("robDay", -99)); robbers.owed = int(d.get("robOwed", 0))
+	cole_told = bool(d.get("coleTold", false)); race.wins = int(d.get("raceWins", 0)); robbers.last_day = int(d.get("robDay", -99)); robbers.owed = int(d.get("robOwed", 0))
 	var ce = d.get("cellar")
 	if ce != null:
 		if ce.get("built", false): extras.build_cellar()
@@ -2498,7 +2511,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day, "raceWins": race.wins, "robDay": robbers.last_day, "robOwed": robbers.owed,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day, "raceWins": race.wins, "coleTold": cole_told, "robDay": robbers.last_day, "robOwed": robbers.owed,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),

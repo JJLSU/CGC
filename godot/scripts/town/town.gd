@@ -1435,6 +1435,9 @@ func set_trophies(ids: Array) -> void:
 	trophies.position = base; trophies.basis = Basis(along, Vector3.UP, outw).orthonormalized()
 	var spots := {"jebediah": [-2.05, 0.35, 0.0], "angus": [2.05, -0.35, 0.0], "crane": [0.0, 0.0, 1.05]}
 	for id in ids:
+		if id == "cole": # (his Colt, hung level up by the dynamite, its barrel along the front)
+			var colt := Boss._colt_mesh(1.1); colt.rotation = Vector3(0, PI / 2.0, 0.15); colt.position = Vector3(0.7, 0.42, 0.05); trophies.add_child(colt)
+			continue
 		if not spots.has(id): continue
 		var w: Node3D = {"jebediah": Boss._pick_mesh, "angus": Boss._axe_mesh, "crane": Boss._dynamite_mesh}[id].call(1.5 if id != "crane" else 1.3)
 		var tilt := Node3D.new(); tilt.position = Vector3(spots[id][0], spots[id][2], 0); tilt.rotation.z = spots[id][1]

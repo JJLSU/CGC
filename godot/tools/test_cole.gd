@@ -11,6 +11,11 @@ func _initialize() -> void:
 	await process_frame
 	main.force_active = true; main.sky.time = 0.42
 	var C: Boss = main.bosses.filter(func(b): return b.id == "cole")[0]
+	var known_before: bool = main._boss_known(C)
+	main._dev_town() # (every street built: word comes of Cole, his poster goes up)
+	for i in 5: await process_frame
+	var told: bool = main.cole_told and main.boss_board != null
+	print("known before the streets %s; word come and poster up %s" % [known_before, told])
 	print("Cole's hideout %.0f m from town; %d bosses" % [Vector2(C.at.x - main.town.at.x, C.at.z - main.town.at.z).length(), main.bosses.size()])
 	var dir: Vector3 = (main.town.at - C.at).normalized(); var off: Vector3 = C.at + dir * 16.0
 	var shots := 0; var t0 := Time.get_ticks_msec()
@@ -32,7 +37,7 @@ func _initialize() -> void:
 	main.train.passenger = true; main.train.state = "run"; main.train.leg = 0; main.train.s = main.train.home_s() + 200.0
 	for k in 20: main.rob_run = false; main.robbers.last_day = -99; main._robbers_update(0.016)
 	print("handed in: +$%d, gang broken %s, robbers came %s, rank '%s'" % [pay, main.gang_broken(), main.robbers.active, main.town_rank()])
-	var ok: bool = main.bosses.size() == 4 and C.throws > 0 and C.beaten and payroll.size() == 1 and pay == 200 and main.gang_broken() and not main.robbers.active
+	var ok: bool = not known_before and told and main.bosses.size() == 4 and C.throws > 0 and C.beaten and payroll.size() == 1 and pay == 200 and main.gang_broken() and not main.robbers.active
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	print("COLE TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
