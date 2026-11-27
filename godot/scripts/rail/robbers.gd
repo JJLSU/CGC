@@ -22,6 +22,13 @@ var active := false
 var last_day := -99
 var downed := 0            ## shot down on this run (paid when she's home)
 var owed := 0
+## The gang's leader calls out (on a card over him): as they come up, as his men fall, as they turn tail.
+const LINES := {"come": ["Stand and deliver!", "Throw down the strongbox!", "Nobody be a hero!"],
+	"fall": ["They got Lefty!", "Shoot that farmer!", "Keep firing, boys!"], "flee": ["Ride! Ride for it!", "This ain't worth it!"]}
+var card: SayCard
+func _call(kind: String) -> void:
+	if card == null: card = SayCard.make(); add_child(card)
+	var L: Array = LINES[kind]; card.say(L[randi() % L.size()])
 
 ## A gang rides up behind the train: count men, from behind the open car.
 func start(train: Train, count := 3) -> void:
@@ -39,10 +46,12 @@ func start(train: Train, count := 3) -> void:
 		var fig := ModelFigure.new(nm, {"hue": 0.0})
 		var g := Boss._colt_mesh(0.5); g.position = Vector3(0, 0.02, 0.04); fig.hands[1].add_child(g) # (a Colt, barrel along the hand)
 		fig.root.position = p; add_child(fig.root)
+		if i == 0: _call.call_deferred("come")
 		men.append({"fig": fig, "horse": h, "side": sd, "ahead": -3.5 + i * 3.0, "hp": HP, "dead": 0.0, "cool": 2.0 + randf() * 2.0, "pos": p, "hurt": 0.0})
 
 ## Gone: the gang and their horses taken off the page.
 func clear() -> void:
+	if card: card.visible = false; card.t = 0.0; card.set_meta("fled", false)
 	for m in men:
 		if is_instance_valid(m.fig.root): m.fig.root.queue_free()
 		if is_instance_valid(m.horse.group): m.horse.group.queue_free()
@@ -66,6 +75,7 @@ func damage(m: Dictionary, n: int, hooks: Dictionary) -> bool:
 	m.hp -= n; m.hurt = 0.3
 	if m.hp > 0: return false
 	m.dead = 0.001; downed += 1
+	if not up().is_empty(): _call("fall")
 	m.fig.play("idle", 0.1)
 	if hooks.has("on_fall"): hooks.on_fall.call(m)
 	return true
@@ -88,6 +98,11 @@ func update(dt: float, train: Train, player: Player, riding: bool, hooks: Dictio
 	var fwd := _fwd(car); var side := fwd.cross(Vector3.UP).normalized()
 	var cp: Vector3 = car.global_position
 	var leaving := not riding
+	if card:
+		var lead = null
+		for m in men: if not m.dead: lead = m; break
+		card.tick(dt, (lead.pos if lead != null else cp) + Vector3(0, 3.6, 0))
+		if leaving and lead != null and card.t < -1.0 and card.get_meta("fled", false) == false: card.set_meta("fled", true); _call("flee")
 	var all_down := up().is_empty()
 	for m in men:
 		var fig: ModelFigure = m.fig; var h: Puppet = m.horse
