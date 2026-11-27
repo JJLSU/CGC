@@ -39,7 +39,7 @@ func update_camera(dt: float) -> void:
 	if first_person and eye_at.is_valid() and active:
 		# through his eyes: looking where the mouse turns him (the same yaw and pitch as the free camera, seen from the
 		# other end), a wide 90-degree lens, nothing to lift over hills (his head is above them)
-		camera.fov = FP_FOV; camera.near = 0.05
+		camera.fov = FP_FOV; camera.near = 0.05; camera.keep_aspect = Camera3D.KEEP_WIDTH # (90 degrees across, as games mean it: ~59 up and down on a wide screen, not a fisheye)
 		var e: Vector3 = eye_at.call()
 		var look := Vector3(-sin(yaw) * cos(pitch), -sin(pitch), -cos(yaw) * cos(pitch))
 		if shake > 0.001: e += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * shake; shake *= exp(-dt * 7.0)
@@ -47,7 +47,7 @@ func update_camera(dt: float) -> void:
 		camera.look_at(e + look, Vector3.UP)
 		anchor = e; focus_offset = Vector3.ZERO
 		return
-	camera.fov = TP_FOV; camera.near = 0.2
+	camera.fov = TP_FOV; camera.near = 0.2; camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	var zoom := smoothstep(11.0, 40.0, dist)
 	var p := target_node.global_position if target_node else Vector3.ZERO
 	var want_anchor := Vector3(p.x, p.y + 0.9, p.z)
