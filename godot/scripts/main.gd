@@ -563,7 +563,7 @@ func _ready() -> void:
 		"on_end": func(won: bool, why: String, pot: int) -> void:
 			if won:
 				inventory.dollars = inventory.get("dollars", 0) + pot; sound.craft()
-				hud.toast("You thunder past the post a length clear! Dusty Jake reins in and slaps $%d into your hand. %s" % [pot, ["\"Biscuit's got wind, I'll give her that. Double or nothing next time?\"", "\"Again! Well, I'll be. Twenty a side next time, and I won't go easy.\"", "\"That's %d times you've had me. Tell you what: Domino's wasted on me. Sixty dollars and your mare, and she's yours.\"" % race.wins][mini(race.wins - 1, 2)]])
+				hud.toast("You thunder past the post a length clear! Dusty Jake reins in and slaps $%d into your hand. %s" % [pot, ["\"Biscuit's got wind, I'll give her that. Double or nothing next time?\"", "\"Again! Well, I'll be. Twenty a side next time, and I won't go easy.\"", ("\"That's %d times you've had me. Tell you what: Domino's wasted on me. Sixty dollars and your mare, and she's yours.\"" % race.wins) if not race.sold else ("\"%d times! On my own horse, too. Biscuit and I'll get you one of these days.\"" % race.wins)][mini(race.wins - 1, 2)]])
 			else: hud.toast({"jake": "Dusty Jake crosses the post ahead of you and pockets the stakes. \"Better luck next time, neighbour. Gallop her, and cut the flags close.\"", "down": "You got down off your horse: that's the race forfeit, and Jake keeps the stakes.", "slow": "Too slow: Jake's long home, and the stakes are his.", "astray": "You've ridden clean off the course: the race is Jake's."}[why]),
 	}
 	dance = BarnDance.new(town.spot(-1, 1.2, -1, -8)); add_child(dance) # (in the street before the livery barn)
