@@ -142,10 +142,96 @@ static func box(w: float, h: float, d: float, hex: int) -> MeshInstance3D:
 ## A board on one of the player's Meshy posts (the signposts, the wide two-post sign): the model standing h tall, and
 ## the printed board tex fitted to the model's own board (measured off it: the part of it from 50% to 85% of its
 ## height, between its post(s)), on its front and back. null if the model isn't in (the caller keeps its own).
-static func board_post(model_name: String, h: float, tex: String, aspect: float) -> Node3D:
+## words: lettered in type instead of keyed out of the print (a print too dark to key, the Row's).
+static func board_post(model_name: String, h: float, tex: String, aspect: float, words := "") -> Node3D:
 	var m := model(model_name, h, 1)
 	if m == null: return null
 	var g := Node3D.new(); g.add_child(m)
+	# the painted (whitewashed) patch on the model's own board, front and back: the triangles facing out whose texture
+	# under them is pale (the player: the lettering goes on the white board, not on a board of its own below it)
+	var img := _model_image(model_name)
+	var fronts: Array = [[], []] # per side: [x, y, z] of each pale triangle's middle
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		var mesh := (mi as MeshInstance3D).mesh
+		var xf := Railroad._rel(mi as MeshInstance3D, g)
+		for si in mesh.get_surface_count():
+			var arr := mesh.surface_get_arrays(si)
+			var V: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var UV = arr[Mesh.ARRAY_TEX_UV]; var I = arr[Mesh.ARRAY_INDEX]
+			if img == null or UV == null or (UV as PackedVector2Array).size() != V.size(): continue
+			var n_tri: int = (I.size() if I != null and I.size() else V.size()) / 3
+			for t in n_tri:
+				var ia: int = I[t * 3] if I != null and I.size() else t * 3
+				var ib: int = I[t * 3 + 1] if I != null and I.size() else t * 3 + 1
+				var ic: int = I[t * 3 + 2] if I != null and I.size() else t * 3 + 2
+				var a := xf * V[ia]; var b := xf * V[ib]; var c := xf * V[ic]
+				var mid := (a + b + c) / 3.0
+				if mid.y < h * 0.3: continue
+				var nrm := (b - a).cross(c - a)
+				if nrm.length_squared() < 1e-12: continue
+				nrm = nrm.normalized()
+				if absf(nrm.z) < 0.75: continue
+				var uv: Vector2 = (UV[ia] + UV[ib] + UV[ic]) / 3.0
+				var px := img.get_pixel(clampi(int(fposmod(uv.x, 1.0) * img.get_width()), 0, img.get_width() - 1), clampi(int(fposmod(uv.y, 1.0) * img.get_height()), 0, img.get_height() - 1))
+				if px.get_luminance() < 0.66: continue
+				fronts[0 if nrm.z > 0.0 else 1].append(mid)
+	# the post, low down (where only it stands): its middle, half-width and its front and back
+	var plo := Vector3(INF, INF, INF); var phi := -plo
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		var xf2 := Railroad._rel(mi as MeshInstance3D, g)
+		for v in ((mi as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
+			var q := xf2 * v
+			if q.y > h * 0.1 and q.y < h * 0.3: plo = plo.min(q); phi = phi.max(q)
+	var ink := _ink_tex(tex)
+	var side_rects: Array = []
+	for k in 2:
+		var P: Array = fronts[k]
+		if P.size() < 6: side_rects.append(null); continue
+		# the board: the band of heights where the pale triangles crowd thickest (a light post or brace below doesn't count)
+		var bins := {}; var bin := h * 0.025
+		for q in P: var bi := int(q.y / bin); bins[bi] = bins.get(bi, 0) + 1
+		var peak: int = bins.keys()[0]
+		for bi in bins: if bins[bi] > bins[peak]: peak = bi
+		var lo_b := peak; var hi_b := peak
+		var keep := func(bi: int) -> bool: return bins.get(bi, 0) > bins[peak] * 0.1
+		while keep.call(lo_b - 1) or keep.call(lo_b - 2) or keep.call(lo_b - 3): lo_b -= 1
+		while keep.call(hi_b + 1) or keep.call(hi_b + 2) or keep.call(hi_b + 3): hi_b += 1
+		var B := P.filter(func(q): return q.y >= lo_b * bin and q.y < (hi_b + 1) * bin)
+		var xs := B.map(func(q): return q.x); var ys := B.map(func(q): return q.y); var zs := B.map(func(q): return q.z)
+		xs.sort(); ys.sort(); zs.sort()
+		var n := B.size()
+		side_rects.append({"x0": xs[int(n * 0.03)], "x1": xs[int(n * 0.97)], "y0": ys[int(n * 0.03)], "y1": ys[int(n * 0.97)], "z": zs[n - 1] if k == 0 else zs[0]})
+	if side_rects[0] == null and side_rects[1] == null: return _board_post_card(g, m, h, tex, aspect) # (no white patch found: the printed card as before)
+	if side_rects[0] == null: side_rects[0] = side_rects[1].duplicate(); side_rects[0].z = -side_rects[1].z
+	if side_rects[1] == null: side_rects[1] = side_rects[0].duplicate(); side_rects[1].z = -side_rects[0].z
+	var ia2: float = float(ink.get_width()) / ink.get_height()
+	for k in 2:
+		var r: Dictionary = side_rects[k]
+		# one post standing proud of the board on this side, across its middle: letter the longer stretch beside it
+		if plo.x != INF and phi.x - plo.x < (r.x1 - r.x0) * 0.4 and ((k == 0 and phi.z > float(r.z) + 0.01) or (k == 1 and plo.z < float(r.z) - 0.01)) and plo.x > r.x0 and phi.x < r.x1:
+			var gap := 0.04
+			if (plo.x - r.x0) > (r.x1 - phi.x): r = r.duplicate(); r.x1 = plo.x - gap
+			else: r = r.duplicate(); r.x0 = phi.x + gap
+		var rw: float = r.x1 - r.x0; var rh: float = r.y1 - r.y0
+		var w := minf(rw * 0.86, rh * 0.8 * ia2); var ht := w / ia2
+		if words != "":
+			var lb := Label3D.new(); lb.text = words
+			var f := SystemFont.new(); f.font_names = PackedStringArray(["Georgia", "Times New Roman", "serif"]); f.font_weight = 700; f.font_italic = true
+			lb.font = f; lb.font_size = 96; lb.outline_size = 0; lb.modulate = Color("2e2218")
+			lb.shaded = true; lb.double_sided = false; lb.alpha_cut = Label3D.ALPHA_CUT_DISCARD
+			var tw: float = f.get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 96).x
+			lb.pixel_size = minf(rw * 0.84 / maxf(tw, 1.0), rh * 0.62 / 96.0)
+			lb.position = Vector3((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0, float(r.z) + (0.008 if k == 0 else -0.008)); lb.rotation.y = 0.0 if k == 0 else PI
+			g.add_child(lb); continue
+		var q := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(w, ht); q.mesh = qm
+		q.material_override = _ink_mat(tex, ink)
+		q.position = Vector3((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0, float(r.z) + (0.008 if k == 0 else -0.008))
+		q.rotation.y = 0.0 if k == 0 else PI
+		g.add_child(q)
+	return g
+
+## The sign as it was before the white patch was read: a printed card sized to the board, front and back.
+static func _board_post_card(g: Node3D, m: Node3D, h: float, tex: String, aspect: float) -> Node3D:
 	var lo := Vector3(INF, INF, INF); var hi := -lo
 	for mi in m.find_children("*", "MeshInstance3D", true, false):
 		var xf := Railroad._rel(mi as MeshInstance3D, g)
@@ -154,7 +240,6 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float)
 			var q := xf * verts[i]
 			if q.y > h * 0.5 and q.y < h * 0.86: lo = lo.min(q); hi = hi.max(q)
 	if lo.x == INF: return g
-	# (the board's own band: its top and bottom where the most of its points lie, so a post cap or a brace doesn't count)
 	var bw := hi.x - lo.x; var bh := (hi.y - lo.y) * 0.7
 	var w := minf(bw * 0.8, bh * aspect); var ht := w / aspect
 	var c := Vector3((lo.x + hi.x) / 2.0, (lo.y + hi.y) / 2.0, 0.0)
@@ -162,6 +247,52 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float)
 		var cd := card([[-w / 2.0, 0], [w / 2.0, 0], [w / 2.0, ht], [-w / 2.0, ht]], tex, 0.015)
 		cd.position = Vector3(c.x, c.y - ht / 2.0, (lo.z - 0.012) if back else (hi.z + 0.012)); cd.rotation.y = PI if back else 0.0; g.add_child(cd)
 	return g
+
+static var _img_cache := {}
+## The model's own texture (its baked colour map), to read what's painted where.
+static func _model_image(model_name: String) -> Image:
+	if _img_cache.has(model_name): return _img_cache[model_name]
+	var img: Image = null
+	var path := "res://assets/models/props/%s_Image_0.jpg" % model_name
+	if ResourceLoader.exists(path):
+		img = (load(path) as Texture2D).get_image()
+		if img != null and img.is_compressed(): img.decompress()
+	_img_cache[model_name] = img
+	return img
+
+static var _ink_cache := {}
+## Just the ink of a printed sign (its lettering), the paper and its ruled frame let go, to letter straight onto a board.
+static func _ink_tex(tex: String) -> ImageTexture:
+	if _ink_cache.has(tex): return _ink_cache[tex]
+	var src: Image = (load(tex + ".png" if tex.begins_with("res://") else "res://assets/baked/town/%s.png" % tex) as Texture2D).get_image()
+	if src.is_compressed(): src.decompress()
+	src.convert(Image.FORMAT_RGBA8)
+	var W := src.get_width(); var H := src.get_height()
+	var mx := int(W * 0.05); var my := int(H * 0.12) # (inside the ruled frame)
+	var img := Image.create(W - mx * 2, H - my * 2, false, Image.FORMAT_RGBA8)
+	# the paper's own shade, from a band near the top inside the frame
+	var bg := 0.0; var nb := 0
+	for x in range(mx, W - mx, 7): bg += src.get_pixel(x, my + 2).get_luminance(); nb += 1
+	bg /= maxf(1, nb)
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := src.get_pixel(x + mx, y + my)
+			var a := clampf((bg - 0.1 - c.get_luminance()) / 0.22, 0.0, 1.0)
+			img.set_pixel(x, y, Color(c.r * 0.8, c.g * 0.8, c.b * 0.8, a))
+	img.generate_mipmaps()
+	var t := ImageTexture.create_from_image(img)
+	_ink_cache[tex] = t
+	return t
+
+static var _ink_mats := {}
+static func _ink_mat(tex: String, ink: Texture2D) -> Material:
+	if _ink_mats.has(tex): return _ink_mats[tex]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = ink; mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR; mat.alpha_scissor_threshold = 0.45
+	mat.alpha_antialiasing_mode = BaseMaterial3D.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE
+	mat.roughness = 1.0; mat.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	_ink_mats[tex] = mat
+	return mat
 
 static func posts(xs: Array) -> Node3D:
 	var g := Node3D.new()
@@ -323,7 +454,7 @@ func _init(w: World, home: Vector3) -> void:
 		folk["row_%d" % ri] = {"fig": f, "pose": null, "face": rface}
 		ri += 1
 	var sp: Vector3 = at + along * -31.0 + toward * -3.6
-	var sg := board_post("prop_signpost_long", 2.6, "rowsign", 3.56)
+	var sg := board_post("prop_signpost_long", 2.6, "rowsign", 3.56, "Squatters' Row")
 	if sg == null: sg = Node3D.new(); var rs := card([[-1.0, 0], [1.05, 0.05], [1.0, 0.5], [-1.05, 0.48]], "rowsign"); rs.position.y = 1.1; rs.rotation.z = -0.06; sg.add_child(rs); sg.add_child(posts([0.0]))
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
 	# the dirt street: a long torn sheet of ochre with wheel ruts

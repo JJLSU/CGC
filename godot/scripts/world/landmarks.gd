@@ -18,6 +18,14 @@ const CLIMB := {
 }
 
 const SCHOONER := "veh_conestoga_wreck_hoops"
+## The Belle as the player's Meshy paddle-wheel wreck (in place of the web's baked boat): 12 m long down x, settled
+## into the marsh; her main deck and the deck above it walked on, flat, at their measured heights.
+const BELLE := "veh_paddleboat_wreck"
+const BELLE_SINK := 0.35
+const BELLE_CLIMB := {"decks": [{"x": 0, "z": 0, "hw": 5.2, "hd": 1.6, "y": 1.0 - BELLE_SINK, "rail": true}, {"x": 0.4, "z": 0, "hw": 4.0, "hd": 1.2, "y": 2.95 - BELLE_SINK, "rail": true}],
+	"ladders": [{"foot": [4.6, 0, 2.7], "top": [4.6, 1.0 - BELLE_SINK, 1.4], "land": [4.6, 0.6], "name": "the wreck of the Belle"},
+		{"foot": [4.7, 1.0 - BELLE_SINK, -0.6], "top": [4.0, 2.95 - BELLE_SINK, -0.6], "land": [3.6, -0.6], "name": "the Belle's upper deck"}]}
+static func belle() -> bool: return ResourceLoader.exists("res://assets/models/props/%s.glb" % BELLE)
 var info := {}
 var models := {}     ## kind -> {scene, json}
 var live := {}       ## site key -> {site, group, figure?, puppet?}
@@ -40,6 +48,10 @@ func _build(kind: String) -> Node3D:
 	var inst: Node3D = (M.scene as PackedScene).instantiate()
 	Homestead.bake_materials(inst)
 	g.add_child(inst)
+	if kind == "steamboat" and belle():
+		inst.visible = false # (the old baked boat let go)
+		var b := PaperMats.seated_axis(load("res://assets/models/props/%s.glb" % BELLE), 12.0, 0, false)
+		b.position.y = -BELLE_SINK; g.add_child(b)
 	for m in M.json.models: # the reference-art models (the broken wagon, Asa's lean-to), placed as the web did
 		if kind == "schooner" and m.model == "veh_broken_wagon" and ResourceLoader.exists("res://assets/models/props/%s.glb" % SCHOONER):
 			# the lost schooner as the player's wrecked Conestoga (bare hoops, collapsed running gear), where the old one lay
@@ -72,7 +84,7 @@ func spawn(site: Dictionary) -> void:
 		var fig := ModelFigure.new("folk_asa"); fig.root.position = Vector3(0.9, 0, 1.9); fig.root.rotation.y = 0.4; g.add_child(fig.root)
 		l.figure = fig
 	live[site.key] = l
-	if CLIMB.has(site.mark) and climbs: climbs.add(site.key, site.x, site.y, site.z, site.rot, CLIMB[site.mark])
+	if CLIMB.has(site.mark) and climbs: climbs.add(site.key, site.x, site.y, site.z, site.rot, BELLE_CLIMB if site.mark == "steamboat" and belle() else CLIMB[site.mark])
 
 func despawn(site: Dictionary) -> void:
 	if live.has(site.key): (live[site.key].group as Node).queue_free(); live.erase(site.key)
