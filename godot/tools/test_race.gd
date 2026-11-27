@@ -37,7 +37,9 @@ func _initialize() -> void:
 		if d.length() < 1.0: k += 1
 		p.y = Terrain.get_height(p.x, p.z); main.player.pos = p
 		await process_frame
-	var won1: bool = R.wins == 1 and main.inventory.dollars == 25
+	print("Jake's last word: '%s' (card %s, wins %d, state %s)" % [R.say_card.text if R.say_card else "-", R.say_card != null, R.wins, R.state])
+	var said: bool = R.say_card.text in R.JAKE_LINES.lost
+	var won1: bool = said and R.wins == 1 and main.inventory.dollars == 25
 	print("race 1: began %s, won %s ($%d), on foot it stayed %s" % [began, won1, main.inventory.dollars, on_foot_state])
 	while R.state != "idle": main.player.pos = R.start; await process_frame # (he's back at the post)
 	# race 2: sit at the post: Jake wins

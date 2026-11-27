@@ -30,6 +30,20 @@ var bob := 0.0
 var _pen_mats := {}
 var taken: Array = []     ## the world's spots kept for something (the town, the farm, the sites): {x, z, r}
 var cum: Array = []
+## What Jake calls out in a race, on a card over his head (as the bosses do): at the off, pulling ahead, passed, home.
+const JAKE_LINES := {"go": ["Hyah! Eat my dust, neighbour!", "See you at the finish!", "Come on, Domino!"],
+	"ahead": ["Too slow!", "That all she's got?", "Haw! Catch me if you can!"],
+	"behind": ["Well, I'll be...", "Hold on now!", "Not for long, friend!"],
+	"won": ["Better luck next time!", "Ha! Domino never loses!"], "lost": ["Dang it all!", "Fair and square. Good race."]}
+var say_card: Label3D
+var say_t := 0.0
+var lead_was := 0         ## who led at the last flag: 1 Jake, -1 you
+func say(kind: String) -> void:
+	if say_card == null: return
+	var L: Array = JAKE_LINES[kind]; var line: String = L[randi() % L.size()]
+	if kind == "go" and sold: line = line.replace("Domino", "Biscuit")
+	if kind == "won" and sold: line = "Ha! Biscuit's quicker than she looks!"
+	say_card.text = line; say_t = 2.6
 var sold := false          ## he's sold you Domino (and rides Biscuit now)
 const DOMINO_COST := 60
 const DOMINO_WINS := 3
@@ -73,6 +87,13 @@ func setup(town: Town, world: World = null) -> void:
 	var nm: String = "prospectors_1"
 	for n in RIVAL: if ModelFigure.has_folk(n): nm = n; break
 	jake = ModelFigure.new(nm, {"hue": 0.0}); add_child(jake.root)
+	say_card = Label3D.new(); say_card.billboard = BaseMaterial3D.BILLBOARD_ENABLED; say_card.font_size = 64; say_card.pixel_size = 0.0065
+	say_card.modulate = Color("3a2f25"); say_card.outline_size = 0; say_card.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS; say_card.render_priority = 10
+	var sf := SystemFont.new(); sf.font_names = PackedStringArray(["Patrick Hand", "Segoe Print", "Comic Sans MS"]); say_card.font = sf
+	var back := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(3.2, 0.7); back.mesh = qm; back.position.z = -0.02
+	var bm := StandardMaterial3D.new(); bm.albedo_color = Color("f4ecd8"); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.render_priority = 9
+	back.material_override = bm; back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; say_card.add_child(back)
+	say_card.visible = false; add_child(say_card)
 	horse = Puppet.new("horse", 1.7); add_child(horse.group); Horse.dye_bay(horse) # (Domino, his bay, till he sells her to you)
 	jpos = start + town.toward * 3.0; jpos.y = Terrain.get_height(jpos.x, jpos.z)
 	_place_jake(0.0, 0.0, null)
@@ -127,6 +148,7 @@ func stake() -> int: return STAKE * (1 << mini(wins, 2))
 ## His pace for the next race: a touch harder each time he's lost to you.
 func pace0() -> float: return JAKE * (1.0 + 0.03 * mini(wins, 4))
 
+func on_ok(sky_time: float) -> bool: return shown(sky_time)
 func shown(sky_time: float) -> bool: return state != "idle" or (sky_time > 0.28 and sky_time < 0.76)
 func near_post(p: Vector3, r := 7.0) -> bool: return Vector2(p.x - start.x, p.z - start.z).length() < r
 
@@ -141,6 +163,8 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 	var on := shown(sky_time)
 	jake.root.visible = on; horse.group.visible = on
 	bob += dt
+	say_t -= dt
+	if say_card: say_card.visible = say_t > 0.0 and on_ok(sky_time); if say_card and say_card.visible: say_card.position = jpos + Vector3(0, 4.2, 0)
 	for i in posts.size():
 		var pen: MeshInstance3D = posts[i].get_meta("pennant")
 		var k := "flag"
@@ -162,7 +186,7 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 			if n1 != n0 and n1 > 0 and hooks.has("on_count"): hooks.on_count.call(n1)
 			_place_jake(dt, 0.0, null)
 			if t <= 0.0:
-				state = "run"; t = 0.0
+				state = "run"; t = 0.0; lead_was = 0; say("go")
 				if hooks.has("on_go"): hooks.on_go.call()
 		"run":
 			t += dt
@@ -182,6 +206,8 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 				you_next += 1
 				if you_next > FLAGS: _end(true, "", hooks); return
 				if hooks.has("on_flag"): hooks.on_flag.call(you_next, -lead)
+				var now_lead := 1 if lead < -2.0 else (-1 if lead > 2.0 else 0) # (who's ahead as you round it)
+				if now_lead != 0 and now_lead != lead_was: say("ahead" if now_lead == 1 else "behind"); lead_was = now_lead
 			if not riding: _end(false, "down", hooks)
 			elif t > TIME_LIMIT: _end(false, "slow", hooks)
 			elif _off_course(player.pos): _end(false, "astray", hooks)
@@ -201,4 +227,5 @@ func _end(won: bool, why: String, hooks: Dictionary) -> void:
 	state = "done"; t = 6.0
 	var pot := stake() * 2
 	if won: wins += 1
+	say("lost" if won else "won")
 	if hooks.has("on_end"): hooks.on_end.call(won, why, pot)
