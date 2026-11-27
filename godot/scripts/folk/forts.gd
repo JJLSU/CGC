@@ -155,6 +155,7 @@ func find_target(player: Player, reach: float):
 
 ## A wound: the whole fort turns out. True if he fell.
 ## The troopers' calls (on a card over the one who calls): when the fort turns on you, and as a man falls.
+const GREET := ["Mornin', citizen.", "Fort's open. Mind the horses.", "Anything to report out there?", "Quiet day, thank the Lord."]
 const LINES := {"angry": ["Halt! Who goes there?", "To arms! To arms!", "Fire at will!"], "fall": ["Man down!", "Hold the line!", "Close ranks!"]}
 var card: SayCard
 var card_on = null
@@ -197,6 +198,16 @@ func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 		elif f.built and d > FAR: _unbuild(f)
 		if f.angry and today > f.angry_day: f.angry = false # (a day on, it's forgotten)
 		if f.built: _fort_update(f, dt, player, hooks, d)
+		# a sentry's word as you come up to the gate in peace (once a visit)
+		if f.built and not f.angry:
+			var sentries: Array = f.men.filter(func(o): return not o.dead and o.role == "sentry")
+			var near_s = null
+			for o in sentries: if Vector2(o.fig.root.position.x - p.x, o.fig.root.position.z - p.z).length() < 6.0: near_s = o
+			if near_s != null and not f.get("greeted", false):
+				f.greeted = true
+				if card == null: card = SayCard.make(); add_child(card)
+				card.say(GREET[randi() % GREET.size()]); card_on = near_s
+			elif d > SIDE * 2.0: f.greeted = false
 		if not told and d < SIDE * 0.9:
 			told = true
 			if hooks.has("on_first"): hooks.on_first.call(f)
