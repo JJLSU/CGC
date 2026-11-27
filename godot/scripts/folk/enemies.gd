@@ -57,6 +57,7 @@ func spawn_site(site: Dictionary) -> void:
 		var spec: Dictionary = GUARDS[kind]
 		var pup := Puppet.new(kind, spec.scale, "boar" if kind == "gouger" else "")
 		if kind == "gouger" and pup.model: _gougerize(pup)
+		if kind == "hidebehind": _meshy_hidebehind(pup)
 		var wk := _kit("warn"); var warn := MeshInstance3D.new(); warn.mesh = wk[0]; warn.material_override = wk[1]
 		warn.position = Vector3(0.3, spec.top, 0.06); warn.visible = false; pup.flip.add_child(warn)
 		var zk := _kit("zz"); var zz := MeshInstance3D.new(); zz.mesh = zk[0]; zz.material_override = zk[1]
@@ -71,6 +72,17 @@ func spawn_site(site: Dictionary) -> void:
 			if spec.lurk == "flat": pup.set_fold(0.0)
 			else: pup.group.visible = false
 		list.append(e)
+
+## The Hidebehind as the player's Meshy one (lanky, shaggy, bear-eared, long-clawed), 2.4 m tall, in place of the
+## paper puppet's parts: turned so its face leads the way the puppet goes (the puppet's +x), still as a statue (it only
+## ever moves when you aren't looking).
+const HIDEBEHIND := "res://assets/models/props/animal_hidebehind.glb"
+static func _meshy_hidebehind(pup: Puppet) -> void:
+	if not ResourceLoader.exists(HIDEBEHIND): return
+	for c in pup.rig.get_children(): if c is Node3D: (c as Node3D).visible = false
+	var m := ModelBake.still(HIDEBEHIND, 2.4, 1); m.rotation.y = PI / 2.0
+	m.scale /= pup.rig.scale.x # (the rig carries the guard's scale already)
+	pup.rig.add_child(m)
 
 ## Who keeps a wild-hive grove: a grizzly up in the pines; elsewhere a black bear at about half of them (by the
 ## site, so it's always the same one), else the old bramble boar.
