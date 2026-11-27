@@ -61,6 +61,9 @@ const TAUNTS := {
 		"fight": ["Dance, farmer!", "Hold still and I'll make it quick.", "That payroll's spent, friend. Every dime."],
 		"riled": ["You're better than my boys said.", "Now you've made me mad.", "I'll fan this hammer till you drop!"]},
 }
+## A boss back for a rematch knows you (his first line, when he sees you).
+const AGAIN := {"jebediah": ["You again! I been waiting, varmint.", "Back for more, are ya?"], "angus": ["Round two, little fella!", "Didn't learn the first time?"],
+	"crane": ["You'll not catch me twice, farmer.", "I've hired better lawyers. And more dynamite."], "cole": ["Thought you'd seen the last of me?", "This time I don't miss."]}
 const SAY_EVERY := 6.5      ## seconds at least between his lines
 
 var id := "jebediah"
@@ -189,7 +192,7 @@ func _spotted(hooks: Dictionary) -> void:
 ## A line of his on the card over his head (kind: spot, fight, riled); force: even if he spoke a moment ago.
 func say(kind: String, force := false) -> void:
 	if say_card == null or (say_cool > 0.0 and not force): return
-	var lines: Array = TAUNTS[id][kind]
+	var lines: Array = AGAIN[id] if kind == "spot" and returns > 0 and AGAIN.has(id) else TAUNTS[id][kind]
 	say_card.text = lines[randi() % lines.size()]
 	say_t = 2.8; say_cool = SAY_EVERY + randf() * 3.0
 	# the paper behind fitted to the lines the words wrap to (a long line ran past its top and bottom)
