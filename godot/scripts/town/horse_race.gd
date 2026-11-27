@@ -35,15 +35,14 @@ const JAKE_LINES := {"go": ["Hyah! Eat my dust, neighbour!", "See you at the fin
 	"ahead": ["Too slow!", "That all she's got?", "Haw! Catch me if you can!"],
 	"behind": ["Well, I'll be...", "Hold on now!", "Not for long, friend!"],
 	"won": ["Better luck next time!", "Ha! Domino never loses!"], "lost": ["Dang it all!", "Fair and square. Good race."]}
-var say_card: Label3D
-var say_t := 0.0
+var say_card: SayCard
 var lead_was := 0         ## who led at the last flag: 1 Jake, -1 you
 func say(kind: String) -> void:
 	if say_card == null: return
 	var L: Array = JAKE_LINES[kind]; var line: String = L[randi() % L.size()]
 	if kind == "go" and sold: line = line.replace("Domino", "Biscuit")
 	if kind == "won" and sold: line = "Ha! Biscuit's quicker than she looks!"
-	say_card.text = line; say_t = 2.6
+	say_card.say(line)
 var sold := false          ## he's sold you Domino (and rides Biscuit now)
 const DOMINO_COST := 60
 const DOMINO_WINS := 3
@@ -87,13 +86,7 @@ func setup(town: Town, world: World = null) -> void:
 	var nm: String = "prospectors_1"
 	for n in RIVAL: if ModelFigure.has_folk(n): nm = n; break
 	jake = ModelFigure.new(nm, {"hue": 0.0}); add_child(jake.root)
-	say_card = Label3D.new(); say_card.billboard = BaseMaterial3D.BILLBOARD_ENABLED; say_card.font_size = 64; say_card.pixel_size = 0.0042
-	say_card.modulate = Color("3a2f25"); say_card.outline_size = 0; say_card.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS; say_card.render_priority = 10
-	var sf := SystemFont.new(); sf.font_names = PackedStringArray(["Patrick Hand", "Segoe Print", "Comic Sans MS"]); say_card.font = sf
-	var back := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(3.3, 0.5); back.mesh = qm; back.position.z = -0.02
-	var bm := StandardMaterial3D.new(); bm.albedo_color = Color("f4ecd8"); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.render_priority = 9
-	back.material_override = bm; back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; say_card.add_child(back)
-	say_card.visible = false; add_child(say_card)
+	say_card = SayCard.make(); add_child(say_card)
 	horse = Puppet.new("horse", 1.7); add_child(horse.group); Horse.dye_bay(horse) # (Domino, his bay, till he sells her to you)
 	jpos = start + town.toward * 3.0; jpos.y = Terrain.get_height(jpos.x, jpos.z)
 	_place_jake(0.0, 0.0, null)
@@ -163,8 +156,7 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 	var on := shown(sky_time)
 	jake.root.visible = on; horse.group.visible = on
 	bob += dt
-	say_t -= dt
-	if say_card: say_card.visible = say_t > 0.0 and on_ok(sky_time); if say_card and say_card.visible: say_card.position = jpos + Vector3(0, 3.7, 0)
+	if say_card: say_card.tick(dt, jpos + Vector3(0, 3.7, 0)); say_card.visible = say_card.visible and on_ok(sky_time)
 	for i in posts.size():
 		var pen: MeshInstance3D = posts[i].get_meta("pennant")
 		var k := "flag"
