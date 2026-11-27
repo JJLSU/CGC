@@ -140,6 +140,11 @@ func unload() -> void:
 ## a pace or two apart, looking out over the side; off again when she's home.
 const RIDERS := ["cgc_man_gent", "cgc_woman_floral", "cgc_man_glasses", "cgc_woman_plumstripe", "cgc_man_elder", "cgc_woman_calico", "cgc_man_youth"]
 var riders: Array = []
+## What the travellers say to you now and then on the ride (on a card over the one speaking).
+const RIDER_LINES := ["Fine country, this.", "Going all the way East, friend?", "Mind your hat in the wind!", "Smells like rain coming.",
+	"First time on the rails?", "Beats a stagecoach all hollow.", "Look there, antelope!", "Hold tight on the curves."]
+var rider_card: SayCard
+var rider_t := 6.0
 func board_riders() -> void:
 	if ride_i < 0: return
 	var car := ride_car(); var n := 1 + randi() % 2
@@ -212,6 +217,16 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 			state = "run"; at_stop = -1
 			if on_whistle.is_valid(): on_whistle.call(at(s).pos)
 	for f in riders: if f.root.is_visible_in_tree(): f.update(dt, 0.0, null)
+	if passenger and riders.size() and state == "run":
+		rider_t -= dt
+		if rider_t <= 0.0:
+			rider_t = 9.0 + randf() * 8.0
+			if rider_card == null: rider_card = SayCard.make(); add_child(rider_card)
+			rider_card.set_meta("who", randi() % riders.size()); rider_card.say(RIDER_LINES[randi() % RIDER_LINES.size()], 3.0)
+	if rider_card:
+		var wi: int = rider_card.get_meta("who", 0)
+		if wi < riders.size() and passenger: rider_card.tick(dt, (riders[wi].root as Node3D).global_position + Vector3(0, 2.3, 0))
+		else: rider_card.visible = false
 	if ride_i >= 0 and ride_y != 0.0: ride_at.y = move_toward(ride_at.y, ride_y, dt * 4.0) # (up the stack hand over hand, ~half a second)
 	# the cars along the line, coupled one behind another
 	var cp := camera.global_position; var head := at(s)

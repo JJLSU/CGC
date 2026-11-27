@@ -22,6 +22,7 @@ func _initialize() -> void:
 	main.set_process(true); main.player.avatar.root.visible = true
 	TR.load_cargo(6); TR.board_riders()
 	TR.passenger = true; TR.state = "run"; TR.leg = 0; TR.dir = 1; TR.s = TR.home_s() + 200.0
+	TR.rider_t = 0.3
 	for i in 60: await process_frame
 	main.input.keys["KeyD"] = true # (a few steps across the car)
 	for i in 30: await process_frame
@@ -34,6 +35,7 @@ func _initialize() -> void:
 	cam.global_position = rc.global_position + sd * 3.5 - fw * 4.0 + Vector3(0, 7.0, 0); cam.look_at(rc.global_position + Vector3(0, 1.2, 0), Vector3.UP)
 	await process_frame; await process_frame; await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_ride.png"))
+	print("traveller says: '%s' visible %s" % [TR.rider_card.text if TR.rider_card else "-", TR.rider_card.visible if TR.rider_card else false])
 	print("rider at %.1f above the track; train visible %s, car %s at %s, player at %s, head %s, cam %s" % [main.player.pos.y - R.grade_d(TR.s), TR.visible, rc.visible, rc.global_position.round(), main.player.pos.round(), TR.at(TR.s).pos.round(), cam.global_position.round()])
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	quit()
