@@ -48,6 +48,22 @@ func _init(k: String, scale := 1.0, wear_of := "") -> void:
 	elif info.get("model") != null: _wear(info.model)
 	else: _paper()
 	if head == null: head = Node3D.new(); rig.add_child(head)
+	_wear_still()
+
+## The farm's hens and rooster and the wild turkeys as the player's Meshy birds (still models: no rig), in place of the
+## paper cut-outs: [model, height before the puppet's own scale]. The paper parts stay (they still drive the gait) but
+## aren't drawn; each peck dips the whole bird forward.
+const STILL := {"hen": ["animal_hen", 0.42], "rooster": ["animal_rooster", 0.55], "turkey": ["animal_turkey", 0.62]}
+var still: Node3D = null
+func _wear_still() -> void:
+	if not STILL.has(kind) or model != null: return
+	var path := "res://assets/models/props/%s.glb" % STILL[kind][0]
+	if not ResourceLoader.exists(path): return
+	for c in rig.get_children(): if c is Node3D: (c as Node3D).visible = false
+	head.visible = false
+	var piv := Node3D.new(); rig.add_child(piv)
+	var m := ModelBake.still(path, float(STILL[kind][1]), 1); m.rotation.y = PI / 2.0 # (its face to the puppet's +x, the way it goes)
+	piv.add_child(m); still = piv
 
 static func _unown(n: Node) -> void:
 	n.owner = null
@@ -148,6 +164,7 @@ func update(dt: float, speed: float, state: String, left: bool, yaw_to_cam: floa
 	else: graze = maxf(0.0, graze - dt * 3.0)
 	var peck := maxf(0.0, sin(t * 5.0)) * 0.6 if gait == "peck" else 0.0
 	head.rotation.z = -graze * (peck if gait == "peck" else 0.7) + (s * 0.05 if moving else sin(t * 0.7) * 0.04) - lunge * 0.5
+	if still: still.rotation.z = head.rotation.z * 0.4 # (the Meshy bird dips to peck, sways as it goes)
 	for e in ears: e.rotation.z = sin(t * 1.7 + phase) * 0.12 + (-0.4 if state == "flee" else 0.0)
 	if tail: tail.rotation.z = sin(t * 9.0) * 0.25 if (state == "chase" or state == "attack") else sin(t * 2.3) * 0.15 + (0.6 if state == "flee" else 0.0)
 	rig.position = Vector3(lunge * 0.3, bob, 0)
