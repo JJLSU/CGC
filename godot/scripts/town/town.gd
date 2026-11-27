@@ -175,13 +175,23 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float,
 				var px := img.get_pixel(clampi(int(fposmod(uv.x, 1.0) * img.get_width()), 0, img.get_width() - 1), clampi(int(fposmod(uv.y, 1.0) * img.get_height()), 0, img.get_height() - 1))
 				if px.get_luminance() < 0.66: continue
 				fronts[0 if nrm.z > 0.0 else 1].append(mid)
-	# the post, low down (where only it stands): its middle, half-width and its front and back
-	var plo := Vector3(INF, INF, INF); var phi := -plo
+	# every triangle of the model, for what stands in front of the board (a post, a long thin brace)
+	var tris: Array = []
 	for mi in m.find_children("*", "MeshInstance3D", true, false):
 		var xf2 := Railroad._rel(mi as MeshInstance3D, g)
-		for v in ((mi as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array):
-			var q := xf2 * v
-			if q.y > h * 0.1 and q.y < h * 0.3: plo = plo.min(q); phi = phi.max(q)
+		var mesh2 := (mi as MeshInstance3D).mesh
+		for si in mesh2.get_surface_count():
+			var arr2 := mesh2.surface_get_arrays(si)
+			var V2: PackedVector3Array = arr2[Mesh.ARRAY_VERTEX]; var I2 = arr2[Mesh.ARRAY_INDEX]; var U2 = arr2[Mesh.ARRAY_TEX_UV]
+			var idx: bool = I2 != null and I2.size() > 0
+			var has_uv: bool = img != null and U2 != null and (U2 as PackedVector2Array).size() == V2.size()
+			for t in (I2.size() if idx else V2.size()) / 3:
+				var i0: int = I2[t * 3] if idx else t * 3; var i1: int = I2[t * 3 + 1] if idx else t * 3 + 1; var i2: int = I2[t * 3 + 2] if idx else t * 3 + 2
+				var pale := false
+				if has_uv:
+					var uv: Vector2 = (U2[i0] + U2[i1] + U2[i2]) / 3.0
+					pale = img.get_pixel(clampi(int(fposmod(uv.x, 1.0) * img.get_width()), 0, img.get_width() - 1), clampi(int(fposmod(uv.y, 1.0) * img.get_height()), 0, img.get_height() - 1)).get_luminance() >= 0.66
+				tris.append([xf2 * V2[i0], xf2 * V2[i1], xf2 * V2[i2], pale])
 	var ink := _ink_tex(tex)
 	var side_rects: Array = []
 	for k in 2:
@@ -207,11 +217,46 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float,
 	var ia2: float = float(ink.get_width()) / ink.get_height()
 	for k in 2:
 		var r: Dictionary = side_rects[k]
-		# one post standing proud of the board on this side, across its middle: letter the longer stretch beside it
-		if plo.x != INF and phi.x - plo.x < (r.x1 - r.x0) * 0.4 and ((k == 0 and phi.z > float(r.z) + 0.01) or (k == 1 and plo.z < float(r.z) - 0.01)) and plo.x > r.x0 and phi.x < r.x1:
-			var gap := 0.04
-			if (plo.x - r.x0) > (r.x1 - phi.x): r = r.duplicate(); r.x1 = plo.x - gap
-			else: r = r.duplicate(); r.x0 = phi.x + gap
+		# whatever stands proud of the board on this side across the lettering's band (the post, a brace): letter the
+		# longest clear stretch between them (the player: the brace ran across the end of the words)
+		var NB := 48; var busy := []; busy.resize(NB); busy.fill(false)
+		var ym0: float = lerpf(r.y0, r.y1, 0.2); var ym1: float = lerpf(r.y0, r.y1, 0.8)
+		for tr in tris:
+			var a0: Vector3 = tr[0]; var a1: Vector3 = tr[1]; var a2: Vector3 = tr[2]
+			var zc := (a0.z + a1.z + a2.z) / 3.0
+			var proud: bool = (k == 0 and zc > float(r.z) + 0.02) or (k == 1 and zc < float(r.z) - 0.02)
+			var ty0 := minf(a0.y, minf(a1.y, a2.y)); var ty1 := maxf(a0.y, maxf(a1.y, a2.y))
+			if not proud: continue
+			if ty1 < ym0 or ty0 > ym1: continue
+			var tx0 := minf(a0.x, minf(a1.x, a2.x)); var tx1 := maxf(a0.x, maxf(a1.x, a2.x))
+			if tx1 < r.x0 or tx0 > r.x1: continue
+			for bi in range(clampi(int((tx0 - r.x0) / (r.x1 - r.x0) * NB), 0, NB - 1), clampi(int((tx1 - r.x0) / (r.x1 - r.x0) * NB), 0, NB - 1) + 1): busy[bi] = true
+		if OS.get_environment("SIGN_DBG") != "": print("%s side %d: rect x %.2f..%.2f y %.2f..%.2f z %.3f busy %s" % [model_name, k, r.x0, r.x1, r.y0, r.y1, r.z, "".join(busy.map(func(v): return "#" if v else "."))])
+		var best0 := 0; var best_n := 0; var run0 := 0; var run_n := 0
+		for i in NB:
+			if busy[i]: run_n = 0; run0 = i + 1; continue
+			run_n += 1
+			if run_n > best_n: best_n = run_n; best0 = run0
+		if best_n < NB and best_n >= NB * 0.3:
+			var bw: float = (r.x1 - r.x0) / NB; r = r.duplicate()
+			var nx0: float = r.x0 + (best0 + (0.5 if best0 > 0 else 0.0)) * bw; var nx1: float = r.x0 + (best0 + best_n - (0.5 if best0 + best_n < NB else 0.0)) * bw
+			# (a signpost's brace runs up from the post to the board beside it: keep clear of the stretch nearest the post)
+			var trim: float = (nx1 - nx0) * 0.25
+			if best0 == 0: nx1 -= trim
+			elif best0 + best_n >= NB: nx0 += trim
+			r.x0 = nx0; r.x1 = nx1
+			# and its height, from the painted facets over that stretch alone: where they crowd thickest (the board, not a
+			# light brace or post below it)
+			var B2: Array = fronts[k].filter(func(q): return q.x >= nx0 and q.x <= nx1)
+			if B2.size() > 12:
+				var bins2 := {}; var bsz := h * 0.02
+				for q in B2: var bi2 := int(q.y / bsz); bins2[bi2] = bins2.get(bi2, 0) + 1
+				var pk: int = bins2.keys()[0]
+				for bi2 in bins2: if bins2[bi2] > bins2[pk]: pk = bi2
+				var lo2 := pk; var hi2 := pk
+				while bins2.get(lo2 - 1, 0) > bins2[pk] * 0.3 or bins2.get(lo2 - 2, 0) > bins2[pk] * 0.3: lo2 -= 1
+				while bins2.get(hi2 + 1, 0) > bins2[pk] * 0.3 or bins2.get(hi2 + 2, 0) > bins2[pk] * 0.3: hi2 += 1
+				r.y0 = lo2 * bsz; r.y1 = (hi2 + 1) * bsz
 		var rw: float = r.x1 - r.x0; var rh: float = r.y1 - r.y0
 		var w := minf(rw * 0.86, rh * 0.8 * ia2); var ht := w / ia2
 		if words != "":
