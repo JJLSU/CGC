@@ -56,6 +56,7 @@ func _ready() -> void:
 	add_child(model_root)
 	_materials(model_root)
 	fan = model_root.find_child("fan", true, false)
+	_meshy_mill()
 	mail_flag = model_root.find_child("mailflag", true, false)
 	house = model_root.find_child("house", true, false)
 	# the models from the reference art, where the web placed them (the barn, the hay)
@@ -162,11 +163,39 @@ func covers(x: float, z: float) -> bool:
 		if absf(lx) < r.hw and lz > r.z0 and lz < r.z1: return true
 	return false
 
+## The windmill as the player's Meshy one (its lattice tower, its ladder up the front leg, the railed platform, its stock
+## tank), 14.3 m to the top of the wheel, the wheel cut free in Blender (tools/blender_split_wheel.py) so it turns. The
+## old baked windmill's pieces at the spot are let go. Its tower stands on mill_at; its platform at 7.82 m.
+const MILL := "bldg_windmill_split"
+const MILL_H := 14.3
+const MILL_OFF := Vector3(1.28, 0, 0.15)   ## the model's middle to its tower's middle (its tail vane reaches out to one side)
+var meshy_mill := false
+var wheel: Node3D
+func mill_climb() -> Dictionary:
+	if not meshy_mill:
+		return {"decks": [{"x": 0, "z": 0, "hw": 0.75, "hd": 0.75, "y": 7.89, "rail": true}],
+			"ladders": [{"foot": [1.4, 0, 0.45], "via": [[0.3, 0.65, 0.78], [0, 1.0, 0.76]], "top": [0, 7.89, 0.32], "land": [0.42, -0.35], "name": "the windmill"}]}
+	return {"decks": [{"x": 0, "z": 0, "hw": 1.9, "hd": 1.8, "y": 7.82, "rail": true}],
+		"ladders": [{"foot": [-3.4, 0, 2.6], "top": [-1.95, 7.82, 0.6], "land": [-1.2, 0.4], "name": "the windmill"}]}
+func _meshy_mill() -> void:
+	var path := "res://assets/models/props/%s.glb" % MILL
+	if info.millAt == null or not ResourceLoader.exists(path): return
+	var ml := _v3(info.millAt)
+	for mi in model_root.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		var c := m.global_transform * m.get_aabb().get_center() - global_position
+		if Vector2(c.x - ml.x, c.z - ml.z).length() < 3.4: m.visible = false
+	var hold := PaperMats.seated_axis(load(path), MILL_H, 1, false)
+	hold.position = Vector3(ml.x, ml.y - 0.05, ml.z) + MILL_OFF; add_child(hold)
+	wheel = hold.find_child("wheel", true, false) as Node3D
+	fan = null; meshy_mill = true
+
 func update(dt: float, night: float, camera: Camera3D) -> void:
 	var glow := PNoise.smoothstep(0.25, 0.8, night)
 	RenderingServer.global_shader_parameter_set("paper_glow", glow)
 	for l in lights: l.light.light_energy = glow * l.max / PI
 	if fan: fan.rotation.z -= dt * 1.4
+	if wheel: wheel.rotate_object_local(Vector3(0, 0, 1), -dt * 1.4) # (about its hub: the model's own y, glTF's z)
 	var top := chimney_top.global_position
 	for p in smoke:
 		var t: float = fmod(float(p.get_meta("t")) + dt / 9.0, 1.0); p.set_meta("t", t)

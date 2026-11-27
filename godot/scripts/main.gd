@@ -589,9 +589,7 @@ func _ready() -> void:
 	pan_mesh = MeshInstance3D.new(); pan_mesh.mesh = pcm; pan_mesh.material_override = PaperMats.paper(Color.hex(0x8a8e90ff), false)
 	pan_mesh.position = Vector3(0, -0.08, 0.32); pan_mesh.visible = false; player.avatar.fig.hands[1].add_child(pan_mesh)
 	# the farm windmill: up the ladder on its south face (stepping round the stock tank) to the railed platform under the head
-	climbs.add("windmill", homestead.mill_at.x, homestead.mill_at.y, homestead.mill_at.z, 0.0, {
-		"decks": [{"x": 0, "z": 0, "hw": 0.75, "hd": 0.75, "y": 7.89, "rail": true}],
-		"ladders": [{"foot": [1.4, 0, 0.45], "via": [[0.3, 0.65, 0.78], [0, 1.0, 0.76]], "top": [0, 7.89, 0.32], "land": [0.42, -0.35], "name": "the windmill"}]})
+	climbs.add("windmill", homestead.mill_at.x, homestead.mill_at.y, homestead.mill_at.z, 0.0, homestead.mill_climb()) # (the Meshy mill's ladder up its front leg, or the old one's)
 	player.avatar.root.position = player.pos
 	rig.target_node = player.avatar.root
 	focus = player.avatar.root
