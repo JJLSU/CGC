@@ -67,8 +67,8 @@ func update(dt: float, input: GameInput, world: World, active: bool) -> Dictiona
 	# --- look (the camera is entirely yours)
 	if active:
 		rig.yaw -= input.dx * 0.0024
-		rig.pitch = clampf(rig.pitch + input.dy * 0.0022, -0.45, 1.53)
-		rig.dist = clampf(rig.dist * (1.0 + input.wheel * 0.12), 2.5, 42.0)
+		rig.pitch = clampf(rig.pitch + input.dy * 0.0022, -1.2 if rig.first_person else -0.45, 1.53) # (through his eyes you can look up at the sky)
+		if not rig.first_person: rig.dist = clampf(rig.dist * (1.0 + input.wheel * 0.12), 2.5, 42.0)
 	else: rig.yaw += dt * 0.05
 	# --- climbing a ladder (or scrambling up rock): carried along the climb's path, nothing else to do meanwhile
 	if climbing != null:

@@ -593,6 +593,12 @@ func _ready() -> void:
 	climbs.add("windmill", homestead.mill_at.x, homestead.mill_at.y, homestead.mill_at.z, 0.0, homestead.mill_climb()) # (the Meshy mill's ladder up its front leg, or the old one's)
 	player.avatar.root.position = player.pos
 	rig.target_node = player.avatar.root
+	rig.camera.cull_mask &= ~SELF_LAYER # (his own body, through his own eyes: drawn for its shadow only)
+	rig.eye_at = func() -> Vector3:
+		var hd: Node3D = player.avatar.fig.head if player.avatar.fig else null
+		var f := player.forward()
+		return (hd.global_position + Vector3(0, 0.07, 0) + f * 0.14) if hd else player.pos + Vector3(0, 1.65, 0)
+	if bool(display.get("first_person", false)): _set_view.call_deferred(true, false) # (the camera option as last chosen)
 	focus = player.avatar.root
 	spawn = center
 	rig.snap()
@@ -802,6 +808,7 @@ func _process(dt: float) -> void:
 	_pm("_pond_ice")
 	RenderingServer.global_shader_parameter_set("paper_cloud_shade", (1.0 - sky.night) * (1.0 - minf(1.0, weather.rain * 1.5))) # (fair days only)
 	_pm("RenderingServer.global_shader_parameter_set")
+	if active_view_key(): _toggle_view()
 	rig.update_camera(dt)
 	_pm("rig.update_camera")
 	world.update_occlusion(rig.camera.global_position, player.pos, dt)
@@ -921,6 +928,7 @@ func _option_text(id: String) -> String:
 		"quality": return ("Auto (%s)" % quality.level if quality.mode == "auto" else String(quality.level).capitalize()) if quality else "Auto"
 		"dof": return "On" if quality == null or quality.dof_on else "Off"
 		"sound": return "Off" if sound.muted else "On"
+		"view": return "First person (90°)" if rig.first_person else "Wide"
 	return ""
 
 func _cycle_option(id: String) -> String:
@@ -931,6 +939,7 @@ func _cycle_option(id: String) -> String:
 		"quality": if quality: quality.cycle()
 		"dof": if quality: quality.toggle_dof()
 		"sound": sound.toggle_mute()
+		"view": _set_view(not rig.first_person)
 	sound.click()
 	return _option_text(id)
 
@@ -1011,6 +1020,28 @@ func _make_post() -> void:
 	q.extra_cull_margin = 16384.0
 	q.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	rig.camera.add_child(q)
+
+## V: first person (through the farmer's eyes, a 90-degree lens) or the diorama view. Through his eyes his own body is
+## kept off the camera (it still casts its shadow), the macro lens's tilt-shift blur is off, and the pitch can look up.
+const SELF_LAYER := 1 << 19
+func active_view_key() -> bool: return input.hit("KeyV") and not panel.open and not build.active
+func _toggle_view() -> void:
+	_set_view(not rig.first_person)
+	hud.toast("Through your own eyes (V for the wide view again)." if rig.first_person else "The wide view (V to see through your own eyes).")
+## The camera option (Options, or V): the wide diorama view (the default) or first person; kept with the display prefs.
+func _set_view(fp: bool, keep := true) -> void:
+	rig.first_person = fp
+	_self_layers(player.avatar.root, fp)
+	if quality: quality._set_dof()
+	if not fp: rig.pitch = clampf(rig.pitch, -0.45, 1.53)
+	if keep and bool(display.get("first_person", false)) != fp:
+		display.first_person = fp
+		if keep_prefs:
+			var f := FileAccess.open(DISPLAY_PATH, FileAccess.WRITE)
+			if f: f.store_string(JSON.stringify(display)); f.close()
+func _self_layers(n: Node, hide: bool) -> void:
+	if n is VisualInstance3D: (n as VisualInstance3D).layers = SELF_LAYER if hide else 1
+	for c in n.get_children(): _self_layers(c, hide)
 
 ## The lens focuses on the hero: kD turns relative depth into frame heights, 1 / (fovY * cot(pitch)).
 var lens_z := 15.0

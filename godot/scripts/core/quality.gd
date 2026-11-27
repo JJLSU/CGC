@@ -58,7 +58,7 @@ func apply(lv: String) -> void:
 		if f: f.store_string(JSON.stringify({"mode": mode, "level": level})); f.close()
 
 func _set_dof() -> void:
-	main.post.set_shader_parameter("dof_enabled", 1.0 if dof_on and LEVELS[level].dof else 0.0)
+	main.post.set_shader_parameter("dof_enabled", 1.0 if dof_on and LEVELS[level].dof and not main.rig.first_person else 0.0) # (no tilt-shift through his own eyes)
 
 ## O: auto → high → medium → low → auto. Returns the new setting's name for the toast.
 func cycle() -> String:

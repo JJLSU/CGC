@@ -16,6 +16,10 @@ var target_node: Node3D = null          ## what the camera rides on (the farmer)
 var height_at: Callable = func(_x: float, _z: float) -> float: return 0.0   ## terrain height lookup (world.getHeight)
 var water_level := 0.0
 var active := true
+var first_person := false  ## V: through the farmer's own eyes, a 90-degree lens (the player's ask); V again for the diorama view
+var eye_at: Callable        ## () -> his eyes, in the world (main: the head bone)
+const FP_FOV := 90.0
+const TP_FOV := 30.0
 var shake := 0.0   ## a jolt (a giant falling, a slam close by): metres, dying away in about half a second
 
 func _ready() -> void:
@@ -32,6 +36,18 @@ func forward() -> Vector3:
 
 func update_camera(dt: float) -> void:
 	if not active: yaw += dt * 0.05 # (idle orbit on the title screen)
+	if first_person and eye_at.is_valid() and active:
+		# through his eyes: looking where the mouse turns him (the same yaw and pitch as the free camera, seen from the
+		# other end), a wide 90-degree lens, nothing to lift over hills (his head is above them)
+		camera.fov = FP_FOV; camera.near = 0.05
+		var e: Vector3 = eye_at.call()
+		var look := Vector3(-sin(yaw) * cos(pitch), -sin(pitch), -cos(yaw) * cos(pitch))
+		if shake > 0.001: e += Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5) * shake; shake *= exp(-dt * 7.0)
+		camera.global_position = e
+		camera.look_at(e + look, Vector3.UP)
+		anchor = e; focus_offset = Vector3.ZERO
+		return
+	camera.fov = TP_FOV; camera.near = 0.2
 	var zoom := smoothstep(11.0, 40.0, dist)
 	var p := target_node.global_position if target_node else Vector3.ZERO
 	var want_anchor := Vector3(p.x, p.y + 0.9, p.z)

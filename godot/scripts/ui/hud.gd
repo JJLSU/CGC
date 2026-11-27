@@ -880,7 +880,7 @@ func show_error(text: String) -> void:
 
 ## The options card (the port's own; the page leaves display matters to the browser): each row a setting and a button
 ## showing its value that cycles it. Shown over the title card; Done folds it away.
-const OPTIONS := [["window", "Display"], ["vsync", "Vertical sync"], ["ui", "Interface size"], ["quality", "Graphics"], ["dof", "Depth of field"], ["sound", "Sound"]]
+const OPTIONS := [["window", "Display"], ["vsync", "Vertical sync"], ["ui", "Interface size"], ["quality", "Graphics"], ["dof", "Depth of field"], ["view", "Camera"], ["sound", "Sound"]]
 func _build_options() -> void:
 	options_card = card(-0.6, Vector4(26, 16, 26, 16)); options_card.visible = false; options_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", 8); options_card.add_child(v)
