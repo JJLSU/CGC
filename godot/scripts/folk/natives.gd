@@ -334,7 +334,7 @@ class Camp extends Node3D:
 		var p := player.pos; var d_camp := Vector2(p.x - at.x, p.z - at.z).length()
 		var cam := camera.global_position
 		var near := Vector2(cam.x - at.x, cam.z - at.z).length() < 140.0
-		visible = near
+		visible = near and World.ground_ready(at.x, at.z) # (no floating over the flat sheet before the camp's ground is built)
 		# the camp's mood: a trespasser warned, then fought, then let go once they've gone
 		var inside := d_camp < R and not player.dead
 		var peace := peace_until > NativeCamps.camp_day

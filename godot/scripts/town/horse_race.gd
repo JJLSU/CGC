@@ -153,8 +153,10 @@ func begin() -> void:
 ## Each frame. hooks: on_count(n), on_go(), on_flag(i, behind_m), on_end(won, why)
 func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dictionary) -> void:
 	if flags.is_empty(): return
-	var on := shown(sky_time)
+	var on := shown(sky_time) and World.ground_ready(jpos.x, jpos.z) # (Jake, his horse and the flags only once their ground is built)
 	jake.root.visible = on; horse.group.visible = on
+	if start_post: start_post.visible = World.ground_ready(start.x, start.z)
+	for i in posts.size(): (posts[i] as Node3D).visible = World.ground_ready(flags[i].x, flags[i].z)
 	bob += dt
 	if say_card: say_card.tick(dt, jpos + Vector3(0, 3.7, 0)); say_card.visible = say_card.visible and on_ok(sky_time)
 	for i in posts.size():

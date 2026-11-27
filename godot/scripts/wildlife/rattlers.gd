@@ -51,6 +51,7 @@ func update(dt: float, player: Player, today: int) -> void:
 		if not want.has(key): (snakes[key].node as Node3D).queue_free(); snakes.erase(key)
 	for key in snakes.keys():
 		var s: Dictionary = snakes[key]; var n: Node3D = s.node
+		n.visible = World.ground_ready(s.pos.x, s.pos.z) # (not coiled in mid-air before its ground is built)
 		var to := Vector3(player.pos.x - s.pos.x, 0, player.pos.z - s.pos.z); var d := to.length()
 		s.cool = maxf(0.0, s.cool - dt)
 		if s.get("leaving", 0.0) > 0.0: # (slithering off)
