@@ -65,6 +65,11 @@ func _init(model_name: String, spec := {}) -> void:
 	model = scene.instantiate() as Node3D
 	PaperMats.paperize(model, false, float(spec.get("hue", 0.0)))
 	body.add_child(model)
+	# not drawn past ~65 m (scaled with a giant): a figure there is a few pixels tall, and each is ~20k triangles, drawn
+	# again for every shadow slice; a town full of them cost the GPU dearly (spec "far" to set another distance)
+	var far_m: float = float(spec.get("far", 65.0)) * maxf(1.0, float(spec.get("scale", 1.0)))
+	for gi in model.find_children("*", "GeometryInstance3D", true, false):
+		(gi as GeometryInstance3D).visibility_range_end = far_m; (gi as GeometryInstance3D).visibility_range_end_margin = 5.0
 	var aps := model.find_children("*", "AnimationPlayer", true, false)
 	player = aps[0] if aps.size() else null
 	if player:

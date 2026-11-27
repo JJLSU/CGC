@@ -11,6 +11,11 @@ func _initialize() -> void:
 	var T: Town = main.town; var at: Vector3 = T.at - T.along * 15.0
 	if OS.get_environment("LOD_T") != "": root.get_viewport().mesh_lod_threshold = float(OS.get_environment("LOD_T"))
 	for i in 240: main.player.pos = Vector3(at.x, Terrain.get_height(at.x, at.z), at.z); await process_frame
+	var sun: DirectionalLight3D = main.sky.sun # (shadow variations, set once the quality settings have run)
+	if OS.get_environment("NO_SUN_SHADOW") != "": sun.shadow_enabled = false
+	if OS.get_environment("SPLITS2") != "": sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	if OS.get_environment("SHADOW_M") != "": sun.directional_shadow_max_distance = float(OS.get_environment("SHADOW_M"))
+	for i in 30: main.player.pos = Vector3(at.x, Terrain.get_height(at.x, at.z), at.z); await process_frame
 	var g := 0.0; var tr := 0.0; var dc := 0.0
 	for i in 120:
 		main.player.pos = Vector3(at.x, Terrain.get_height(at.x, at.z), at.z); await process_frame

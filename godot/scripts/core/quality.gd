@@ -48,11 +48,12 @@ func apply(lv: String) -> void:
 	RenderingServer.directional_shadow_atlas_set_size(q.shadow, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(q.filter)
 	main.sky.sun.shadow_blur = q.soft / 5.0
-	# on high, the sun's shadow in four slices (crisp at your feet, soft and cheap far off) instead of two
+	# the sun's shadow in two slices over 50 m (shadows past that sink into the haze), the near slice the first 12 m:
+	# crisp at your feet, and every caster drawn twice not four times (four slices over 80 m cost a third of the GPU)
 	var sun: DirectionalLight3D = main.sky.sun
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if lv == "high" else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_split_1 = 0.08; sun.directional_shadow_split_2 = 0.22; sun.directional_shadow_split_3 = 0.5
-	sun.directional_shadow_blend_splits = lv == "high"
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_max_distance = 50.0; sun.directional_shadow_split_1 = 0.24
+	sun.directional_shadow_blend_splits = true
 	var env: Environment = main.env.environment
 	env.ssao_enabled = q.ao
 	# contact shadow: where a card stands on the ground, a wall meets a porch, a figure a step: a little deeper and a little
