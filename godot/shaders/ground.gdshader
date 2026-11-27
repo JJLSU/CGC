@@ -162,6 +162,10 @@ void fragment() {
 	float gl = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(vec3(gl), col, GROUND_SAT) * GROUND_TONE;
 	col *= 1.0 - paper_wet * 0.22 * landMask; // (wet ground prints darker)
+	// puddles: in a soaking, small pools gather in the low patches (most on the trodden paths), a grey-blue of the sky
+	float pud = smoothstep(0.74, 0.79, nz(p * 0.05 + vec2(0.37, 0.11)).g + nz(p * 0.4).b * 0.08) * smoothstep(0.35, 0.9, paper_wet) * landMask;
+	pud *= path.x; // (on the trodden paths only: grey patches in the grass read as mould)
+	col = mix(col, vec3(0.42, 0.46, 0.5) * (0.9 + fine * 0.1), pud * 0.75);
 	float hz = haze_factor(wpos);
 	ALBEDO = col * (1.0 - hz);
 	EMISSION = haze_color(wpos) * hz;
