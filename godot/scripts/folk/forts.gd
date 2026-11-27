@@ -154,17 +154,28 @@ func find_target(player: Player, reach: float):
 	return best
 
 ## A wound: the whole fort turns out. True if he fell.
+## The troopers' calls (on a card over the one who calls): when the fort turns on you, and as a man falls.
+const LINES := {"angry": ["Halt! Who goes there?", "To arms! To arms!", "Fire at will!"], "fall": ["Man down!", "Hold the line!", "Close ranks!"]}
+var card: SayCard
+var card_on = null
+func _call(kind: String, f: Dictionary) -> void:
+	var up: Array = f.men.filter(func(o): return not o.dead)
+	if up.is_empty(): return
+	if card == null: card = SayCard.make(); add_child(card)
+	var L: Array = LINES[kind]; card.say(L[randi() % L.size()]); card_on = up[0]
 func damage(m: Dictionary, n: int, hooks: Dictionary) -> bool:
 	if m.dead: return false
 	m.hp -= n; m.hurt = 0.3
 	for f in forts:
 		if m in f.men:
+			if not f.angry: _call("angry", f)
 			if not f.angry and hooks.has("on_angry"): hooks.on_angry.call(f)
 			f.angry = true; f.angry_day = day
 			for o in f.men: o.state = "fight"
 	if m.hp > 0: return false
 	m.dead = 0.001
 	if hooks.has("on_fall"): hooks.on_fall.call(m)
+	for f in forts: if m in f.men: _call("fall", f)
 	for f in forts:
 		if m in f.men and f.men.all(func(o): return o.dead): f.cleared_day = day
 	return true
@@ -177,6 +188,8 @@ func near_fort(p: Vector3, r := 40.0):
 var clock := 0.5 ## the time of day (main sets it), for the gates
 func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 	day = today
+	if card and card_on != null and is_instance_valid(card_on.fig.root): card.tick(dt, card_on.fig.root.position + Vector3(0, 2.6, 0))
+	elif card: card.visible = false
 	var p := player.pos
 	for f in forts:
 		var d := Vector2(f.at.x - p.x, f.at.z - p.z).length()
