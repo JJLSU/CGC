@@ -48,6 +48,11 @@ func apply(lv: String) -> void:
 	RenderingServer.directional_shadow_atlas_set_size(q.shadow, true)
 	RenderingServer.directional_soft_shadow_filter_set_quality(q.filter)
 	main.sky.sun.shadow_blur = q.soft / 5.0
+	# on high, the sun's shadow in four slices (crisp at your feet, soft and cheap far off) instead of two
+	var sun: DirectionalLight3D = main.sky.sun
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if lv == "high" else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	sun.directional_shadow_split_1 = 0.08; sun.directional_shadow_split_2 = 0.22; sun.directional_shadow_split_3 = 0.5
+	sun.directional_shadow_blend_splits = lv == "high"
 	var env: Environment = main.env.environment
 	env.ssao_enabled = q.ao
 	# screen-space indirect light (the engine's own bounce: sunlit ground and walls tint the shade beside them), on high
