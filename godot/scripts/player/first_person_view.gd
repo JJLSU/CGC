@@ -9,8 +9,10 @@ var models := {}           ## MADE key -> Node3D holder
 var shown := ""
 var t := 0.0
 var aim_k := 0.0           ## 0 at rest, 1 raised to aim
-const REST := Vector3(0.24, -0.2, -0.55)
-const AIM := Vector3(0.0, -0.12, -0.5)
+## (the grip held just below the frame: only the business end shows, the player's ask; no hand drawn)
+const REST := Vector3(0.25, -0.29, -0.46)
+const AIM := Vector3(0.0, -0.215, -0.42)
+const TOOL_REST := Vector3(0.3, -0.42, -0.42)
 
 func _holder(key: String) -> Node3D:
 	if models.has(key): return models[key]
@@ -32,7 +34,6 @@ func _holder(key: String) -> Node3D:
 		var b := Basis(Vector3.RIGHT, -1.05) * Basis(Vector3.UP, PI / 2.0)
 		m.transform = Transform3D(b * k, b * Vector3(0, -float(spec[2]) * 0.0, 0) * k)
 		pivot.position = Vector3(0, 0, 0.1)
-	pivot.add_child(make_hand() if key != "box:bow" and not key.begins_with("box:bow") else _bow_hand())
 	add_child(holder); holder.visible = false
 	models[key] = holder
 	return holder
@@ -54,7 +55,6 @@ func _box_holder(id: String, src: Node3D) -> Node3D:
 		var mid := c.basis * bb.get_center(); c.position = -mid # (held at its middle)
 	else:
 		c.basis = Basis(Vector3.RIGHT, 0.5) * Basis(Vector3.UP, PI) # (the haft, along its +z, forward and a little up)
-	pivot.add_child(make_hand() if key != "box:bow" and not key.begins_with("box:bow") else _bow_hand())
 	add_child(holder); holder.visible = false
 	models[key] = holder
 	return holder
@@ -106,7 +106,7 @@ func update(dt: float, key: String, aiming: bool, swing: float, casting: float, 
 	var bow: bool = key == "box:bow"
 	aim_k = move_toward(aim_k, 1.0 if aiming and (gun or bow) else 0.0, dt * 6.0)
 	var bob := sin(t * 9.0) * 0.012 * clampf(speed / 6.0, 0.0, 1.0) * (1.0 - aim_k)
-	var rest := Vector3(-0.28, -0.14, -0.75) if bow else REST; var aim := Vector3(-0.18, -0.04, -0.7) if bow else AIM
+	var rest := Vector3(-0.3, -0.42, -0.6) if bow else (REST if gun else TOOL_REST); var aim := Vector3(-0.2, -0.36, -0.6) if bow else AIM
 	h.position = rest.lerp(aim, aim_k) + Vector3(bob * 0.5, absf(bob), 0)
 	if bow: h.rotation = Vector3(0, 0, 0.25 * (1.0 - aim_k)) # (canted at rest, upright when drawn)
 	var pivot := h.get_child(0) as Node3D
