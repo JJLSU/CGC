@@ -628,7 +628,7 @@ func _process(dt: float) -> void:
 	NativeCamps.player_armed = tools.has("bow") or tools.has("revolver") or tools.has("rifle")
 	camp.update(dt, player, rig.camera, camp_hooks, raid_hooks)
 	jumpers.update(dt, sky.day, player, jumper_hooks)
-	forts.update(dt, sky.day, player, fort_hooks)
+	forts.clock = sky.time; forts.update(dt, sky.day, player, fort_hooks)
 	forts.patrols_update(dt, sky.time, player)
 	_escort_update(dt)
 	wayfarers.update(dt, player, sky.day)

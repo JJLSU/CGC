@@ -101,6 +101,22 @@ static func _wall_kit():
 	inst.free()
 	return _kit
 
+## A piece of the player's fort kit at q, turned by b, true size (the kit is made to measure: ground line at 0, the
+## foot sunk 0.5 m below it); false if the model isn't in.
+func _piece(f: Dictionary, nm: String, q: Vector3, b: Basis) -> bool:
+	var m := _model(nm)
+	if m == null: return false
+	m.transform = Transform3D(b, Vector3(q.x, Terrain.get_height(q.x, q.z), q.z)); add_child(m); f.nodes.append(m)
+	return true
+static var _models := {}
+static func _model(nm: String) -> Node3D:
+	var path := "res://assets/models/props/%s.glb" % nm
+	if not ResourceLoader.exists(path): return null
+	if not _models.has(nm): _models[nm] = load(path)
+	var m := (_models[nm] as PackedScene).instantiate() as Node3D
+	PaperMats.paperize(m)
+	return m
+
 static func _wall_point(at: Vector3, fx: Vector3, fz: Vector3, side: int, u: float) -> Vector3:
 	var h := SIDE / 2.0
 	match side:
@@ -156,6 +172,7 @@ func near_fort(p: Vector3, r := 40.0):
 	return null
 
 ## hooks: on_hit(dmg), on_shoot(at), on_fall(man), on_angry(fort), on_first(fort)
+var clock := 0.5 ## the time of day (main sets it), for the gates
 func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 	day = today
 	var p := player.pos
@@ -197,18 +214,39 @@ func _build(f: Dictionary) -> void:
 		# colliders as before)
 		var mm := MultiMesh.new(); mm.transform_format = MultiMesh.TRANSFORM_3D; mm.mesh = kit.mesh
 		var xfs := []
+		var corners := ResourceLoader.exists("res://assets/models/props/prop_fort_corner.glb") # (the player's corner pieces: 2 m legs)
+		var end_gap := 2.0 if corners else 0.0
 		for side in 4:
 			var along_v: Vector3 = fx if side < 2 else fz; var out_v: Vector3 = (fz if side == 0 else -fz) if side < 2 else (fx if side == 2 else -fx)
-			var n := ceili(SIDE / kit.w) # (rounded up: the sections overlap a hair rather than leave a gap)
+			var run := SIDE - end_gap * 2.0
+			var n := ceili(run / kit.w) # (rounded up: the sections overlap a hair rather than leave a gap)
 			for k in n:
-				var u := -SIDE / 2.0 + (k + 0.5) * (SIDE / n)
+				var u := -run / 2.0 + (k + 0.5) * (run / n)
 				if side == 0 and absf(u) < 3.2: continue
+				if side == 1 and k == n / 2 and _piece(f, "prop_fort_wall_breached", _wall_point(at, fx, fz, side, u), Basis(along_v, Vector3.UP, out_v)): continue # (one section broken through, at the back)
 				var q: Vector3 = _wall_point(at, fx, fz, side, u); var y := Terrain.get_height(q.x, q.z) - float(kit.sink) # (its foot sunk into the ground)
 				var hh := 1.0 + (rng.next() - 0.5) * 0.12
 				var b := Basis(along_v, Vector3.UP * hh, out_v) # (its x along the wall, a touch taller or shorter section to section)
 				xfs.append(Transform3D(b, Vector3(q.x, y, q.z)) * kit.local)
 		mm.instance_count = xfs.size()
 		for i in xfs.size(): mm.set_instance_transform(i, xfs[i])
+		if corners: # (the four corners: each piece's outside corner on the stockade's, its legs back along the two walls)
+			for sx in [-1.0, 1.0]:
+				for sz in [-1.0, 1.0]:
+					var q: Vector3 = at + fx * (sx * SIDE / 2.0) + fz * (sz * SIDE / 2.0)
+					var X: Vector3 = -fx * sx; var Z: Vector3 = -fz * sz
+					if X.cross(Vector3.UP).dot(Z) < 0.0: var tmp := X; X = Z; Z = tmp # (right-handed: never mirrored)
+					_piece(f, "prop_fort_corner", q, Basis(X, Vector3.UP, Z))
+		# the gate: two leaves hung on the gate posts, swung in by day, shut at night
+		if ResourceLoader.exists("res://assets/models/props/prop_fort_gate.glb"):
+			f.leaves = []
+			for s in [-1.0, 1.0]:
+				var hinge: Vector3 = at + fz * (SIDE / 2.0) + fx * (3.2 * s)
+				var hold := Node3D.new(); hold.position = Vector3(hinge.x, Terrain.get_height(hinge.x, hinge.z), hinge.z)
+				hold.basis = Basis(fx * -s, Vector3.UP, fz * -s) if s > 0 else Basis(fx, Vector3.UP, fz) # (its leaf out along the gateway from its post)
+				add.call(hold)
+				var leaf := _model("prop_fort_gate"); hold.add_child(leaf)
+				f.leaves.append({"hold": hold, "side": s, "shut": hold.basis, "open": 0.0})
 		var mi := MultiMeshInstance3D.new(); mi.multimesh = mm; mi.material_override = kit.mat
 		mi.custom_aabb = AABB(at - Vector3(SIDE, 5, SIDE), Vector3(SIDE * 2, 20, SIDE * 2)); add.call(mi)
 	else:
@@ -275,6 +313,12 @@ func _fort_update(f: Dictionary, dt: float, player: Player, hooks: Dictionary, d
 	var p := player.pos; var at: Vector3 = f.at; var face: float = f.face
 	var fx := Vector3(cos(face), 0, -sin(face)); var fz := Vector3(sin(face), 0, cos(face))
 	if f.has("flag"): (f.flag as Node3D).rotation.z = sin(Time.get_ticks_msec() / 700.0) * 0.06 # (the colours stirring)
+	# the gate: swung in by day (and while the fort's turned out against you, shut), shut at night
+	var want_open := 1.0 if clock > 0.26 and clock < 0.8 and not f.angry else 0.0
+	for L in f.get("leaves", []):
+		L.open = move_toward(L.open, want_open, dt * 0.4)
+		var a: float = smoothstep(0.0, 1.0, L.open) * 1.6 * -float(L.side) # (swung inward on its post)
+		(L.hold as Node3D).basis = Basis(Vector3.UP, a) * L.shut
 	var gate := at + fz * (SIDE / 2.0)
 	var from_gate := Vector2(p.x - gate.x, p.z - gate.z).length()
 	if f.angry and (player.dead or from_gate > AGGRO_LEASH):
