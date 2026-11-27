@@ -7,7 +7,7 @@ func _initialize() -> void:
 	root.add_child(main)
 	await process_frame
 	main.force_active = true; main.sky.time = 0.42; main.weather.rain = 0.0
-	var B: Boss = main.bosses[2] if args.has("crane") else (main.bosses[1] if args.has("angus") else main.boss); var p: Player = main.player
+	var B: Boss = main.bosses[3] if args.has("cole") else main.bosses[2] if args.has("crane") else (main.bosses[1] if args.has("angus") else main.boss); var p: Player = main.player
 	var dir: Vector3 = (main.town.at - B.at).normalized()
 	if args.has("lair"): # (the camp from above and well back, the boss beaten and gone: just the layout)
 		B.beaten = true

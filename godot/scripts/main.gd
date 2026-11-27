@@ -948,7 +948,7 @@ func _dev_cash() -> void:
 ## Dev: the whole town at once (the player's ask, to look round it all): every boss's prize back (so no street is held),
 ## Main Street, the church and every new street mended, Chinatown included; the trophies up.
 func _dev_town() -> void:
-	for b in bosses: b.delivered = true; b.beaten = true
+	for b in bosses: if int(b.spec.street) < Town.STREETS.size(): b.delivered = true; b.beaten = true # (the bosses holding the streets; Cole, who holds none, is left to fight)
 	for b in Town.BUILDINGS: if not town.tiers.get(b.id, 0): town.mend(b.id)
 	if not town.tiers.get("church", 0): town.mend("church")
 	for st in Town.STREETS: for b in st.buildings: if not town.tiers.get(b.id, 0): town.mend(b.id)
@@ -1138,6 +1138,9 @@ func _race_door() -> bool:
 		else: inventory.dollars -= st; race.begin(); hud.toast("You each put $%d on the post. Dusty Jake grins and lines up his paint horse beside you..." % st)
 	return true
 
+## Cottonmouth Cole beaten and the payroll home: his gang is broken, and robs no more trains or banks.
+func gang_broken() -> bool: return bosses.any(func(b): return b.id == "cole" and b.delivered)
+
 ## The train robbers: once she's well out on the line with you aboard and armed, now and then (every couple of days at
 ## most, more often than not) a gang gallops up alongside; the railroad's bounty for them is paid once she's home.
 func _robbers_update(dt: float) -> void:
@@ -1146,7 +1149,7 @@ func _robbers_update(dt: float) -> void:
 	if not robbers.active and out_on_line and not rob_run:
 		rob_run = true
 		var armed: bool = tools.has("revolver") or tools.has("rifle") or tools.has("shotgun")
-		if armed and sky.day - robbers.last_day >= TrainRobbers.EVERY and randf() < 0.6:
+		if armed and not gang_broken() and sky.day - robbers.last_day >= TrainRobbers.EVERY and randf() < 0.6:
 			robbers.last_day = sky.day; robbers.start(train, 3 if sky.day < 12 else 4)
 			sound.whistle(0.8)
 			hud.toast("Riders coming up fast behind the train, bandannas over their faces! It's a hold-up: get your gun up and shoot them out of the saddle.")
@@ -3070,9 +3073,10 @@ func _boss_hooks(b: Boss) -> Dictionary:
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
 			if out: death_timer = 3.0; hud.toast("%s laughs over you. You come to a long while later, far from his camp." % nm),
-		"on_throw": func() -> void: sound.tear(),
+		"on_throw": func() -> void: (sound.bang() if b.spec.weapon == "gun" else sound.tear()),
 		"on_land": func(at: Vector3) -> void:
 			if b.spec.weapon == "dynamite": sound.bang(true); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
+			elif b.spec.weapon == "gun": sound.knock(); confetti.burst(at + Vector3(0, 0.2, 0), [0x8a6a48, 0xc8b48a], 6, 0.8) # (a spurt of dust where it strikes)
 			else: sound.chop(),
 		"on_slam": func(at: Vector3) -> void:
 			sound.land(); confetti.burst(at + Vector3(0, 0.3, 0), [0x8a6a48, 0xc8b48a], 14, 1.2)
@@ -3080,7 +3084,8 @@ func _boss_hooks(b: Boss) -> Dictionary:
 			if dd < 12.0: rig.shake = maxf(rig.shake, 0.12 * (1.0 - dd / 12.0)), # (felt underfoot close by)
 		"on_spotted": func() -> void:
 			hud.toast({"pick": "%s! The giant roars and hefts a pickaxe. Watch where they land.", "axe": "%s! The giant lumberjack grins and spins a hand axe. They fly fast and flat.",
-				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark."}[b.spec.weapon] % nm.to_upper()),
+				"dynamite": "%s! The baron strikes a match. Lit dynamite: get clear of the mark.",
+				"gun": "%s! The outlaw boss slaps leather. Each shot shows on the ground a moment before it lands: step aside."}[b.spec.weapon] % nm.to_upper()),
 		"on_fall": func(at: Vector3) -> void:
 			sound.tear(); journal.record("boss")
 			# he comes down like a felled pine: the ground shakes, dust flies, and the fiddle runs up in triumph
@@ -3126,6 +3131,7 @@ func _hand_in(b: Boss) -> void:
 	inventory[b.spec.prize_key] = 0; b.delivered = true; inventory.dollars = inventory.get("dollars", 0) + pay
 	sound.craft(); journal.record("deed")
 	if b.id == "crane": hud.toast("The assayer burns the mortgage in the stove. \"Cold Glitter Creek owes no man.\" +$%d" % pay)
+	elif b.id == "cole": hud.toast("The assayer counts the railroad's payroll back into its strongbox and wires the Overland & Western. Cole's gang is broken: no more robberies on the line or the road. +$%d" % pay)
 	else: hud.toast("The assayer files %s. \"Cold Glitter Creek grows again.\" +$%d" % [b.spec.prize, pay])
 	town.grow()
 	_trophies()
@@ -3139,7 +3145,8 @@ func _trophies() -> void:
 ## While a boss holds the town back (or his prize lies where he fell, not yet picked up), the rumour note tells where
 ## his lair is, with the arrow and the paces; gone once you're at the lair or carrying the prize.
 const BOSS_TALK := {"jebediah": "Folks say Mad Jebediah sits on the town's deed at his diggings", "angus": "Loggers say Big Angus keeps the timber rights at his camp in the pines",
-	"crane": "The bank clerk says Thaddeus Crane keeps the mortgage in his fenced house"}
+	"crane": "The bank clerk says Thaddeus Crane keeps the mortgage in his fenced house",
+	"cole": "The station agent says Cottonmouth Cole holes up with the stolen payroll at a hideout in the rocks"}
 func _boss_rumour():
 	var b = _boss_holding()
 	if b == null or _prize_held() != null: return null
@@ -3152,7 +3159,7 @@ func _boss_rumour():
 ## Angus's woodpile an armload of split wood, Crane's company stores a few bars of iron. E at the lair's "mouth" (the
 ## mine, the chopping block, the porch).
 const SPOILS := {"jebediah": ["Work Jebediah's old diggings", {"gold": 2}], "angus": ["Take wood from Angus's pile", {"wood": 8}],
-	"crane": ["Help yourself to Crane's company stores", {"iron": 3}]}
+	"crane": ["Help yourself to Crane's company stores", {"iron": 3}], "cole": ["Go through the gang's plunder", {"cartridges": 8, "dollars": 10}]}
 func _boss_spoils(active: bool) -> bool:
 	if not active or player.dead or build.active: return false
 	for b in bosses:
@@ -3166,13 +3173,14 @@ func _boss_spoils(active: bool) -> bool:
 			if b.id == "jebediah" and randf() < 0.35: got.silver = 1
 			var bits := []
 			for k in got: inventory[k] = inventory.get(k, 0) + int(got[k]); bits.append("+%d %s" % [got[k], k])
-			sound.pick(); hud.toast("%s: %s." % [sp[0].replace("Work ", "You work ").replace("Take ", "You take ").replace("Help yourself to", "You help yourself to"), ", ".join(bits)])
+			sound.pick(); hud.toast("%s: %s." % [sp[0].replace("Work ", "You work ").replace("Take ", "You take ").replace("Help yourself to", "You help yourself to").replace("Go through", "You go through"), ", ".join(bits)])
 			if b.id == "jebediah": settlers.discover("gold")
 		return true
 	return false
 
 ## Where the town stands (shown beside its name; it rises as the bosses fall and their prizes come home).
 func town_rank() -> String:
+	if gang_broken(): return "a free and peaceable town"
 	if bosses.size() > 2 and bosses[2].delivered: return "a free town"
 	if 1 in town.opened: return "the county seat"
 	if 0 in town.opened: return "a boom town"
@@ -3184,7 +3192,8 @@ const GOSSIP := {"jebediah": ["\"Jebediah's dug that mine since before the town.
 	"\"Without that deed, Second Street's just a dream.\""], "angus": ["\"Angus cut every tree this side of the river.\"",
 	"\"Not a plank in town while Angus has the rights.\"", "\"Keep your head down round Angus: his axes fly flat.\""],
 	"crane": ["\"Crane's paper's on every roof in town.\"", "\"Crane keeps blasting powder like folk keep flour.\"",
-	"\"Pay off Crane? Better to burn his mortgage, I say.\""], "done": ["\"Free and clear, thanks to you!\"", "\"Hardly know the place, it's grown so.\""]}
+	"\"Pay off Crane? Better to burn his mortgage, I say.\""], "cole": ["\"Cole's boys took the payroll off the noon train, bold as brass.\"",
+	"\"They say Cole can put six in a playing card from forty paces.\"", "\"Nobody rides the line easy while Cottonmouth Cole's out there.\""], "done": ["\"Free and clear, thanks to you!\"", "\"Hardly know the place, it's grown so.\""]}
 var gossip_day := -1
 func _boss_gossip() -> void:
 	if gossip_day == sky.day or randf() > 0.35: return
@@ -3549,7 +3558,7 @@ func _raid_update() -> void:
 			jumpers.end_raid()
 		elif jumpers.raid_beaten() and sky.time < 0.2: jumpers.end_raid() # (the undertaker's been by)
 		return
-	if not town.tiers.get("bank", 0) or not town.doors.has("bank") or sky.day < 3 or sky.day - holdup_day < RAID_EVERY: return
+	if gang_broken() or not town.tiers.get("bank", 0) or not town.doors.has("bank") or sky.day < 3 or sky.day - holdup_day < RAID_EVERY: return
 	if sky.time < 0.72 or sky.time > 0.8 or absi(hash(sky.day)) % 3 != 0: return # (a dusk, most weeks)
 	start_raid()
 ## The gang rides in (also the dev's way to see one).

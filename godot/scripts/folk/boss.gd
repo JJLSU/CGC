@@ -36,8 +36,16 @@ const SPECS := {
 	"crane": {"name": "Thaddeus Crane", "model": "boss_tycoon", "scale": 2.2, "hp": 170, "speed": 3.0, "weapon": "dynamite", "throw_hit": 24, "slam_hit": 26,
 		"cool": 2.6, "fly": 12.0, "arc": 1.1, "hit_r": 2.6, "r0": 380.0, "r1": 520.0, "salt": 2929, "lair": "mansion", "street": 2,
 		"prize": "the town's mortgage", "prize_key": "mortgage", "reward": 150, "bounty": 100},
+	# the outlaw gang's boss (the player's outlaws, the train robbers, the hold-ups): once the town is all built, word
+	# comes of the man behind them, holed up at a hideout with the railroad's stolen payroll. No giant: a big, quick man
+	# with a pair of Colts. Each shot is marked on the ground a moment before it lands (fast and flat: step aside), and
+	# once riled he fans the hammer, five shots in a line across your path. The payroll home, the gang is broken: no
+	# more train robberies or hold-ups on the road.
+	"cole": {"name": "Cottonmouth Cole", "model": "cgc_man_outlaw_veteran", "scale": 1.3, "hp": 150, "speed": 4.4, "weapon": "gun", "throw_hit": 16, "slam_hit": 18,
+		"cool": 1.5, "fly": 30.0, "arc": 0.0, "hit_r": 1.2, "hand_y": 1.9, "r0": 420.0, "r1": 560.0, "salt": 4141, "lair": "hideout", "street": 3,
+		"prize": "the stolen payroll", "prize_key": "payroll", "reward": 200, "bounty": 120},
 }
-const ORDER := ["jebediah", "angus", "crane"]
+const ORDER := ["jebediah", "angus", "crane", "cole"]
 ## What each says in a fight, now and then, on a card over his head: when he sees you, as he throws, once riled.
 const TAUNTS := {
 	"jebediah": {"spot": ["Claim jumper! This here's MY mountain!", "Git off my diggin's!", "Heh heh... fresh meat for the mine!"],
@@ -49,6 +57,9 @@ const TAUNTS := {
 	"crane": {"spot": ["Trespassing on company land, are we?", "Every man has his price. What's yours?", "Ah. The farmer."],
 		"fight": ["Mind the fuse!", "Business is business.", "I own this county, and everyone in it!"],
 		"riled": ["Do you know who I AM?", "I'll have you for this!", "Blast it! BLAST IT ALL!"]},
+	"cole": {"spot": ["Well now. The sodbuster who's been shooting my boys.", "You came a long way to die, farmer.", "Nobody finds this place. Nobody leaves it, neither."],
+		"fight": ["Dance, farmer!", "Hold still and I'll make it quick.", "That payroll's spent, friend. Every dime."],
+		"riled": ["You're better than my boys said.", "Now you've made me mad.", "I'll fan this hammer till you drop!"]},
 }
 const SAY_EVERY := 6.5      ## seconds at least between his lines
 
@@ -274,10 +285,10 @@ func _throw(from: Vector3, p: Vector3, v: Vector3, dp: float, side: float, at = 
 	var fwd := Vector3(to.x - from.x, 0, to.z - from.z).normalized()
 	if at == null: to += Vector3(-fwd.z, 0, fwd.x) * side
 	to.y = Terrain.get_height(to.x, to.z)
-	var n := _boulder() if drop else _weapon(2.3); add_child(n)
+	var n := _boulder() if drop else (_bullet_mesh() if spec.weapon == "gun" else _weapon(2.3)); add_child(n)
 	var mark := MeshInstance3D.new(); var dm := CylinderMesh.new(); var hr: float = spec.get("hit_r", PICK_R); dm.top_radius = hr; dm.bottom_radius = hr; dm.height = 0.02; dm.radial_segments = 20
 	mark.mesh = dm; mark.material_override = _mark_mat(); mark.position = to + Vector3(0, 0.05, 0); add_child(mark)
-	picks.append({"node": n, "mark": mark, "from": (to + Vector3(0, 16.0, 0)) if drop else from + Vector3(0, 4.2, 0), "to": to, "t": 0.0, "dur": dur, "landed": -1.0, "drop": drop})
+	picks.append({"node": n, "mark": mark, "from": (to + Vector3(0, 16.0, 0)) if drop else from + Vector3(0, float(spec.get("hand_y", 4.2)), 0), "to": to, "t": 0.0, "dur": dur, "landed": -1.0, "drop": drop})
 
 ## His own trick, every third throw once he's riled; each marked on the ground before it lands, so you can get clear:
 ## Jebediah stamps and brings a rockfall down round you (three boulders), Angus throws three axes in a wide fan,
@@ -291,6 +302,8 @@ func _special(me: Vector3, p: Vector3, v: Vector3, dp: float) -> void:
 			if hooks.has("on_slam"): hooks.on_slam.call(me) # (the stamp that shakes them loose)
 		"axe":
 			for i in 3: _throw(me, p, v, dp, (i - 1) * 4.5)
+		"gun": # (fans the hammer: five shots in a line across your path)
+			for i in 5: _throw(me, p, v, dp, (i - 2) * 1.7)
 		"dynamite":
 			_throw(me, p, v, dp, 0.0, p)
 			for i in 3:
@@ -308,13 +321,13 @@ func _picks_update(dt: float, player: Player, hooks: Dictionary) -> void:
 		var n: Node3D = k.node
 		if k.landed >= 0.0:
 			k.landed += dt
-			if k.landed > (0.15 if spec.weapon == "dynamite" else 4.0): n.queue_free(); picks.erase(k) # (a stick is gone in the blast)
+			if k.landed > (0.15 if spec.weapon == "dynamite" or spec.weapon == "gun" else 4.0): n.queue_free(); picks.erase(k) # (a stick is gone in the blast)
 			continue
 		k.t += dt
 		var u := clampf(k.t / k.dur, 0.0, 1.0)
 		var q: Vector3 = (k.from as Vector3).lerp(k.to, u * u if k.drop else u) # (a boulder falls, quicker as it comes)
 		if not k.drop: q.y += sin(u * PI) * (3.0 + k.dur * 3.0) * spec.arc # (a high lob; an axe flies flatter)
-		n.position = q; n.rotation = Vector3(-k.t * (3.0 if k.drop else 11.0), atan2(k.to.x - k.from.x, k.to.z - k.from.z) if not k.drop else k.t, 0)
+		n.position = q; n.rotation = Vector3(0.0 if spec.weapon == "gun" else -k.t * (3.0 if k.drop else 11.0), atan2(k.to.x - k.from.x, k.to.z - k.from.z) if not k.drop else k.t, 0) # (a bullet flies true; the rest tumble)
 		var m: MeshInstance3D = k.mark; (m.material_override as StandardMaterial3D).albedo_color.a = 0.28 + 0.34 * u
 		if u >= 1.0:
 			k.landed = 0.0; m.queue_free()
@@ -337,6 +350,7 @@ func _build() -> void:
 	var outw := (at - mouth).normalized()
 	if spec.lair == "logging": _build_logging(place, rng, face, side, outw)
 	elif spec.lair == "mansion": _build_mansion(place, rng, face, side, outw)
+	elif spec.lair == "hideout": _build_hideout(place, rng, face, side, outw)
 	else: _build_diggings(place, rng, face, side, outw)
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.9; tm.outer_radius = 1.0; tm.rings = 40; tm.ring_segments = 4
 	ring.mesh = tm; ring.material_override = PaperMats.paper(Color("a8352a")); ring.visible = false; add_child(ring); nodes.append(ring)
@@ -345,6 +359,7 @@ func _build() -> void:
 	fig = ModelFigure.new(spec.model, {"scale": spec.scale})
 	fig.borrow_clip("run", "folk_native_warrior")
 	hand_pick = _weapon(0.85); hand_pick.rotation.x = PI / 2.0; hand_pick.position = Vector3(0, 0, 0.25); fig.hands[1].add_child(hand_pick)
+	if spec.weapon == "gun": hand_pick.rotation.x = 0.0; hand_pick.position = Vector3(0, 0.02, 0.06) # (a Colt in his fist, its barrel along his hand)
 	var home := mouth + outw * 2.5
 	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z); fig.root.rotation.y = atan2(mouth.x - home.x, mouth.z - home.z)
 	add_child(fig.root)
@@ -397,6 +412,21 @@ func _build_mansion(place: Callable, rng: PNoise.Mulberry32, face: float, side: 
 		var dy := _weapon(1.2); var q := mouth + side * (3.0 + i * 0.5) + outw * 1.0
 		dy.position = Vector3(q.x, Terrain.get_height(q.x, q.z) + 1.0, q.z); dy.rotation = Vector3(0, face + i * 0.4, 0); add_child(dy); nodes.append(dy)
 
+## Cottonmouth Cole's hideout: a tumbledown stable (his "mouth": its doorway, where he sits cleaning his guns), the gang's tents, a
+## covered wagon of plunder, crates of rifles and powder and bottles, the fire, all ringed by boulders.
+func _build_hideout(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:
+	place.call("bldg_stable2_ruined", 9.0, mouth - outw * 4.5, face) # (a tumbledown stable: the gang's horses and their loot)
+	place.call("prop_tent", 3.4, at - side * 7.5 + outw * 1.5, face + 2.2)
+	place.call("prop_tent", 3.2, at + side * 7.0 + outw * 2.5, face - 2.0)
+	place.call("veh_covered_wagon", 5.0, at + side * 9.5 - outw * 3.0, face + 1.4)
+	place.call("prop_weapon_crates", 1.6, mouth + side * 3.6 + outw * 1.2, face)
+	place.call("prop_powder_barrels", 1.4, mouth - side * 3.8 + outw * 1.4, face + 0.5)
+	place.call("prop_bottle_crates", 1.3, at + side * 2.6 - outw * 1.0, face - 0.3)
+	place.call("prop_cookfire", 1.1, at, 0.0)
+	for i in 7:
+		var a := rng.next() * TAU; var rr := 14.0 + rng.next() * 7.0
+		place.call("rock_boulders", 2.2 + rng.next() * 1.8, at + Vector3(cos(a) * rr, 0, sin(a) * rr), rng.next() * TAU)
+
 ## Big Angus's logging camp: the chopping block (his "mouth": where he works) with a great woodpile, a felled pine,
 ## a lean-to and freight wagon for the timber he's hoarding, his fire and tent, stumps, and a row of axes.
 func _build_logging(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:
@@ -435,6 +465,7 @@ func _unbuild() -> void:
 
 func _weapon(length: float) -> Node3D:
 	match spec.weapon:
+		"gun": return _colt_mesh(length)
 		"axe": return _axe_mesh(length)
 		"dynamite": return _dynamite_mesh(length)
 	return _pick_mesh(length)
@@ -461,6 +492,25 @@ static func _axe_mesh(length: float) -> Node3D:
 	h.mesh = cm; h.material_override = PaperMats.paper(Color("9a6a3a")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, length * 0.5 - 0.1); g.add_child(h)
 	var bit := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(length * 0.04, length * 0.32, length * 0.2)
 	bit.mesh = bm; bit.material_override = PaperMats.paper(Color("b9bec4")); bit.position = Vector3(0, length * 0.14, length - 0.14); g.add_child(bit)
+	return g
+
+## A Colt: a dark barrel along its own z, a walnut grip hanging below its back end. length: the whole gun.
+static func _colt_mesh(length: float) -> Node3D:
+	var g := Node3D.new(); var l := length * 0.5
+	var bar := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = l * 0.06; cm.bottom_radius = l * 0.06; cm.height = l; cm.radial_segments = 8
+	bar.mesh = cm; bar.material_override = PaperMats.paper(Color("3a3a40")); bar.rotation.x = PI / 2.0; bar.position = Vector3(0, 0, l * 0.5); g.add_child(bar)
+	var cyl := MeshInstance3D.new(); var cy := CylinderMesh.new(); cy.top_radius = l * 0.12; cy.bottom_radius = l * 0.12; cy.height = l * 0.25; cy.radial_segments = 8
+	cyl.mesh = cy; cyl.material_override = PaperMats.paper(Color("55555c")); cyl.rotation.x = PI / 2.0; cyl.position = Vector3(0, 0, l * 0.05); g.add_child(cyl)
+	var gr := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(l * 0.12, l * 0.38, l * 0.16)
+	gr.mesh = bm; gr.material_override = PaperMats.paper(Color("6a4428")); gr.position = Vector3(0, -l * 0.2, -l * 0.12); gr.rotation.x = 0.35; g.add_child(gr)
+	return g
+## A bullet in flight: a little lead slug trailing a streak of pale smoke (so you can see it coming).
+static func _bullet_mesh() -> Node3D:
+	var g := Node3D.new()
+	var b := MeshInstance3D.new(); var sm := SphereMesh.new(); sm.radius = 0.07; sm.height = 0.14; b.mesh = sm; b.material_override = PaperMats.paper(Color("4a4a50")); g.add_child(b)
+	var tr := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.05; cm.bottom_radius = 0.0; cm.height = 1.4; tr.mesh = cm
+	var m := StandardMaterial3D.new(); m.albedo_color = Color(0.95, 0.92, 0.85, 0.55); m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tr.material_override = m; tr.rotation.x = -PI / 2.0; tr.position = Vector3(0, 0, -0.7); g.add_child(tr)
 	return g
 
 ## A pickaxe: an ash handle along its own z, an iron head across the far end. length: the handle.
