@@ -25,4 +25,10 @@ func say(line: String, sec := 2.6) -> void:
 
 func tick(dt: float, at: Vector3) -> void:
 	t -= dt; visible = t > 0.0
-	if visible: global_position = at
+	if visible:
+		global_position = at
+		# never wider than the view up close: shrink with the camera nearer than 12 m (paper and words together)
+		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+		var k := 1.0
+		if cam: k = clampf(cam.global_position.distance_to(at) / 12.0, 0.35, 1.0)
+		scale = Vector3.ONE * k
