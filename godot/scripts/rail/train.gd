@@ -130,7 +130,7 @@ func load_cargo(n: int) -> void:
 		h.position = ride_floor + Vector3(-ride_half.x * 0.45 + (col % 2) * ride_half.x * 0.9, up * 0.98, ride_half.y * 0.75 - floori(col / 2.0) * 1.15)
 		h.rotation.y = fmod(i * 1.3, 0.4) - 0.2; car.add_child(h); cargo.append(h)
 func unload() -> void:
-	ride_at.y = ride_floor.y # (back down on the floor when the freight's off)
+	ride_at.y = ride_floor.y; ride_y = ride_floor.y # (back down on the floor when the freight's off)
 	for c in cargo: if is_instance_valid(c): c.queue_free()
 	cargo = []
 	for f in riders: f.root.queue_free()
@@ -162,9 +162,10 @@ func move_rider(wish: Vector3, dt: float) -> Vector3:
 	# and stands on top while she runs
 	var here := stack_top(ride_at.x, ride_at.z); var there := stack_top(nx, nz)
 	if there - here > 2.1: return Vector3.ZERO # (a scramble up a two-high stack; never more)
-	ride_at = Vector3(nx, ride_floor.y + there, nz)
+	ride_at = Vector3(nx, ride_at.y, nz); ride_y = ride_floor.y + there # (he climbs to it over a moment: Train.update eases ride_at.y)
 	return wish * 2.6
 ## How high the freight stands at (x, z) in the car's frame, above its floor (0 where there's none).
+var ride_y := 0.0 ## the height he's climbing to (the floor, or the top of the freight)
 func stack_top(x: float, z: float) -> float:
 	var top := 0.0
 	for c in cargo:
@@ -211,6 +212,7 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 			state = "run"; at_stop = -1
 			if on_whistle.is_valid(): on_whistle.call(at(s).pos)
 	for f in riders: if f.root.is_visible_in_tree(): f.update(dt, 0.0, null)
+	if ride_i >= 0 and ride_y != 0.0: ride_at.y = move_toward(ride_at.y, ride_y, dt * 4.0) # (up the stack hand over hand, ~half a second)
 	# the cars along the line, coupled one behind another
 	var cp := camera.global_position; var head := at(s)
 	var far := not passenger and Vector2(cp.x - head.pos.x, cp.z - head.pos.z).length() > 170.0 # (never while you ride her)

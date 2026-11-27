@@ -19,10 +19,14 @@ func _initialize() -> void:
 	var car: Node3D = TR.ride_car(); var along: Vector3 = car.global_basis.z.normalized()
 	var top := 0.0
 	for i in 300: # (toward the crates' end: the car's +z)
-		TR.move_rider(along, 1.0 / 60.0); top = maxf(top, TR.ride_at.y - TR.ride_floor.y)
+		TR.move_rider(along, 1.0 / 60.0); top = maxf(top, TR.ride_y - TR.ride_floor.y)
 		if top > 1.5: break # (on top of the stack: stand there)
+	var mid := 0.0
+	for i in 60:
+		await process_frame
+		if i == 4: mid = TR.ride_at.y - TR.ride_floor.y # (part way up, not there at once)
+	print("part way up after a few frames: %.2f m" % mid)
 	var stood: float = TR.ride_at.y - TR.ride_floor.y
-	for i in 10: await process_frame
 	print("climbed onto the freight: highest %.2f m, standing %.2f m above the floor; his feet %.2f m above the car floor" % [top, stood, main.player.pos.y - car.to_global(TR.ride_floor).y])
 	if out != "":
 		main.set_process(false)
@@ -35,7 +39,7 @@ func _initialize() -> void:
 	for i in 60: TR.move_rider(-along, 1.0 / 60.0)
 	var after: float = TR.ride_at.y - TR.ride_floor.y
 	print("freight off: %.2f m above the floor" % after)
-	var ok: bool = top > 0.9 and stood > 0.9 and after < 0.01
+	var ok: bool = mid > 0.05 and mid < 1.9 and top > 0.9 and stood > 0.9 and after < 0.01
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	print("FREIGHT CLIMB TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
