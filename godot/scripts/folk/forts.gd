@@ -82,7 +82,10 @@ const WALL_H := 3.5
 static var _kit = null
 static func _wall_kit():
 	if _kit != null: return _kit if _kit is Dictionary else null
-	var path := "res://assets/models/props/prop_fort_wall_short_lo.glb"
+	# (the long wall, 4 m of it, made to measure in the player's Meshy agent work: 3.5 m standing, 0.5 m sunk; else the
+	# short section, overlapped)
+	var long := ResourceLoader.exists("res://assets/models/props/prop_fort_wall_long.glb")
+	var path := "res://assets/models/props/prop_fort_wall_long.glb" if long else "res://assets/models/props/prop_fort_wall_short_lo.glb"
 	if not ResourceLoader.exists(path): _kit = false; return null
 	var inst := (load(path) as PackedScene).instantiate() as Node3D
 	PaperMats.paperize(inst)
@@ -91,9 +94,10 @@ static func _wall_kit():
 	var mi: MeshInstance3D = mis[0]
 	var xf := Railroad._rel(mi, inst)
 	var bb := xf * mi.mesh.get_aabb()
-	var k := WALL_H / bb.size.y
+	var k := (WALL_H + 0.5) / bb.size.y if long else WALL_H / bb.size.y
 	var local := Transform3D(Basis().scaled(Vector3.ONE * k), Vector3.ZERO) * Transform3D(Basis(), -Vector3(bb.get_center().x, bb.position.y, bb.get_center().z)) * xf
-	_kit = {"mesh": mi.mesh, "mat": mi.get_active_material(0), "local": local, "w": bb.size.x * k * 0.66} # (overlapped: the section's outer poles lean out past its body)
+	_kit = {"mesh": mi.mesh, "mat": mi.get_active_material(0), "local": local, "sink": 0.5 if long else 0.25,
+		"w": bb.size.x * k * (1.0 if long else 0.66)} # (the long wall butts end to end; the short section overlapped: its outer poles lean out past its body)
 	inst.free()
 	return _kit
 
@@ -195,11 +199,11 @@ func _build(f: Dictionary) -> void:
 		var xfs := []
 		for side in 4:
 			var along_v: Vector3 = fx if side < 2 else fz; var out_v: Vector3 = (fz if side == 0 else -fz) if side < 2 else (fx if side == 2 else -fx)
-			var n := int(SIDE / kit.w)
+			var n := ceili(SIDE / kit.w) # (rounded up: the sections overlap a hair rather than leave a gap)
 			for k in n:
 				var u := -SIDE / 2.0 + (k + 0.5) * (SIDE / n)
 				if side == 0 and absf(u) < 3.2: continue
-				var q: Vector3 = _wall_point(at, fx, fz, side, u); var y := Terrain.get_height(q.x, q.z) - 0.25 # (sunk a little, as the poles are)
+				var q: Vector3 = _wall_point(at, fx, fz, side, u); var y := Terrain.get_height(q.x, q.z) - float(kit.sink) # (its foot sunk into the ground)
 				var hh := 1.0 + (rng.next() - 0.5) * 0.12
 				var b := Basis(along_v, Vector3.UP * hh, out_v) # (its x along the wall, a touch taller or shorter section to section)
 				xfs.append(Transform3D(b, Vector3(q.x, y, q.z)) * kit.local)
