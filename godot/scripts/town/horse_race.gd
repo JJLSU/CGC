@@ -34,9 +34,11 @@ var cum: Array = []
 const JAKE_LINES := {"go": ["Hyah! Eat my dust, neighbour!", "See you at the finish!", "Come on, Domino!"],
 	"ahead": ["Too slow!", "That all she's got?", "Haw! Catch me if you can!"],
 	"behind": ["Well, I'll be...", "Hold on now!", "Not for long, friend!"],
-	"won": ["Better luck next time!", "Ha! Domino never loses!"], "lost": ["Dang it all!", "Fair and square. Good race."]}
+	"won": ["Better luck next time!", "Ha! Domino never loses!"], "hail": ["Fancy a race, neighbour?", "Five dollars says I beat you round!", "Here's trouble on a horse!"],
+	"hail_foot": ["Afoot? Fetch a horse, friend.", "Howdy, neighbour."], "lost": ["Dang it all!", "Fair and square. Good race."]}
 var say_card: SayCard
-var lead_was := 0         ## who led at the last flag: 1 Jake, -1 you
+var lead_was := 0
+var hailed := false         ## who led at the last flag: 1 Jake, -1 you
 func say(kind: String) -> void:
 	if say_card == null: return
 	var L: Array = JAKE_LINES[kind]; var line: String = L[randi() % L.size()]
@@ -168,6 +170,10 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 	if not on: return
 	match state:
 		"idle", "done":
+			# he calls out as you come up to his post (once a visit)
+			var dp := Vector2(player.pos.x - jpos.x, player.pos.z - jpos.z).length()
+			if state == "idle" and dp < 12.0 and not hailed: hailed = true; say("hail" if riding else "hail_foot")
+			elif dp > 40.0: hailed = false
 			# back to the post at a walk, and wait there
 			var home: Vector3 = start + (start - (flags[0] as Vector3)).normalized().cross(Vector3.UP) * 3.0
 			var d := Vector3(home.x - jpos.x, 0, home.z - jpos.z)

@@ -17,6 +17,8 @@ func _initialize() -> void:
 	print("course: %d flags, %.0f m round, %d bad samples, farthest flag %.0f m from the post; post %.0f m from town" % [R.flags.size(), R.cum[-1], bad, span, R.start.distance_to(main.town.at)])
 	main.inventory.dollars = 20
 	for i in 5: main.player.pos = R.start; await process_frame
+	var hail: String = R.say_card.text if R.say_card else ""
+	print("Jake hails you on foot: '%s'" % hail)
 	main.input.pressed["KeyE"] = true; await process_frame
 	var on_foot_state: String = R.state
 	main.make_horse(R.start.x + 2, R.start.z); main.riding = true; main.player.riding = true; main.player.avatar.riding = true
@@ -49,7 +51,7 @@ func _initialize() -> void:
 		main.player.pos = R.start + Vector3(0, 0, 0.5); await process_frame
 	var lost2: bool = R.wins == 1 and main.inventory.dollars == 15 and R.state == "done" # (the stake doubled to $10 after his first loss)
 	print("race 2 (sat still): lost %s ($%d), Jake's next %d" % [lost2, main.inventory.dollars, R.jake_next])
-	var ok: bool = R.flags.size() == 6 and bad < 6 and on_foot_state == "idle" and began and won1 and lost2
+	var ok: bool = hail in R.JAKE_LINES.hail_foot and R.flags.size() == 6 and bad < 6 and on_foot_state == "idle" and began and won1 and lost2
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	print("RACE TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)
