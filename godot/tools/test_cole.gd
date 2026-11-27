@@ -23,7 +23,8 @@ func _initialize() -> void:
 		main.player.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); main.player.health = main.player.max_health; main.player.dead = false
 		shots = maxi(shots, C.picks.size() + (1 if C.throws > 0 else 0))
 		await process_frame
-	print("fighting %s, threw %d, bullets in the air seen %d" % [C.fighting(), C.throws, shots])
+	var gone: int = C.gang.filter(func(g): return g.mounted and Vector2(g.horse.group.position.x - C.at.x, g.horse.group.position.z - C.at.z).length() > 20.0).size()
+	print("fighting %s, threw %d, bullets in the air seen %d; his gang %d, ridden off %d" % [C.fighting(), C.throws, shots, C.gang.size(), gone])
 	while C.alive(): C.damage(10, C.hooks)
 	for i in 30: await process_frame
 	var payroll = main.drops.filter(func(d): return d.loot.has("payroll"))
@@ -37,7 +38,7 @@ func _initialize() -> void:
 	main.train.passenger = true; main.train.state = "run"; main.train.leg = 0; main.train.s = main.train.home_s() + 200.0
 	for k in 20: main.rob_run = false; main.robbers.last_day = -99; main._robbers_update(0.016)
 	print("handed in: +$%d, gang broken %s, robbers came %s, rank '%s'" % [pay, main.gang_broken(), main.robbers.active, main.town_rank()])
-	var ok: bool = not known_before and told and main.bosses.size() == 4 and C.throws > 0 and C.beaten and payroll.size() == 1 and pay == 200 and main.gang_broken() and not main.robbers.active
+	var ok: bool = C.gang.size() == 2 and gone == 2 and not known_before and told and main.bosses.size() == 4 and C.throws > 0 and C.beaten and payroll.size() == 1 and pay == 200 and main.gang_broken() and not main.robbers.active
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	print("COLE TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

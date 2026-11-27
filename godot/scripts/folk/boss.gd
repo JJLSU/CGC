@@ -73,6 +73,7 @@ var mouth := Vector3.ZERO
 var seed_n := 0
 var built := false
 var nodes: Array = []
+var gang: Array = []          ## Cole's two men at the fire: {fig, horse, dir, run} (they ride off when the fight starts)
 var fig: ModelFigure
 var hand_pick: Node3D
 var act := ""             ## a one-off clip playing (throw, slam), and how long it has left
@@ -210,6 +211,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	if dt > 0.0: vel = vel.lerp((p - last_p) / dt, minf(1.0, dt * 4.0))
 	last_p = p
 	_picks_update(dt, player, hooks)
+	_gang_update(dt)
 	if fig == null: return
 	var r := fig.root
 	if dead > 0.0:
@@ -275,6 +277,27 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	act_t -= dt
 	if act_t > 0.0 and fig.player and fig.player.has_animation(act): fig.play(act, 0.12)
 	else: fig.update(dt, speed / spec.scale * 1.6, pose)
+
+## Cole's gang: idle by the fire; once he's fighting, each runs to his horse, mounts and gallops off out of the county.
+func _gang_update(dt: float) -> void:
+	for g in gang:
+		var f: ModelFigure = g.fig; var h: Puppet = g.horse
+		if not is_instance_valid(f.root): continue
+		if state != "fight" and g.run <= 0.0:
+			f.update(dt, 0.0, null); h.update(dt, 0.0, "idle", false, 0.0, 0.0); continue
+		g.run += dt
+		if not g.mounted:
+			var to: Vector3 = h.group.position - f.root.position; to.y = 0.0
+			if to.length() < 0.8: g.mounted = true
+			else:
+				f.root.position += to.normalized() * minf(to.length(), 5.5 * dt); f.root.position.y = Terrain.get_height(f.root.position.x, f.root.position.z)
+				f.root.rotation.y = atan2(to.x, to.z); f.update(dt, 5.5, null)
+			h.update(dt, 0.0, "idle", false, 0.0, 0.0)
+		else:
+			var p: Vector3 = h.group.position + g.dir * 12.0 * dt; p.y = Terrain.get_height(p.x, p.z); h.group.position = p
+			h.update(dt, 9.6, "flee", false, 0.0, 0.0)
+			f.root.position = p; f.play("sit", 0.2); NativeCamps.astride(f); NativeCamps.seat(h, f)
+			if g.run > 14.0: f.root.visible = false; h.group.visible = false # (gone over the hill)
 
 ## A one-off clip of his own (Meshy's Over Shoulder Throw, Jump Attack), held for at least sec.
 func _act(clip: String, sec: float) -> void:
@@ -426,6 +449,16 @@ func _build_hideout(place: Callable, rng: PNoise.Mulberry32, face: float, side: 
 	place.call("prop_powder_barrels", 1.4, mouth - side * 3.8 + outw * 1.4, face + 0.5)
 	place.call("prop_bottle_crates", 1.3, at + side * 2.6 - outw * 1.0, face - 0.3)
 	place.call("prop_cookfire", 1.1, at, 0.0)
+	# two of his gang by the fire, their horses tied by the wagon: when the shooting starts they ride for it
+	if not beaten or back:
+		var have: Array = ClaimJumpers.OUTLAWS.filter(func(n): return n != spec.model and ModelFigure.has_folk(n))
+		for i in mini(2, have.size()):
+			var a2 := face + PI * (0.6 + 0.8 * i); var q: Vector3 = at + Vector3(sin(a2), 0, cos(a2)) * 2.4
+			var f := ModelFigure.new(have[(i + seed_n) % have.size()], {"hue": 0.0}); f.root.position = Vector3(q.x, Terrain.get_height(q.x, q.z), q.z)
+			f.root.rotation.y = atan2(at.x - q.x, at.z - q.z); f.play("sit" if i == 0 else "idle", 0.0); add_child(f.root)
+			var hq: Vector3 = at + side * (7.5 + i * 1.6) - outw * 1.5
+			var h := Puppet.new("horse", 1.7); h.group.position = Vector3(hq.x, Terrain.get_height(hq.x, hq.z), hq.z); add_child(h.group)
+			gang.append({"fig": f, "horse": h, "dir": (side * (1.0 if i == 0 else -1.0) - outw * 0.6).normalized(), "run": 0.0, "mounted": false})
 	for i in 7:
 		var a := rng.next() * TAU; var rr := 14.0 + rng.next() * 7.0
 		place.call("rock_boulders", 2.2 + rng.next() * 1.8, at + Vector3(cos(a) * rr, 0, sin(a) * rr), rng.next() * TAU)
@@ -464,6 +497,8 @@ func _unbuild() -> void:
 	for k in picks: (k.node as Node).queue_free(); if is_instance_valid(k.mark): (k.mark as Node).queue_free()
 	nodes = []; picks = []; ring = null
 	if fig: fig.root.queue_free(); fig = null; hand_pick = null
+	for g in gang: if is_instance_valid(g.fig.root): g.fig.root.queue_free(); if is_instance_valid(g.horse.group): g.horse.group.queue_free()
+	gang = []
 	say_card = null
 
 func _weapon(length: float) -> Node3D:
