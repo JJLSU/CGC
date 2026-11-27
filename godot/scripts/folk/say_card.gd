@@ -16,7 +16,12 @@ static func make(width_m := 3.3) -> SayCard:
 	c.visible = false
 	return c
 
-func say(line: String, sec := 2.6) -> void: text = line; t = sec
+func say(line: String, sec := 2.6) -> void:
+	text = line; t = sec
+	# the paper as wide as the words (and a margin), so a long shout never runs off its edge
+	var tw: float = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x * pixel_size
+	var bk := get_child(0) as MeshInstance3D
+	if bk: (bk.mesh as QuadMesh).size = Vector2(tw + 0.5, 0.5)
 
 func tick(dt: float, at: Vector3) -> void:
 	t -= dt; visible = t > 0.0
