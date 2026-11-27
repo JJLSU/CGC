@@ -487,7 +487,9 @@ func update(dt: float, player: Player, day: bool) -> void:
 			if keeper_card == null: keeper_card = SayCard.make(); add_child(keeper_card)
 			keeper_card.say(KEEPER_HELLO[randi() % KEEPER_HELLO.size()] % s.name, 3.0); keeper_on = s
 		elif kd > 40.0: s.hailed = false
-	if keeper_card and keeper_on != null: keeper_card.tick(dt, keeper_on.keeper.root.global_position + Vector3(0, 2.5, 0))
+	if keeper_card and keeper_on != null: # (out in front of the porch, toward you: over his head it sat inside the porch roof)
+		var kr: Node3D = keeper_on.keeper.root; var to_p := Vector3(player.pos.x - kr.global_position.x, 0, player.pos.z - kr.global_position.z)
+		keeper_card.tick(dt, kr.global_position + to_p.normalized() * minf(2.2, to_p.length() * 0.5) + Vector3(0, 2.3, 0))
 
 ## A crate of freight set out on the platform (stacking up, four to a row) for the next train.
 func add_freight() -> void:

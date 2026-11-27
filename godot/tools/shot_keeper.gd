@@ -17,7 +17,11 @@ func _initialize() -> void:
 			main.player.pos = Vector3(st.x, Terrain.get_height(st.x, st.z), st.z); main.rig.yaw = s.keeper.root.rotation.y + 0.4; main.rig.pitch = (0.75 if OS.get_cmdline_user_args().has("high") else 0.2); main.rig.dist = (26.0 if OS.get_cmdline_user_args().has("high") else 7.0)
 		elif s != null: main.player.pos = s.at
 		await process_frame
+	if s != null and main.railroad.keeper_card: s.hailed = false; main.railroad.keeper_card.t = 0.0 # (hail afresh for the picture)
+	for f in 30: await process_frame
 	print("stop %s, keeper %s, says '%s'" % [s.name if s else "-", s.keeper.name if s and s.has("keeper") else "-", main.railroad.keeper_card.text if main.railroad.keeper_card else "-"])
+	var kc = main.railroad.keeper_card
+	if kc: print("card visible %s t %.2f at %s, on screen %s" % [kc.visible, kc.t, kc.global_position.round(), main.rig.camera.unproject_position(kc.global_position).round()])
 	main.player.avatar.root.visible = false
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)
