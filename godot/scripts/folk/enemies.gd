@@ -210,6 +210,33 @@ func update(dt: float, player: Player, camera: Camera3D, now := 0.0) -> void:
 		elif e.state == "return": e.dir = Vector3(e.site.x - ep.x, 0, e.site.z - ep.z).normalized(); speed = s.speed * 0.6
 		elif e.state == "attack":
 			e.dir = to_p.normalized()
+		# the Hidebehind (the tale): it never moves while you're looking at it. In your view it stands stock still (and
+		# slips behind the nearest tree trunk, out of your line of sight, if one stands close); it only comes on, and only
+		# strikes, while you're looking the other way. Watch it and back off past its leash, and it lets you go.
+		var watched := false
+		if s.get("lurk", "") == "unseen" and (e.state == "chase" or e.state == "attack"):
+			var v := ep + Vector3(0, 1.4, 0) - cam
+			watched = v.length() < 45.0 and v.normalized().dot(-camera.global_basis.z) > 0.8
+			e.watched = watched
+			if watched:
+				speed = 0.0; e.windup = 0.0; e.warn.visible = false
+				if not e.get("hid", false):
+					e.hid = true
+					var best = null; var bd := 4.0
+					if world:
+						for r in world.resources_near(ep.x, ep.z, 4.0):
+							if not Res.TYPES[r.type].get("falls", false): continue
+							var dd := Vector2(r.x - ep.x, r.z - ep.z).length()
+							if dd < bd: bd = dd; best = r
+					if best != null: # (behind the trunk, on its far side from you)
+						var away := Vector3(best.x - cam.x, 0, best.z - cam.z).normalized()
+						e.hide_at = Vector3(best.x + away.x * 0.7, 0, best.z + away.z * 0.7)
+					else: e.hide_at = null
+			else: e.hid = false
+		if watched and e.get("hide_at") != null: # (a quick dart round the trunk, then still)
+			var hx: float = e.hide_at.x - ep.x; var hz: float = e.hide_at.z - ep.z; var hd := sqrt(hx * hx + hz * hz)
+			if hd > 0.05: var st := minf(hd, 9.0 * dt); ep.x += hx / hd * st; ep.z += hz / hd * st
+		if e.state == "attack" and not watched:
 			# a readable wind-up before every lunge: it rears back, the red "!" pops up, a growl; step away to dodge
 			if e.cool <= 0.0 and e.windup <= 0.0 and e.lunge <= 0.0:
 				e.windup = WINDUP; e.warn.visible = true

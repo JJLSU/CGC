@@ -28,5 +28,20 @@ func _initialize() -> void:
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_chase.png"))
 	print("then: %s" % e.state)
+	# watched: face it (the camera behind him, looking at it) and it stands still; turn away and it comes on
+	var hb: Vector3 = e.puppet.group.position
+	var far: Vector3 = hb + (main.player.pos - hb).normalized() * 7.0
+	for i in 5: main.player.pos = Vector3(far.x, Terrain.get_height(far.x, far.z), far.z); await process_frame
+	main.rig.yaw = atan2(far.x - hb.x, far.z - hb.z); main.rig.pitch = 0.2; main.rig.dist = 8.0; main.rig.snap()
+	for i in 10: main.player.pos = Vector3(far.x, Terrain.get_height(far.x, far.z), far.z); main.player.health = 100; await process_frame
+	var w0: Vector3 = e.puppet.group.position
+	for i in 60: main.player.pos = Vector3(far.x, Terrain.get_height(far.x, far.z), far.z); main.player.health = 100; await process_frame
+	var w1: Vector3 = e.puppet.group.position
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_watched.png"))
+	main.rig.yaw += PI; main.rig.dist = 3.0; main.rig.snap() # (look away: the camera between him and it, looking at him)
+	for i in 60: main.player.pos = Vector3(far.x, Terrain.get_height(far.x, far.z), far.z); main.player.health = 100; await process_frame
+	var w2: Vector3 = e.puppet.group.position
+	print("watched %s: moved %.2f m in a second watched; %.2f m in a second looking away" % [e.get("watched"), Vector2(w1.x - w0.x, w1.z - w0.z).length(), Vector2(w2.x - w1.x, w2.z - w1.z).length()])
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	quit()

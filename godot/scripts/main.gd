@@ -187,7 +187,7 @@ const KEEPER_LORE := {
 	"hodag": "The HODAG! Up out of the reeds it comes, horns and spikes and a grin full of teeth. It keeps the pearls.",
 	"wampus": "A WAMPUS CAT drops out of the pines, all smoke and lamp-yellow eyes! Mind its pounce.",
 	"gouger": "A sidehill gouger! It lists along on its short uphill legs, and it doesn't like company near its silver.",
-	"hidebehind": "Something was behind you all along: the HIDEBEHIND, tall and grey as birch shadow!",
+	"hidebehind": "Something was behind you all along: the HIDEBEHIND, tall and shaggy as a bear on stilts! It only moves while you look away: keep your eyes on it and back off.",
 	"coyote": "Coyotes! A whole pack, out of the long grass. They keep the thunder eggs.",
 	"bear": "A BLACK BEAR rears up out of the brambles, honey on its muzzle. This grove's hives are its!",
 	"grizzly": "A GRIZZLY! Big as a woodshed, silver-tipped, and between you and the hives.",
