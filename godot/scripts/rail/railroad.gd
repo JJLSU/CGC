@@ -469,13 +469,25 @@ func post_at(x: float, z: float, r := 3.0):
 	return null
 
 ## The keepers: out front by day, and only animated while you're near.
+## What a whistle-stop's keeper says as you come up (%s: the post's name).
+const KEEPER_HELLO := ["Welcome to %s! What'll it be?", "Come in, come in. Best prices in %s.", "Howdy! The %s post is open for trade."]
+var keeper_card: SayCard
+var keeper_on = null
 func update(dt: float, player: Player, day: bool) -> void:
 	if not built: return
 	for s in stops:
 		if not s.has("keeper"): continue
 		var near := Vector2(s.door.x - player.pos.x, s.door.z - player.pos.z).length() < 60.0
-		s.keeper.root.visible = day and near
+		s.keeper.root.visible = day and near and World.ground_ready(s.door.x, s.door.z)
 		if s.keeper.root.visible: s.keeper.update(dt, 0.0, null)
+		# the keeper's word as you come up to the post (once a visit)
+		var kd := Vector2(s.keeper.root.global_position.x - player.pos.x, s.keeper.root.global_position.z - player.pos.z).length()
+		if s.keeper.root.visible and kd < 8.0 and not s.get("hailed", false):
+			s.hailed = true
+			if keeper_card == null: keeper_card = SayCard.make(); add_child(keeper_card)
+			keeper_card.say(KEEPER_HELLO[randi() % KEEPER_HELLO.size()] % s.name, 3.0); keeper_on = s
+		elif kd > 40.0: s.hailed = false
+	if keeper_card and keeper_on != null: keeper_card.tick(dt, keeper_on.keeper.root.global_position + Vector3(0, 2.5, 0))
 
 ## A crate of freight set out on the platform (stacking up, four to a row) for the next train.
 func add_freight() -> void:
