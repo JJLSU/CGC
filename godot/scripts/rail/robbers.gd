@@ -37,8 +37,7 @@ func start(train: Train, count := 3) -> void:
 		var h := Puppet.new("horse", 1.7); h.group.position = p; add_child(h.group)
 		var nm: String = have[i % have.size()] if have.size() else "prospectors_1"
 		var fig := ModelFigure.new(nm, {"hue": 0.0})
-		var g := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.05, 0.06, 0.28); g.mesh = bm
-		g.material_override = PaperMats.paper(Color("2e2c2a")); g.position = Vector3(0, 0.02, 0.12); fig.hands[1].add_child(g)
+		var g := Boss._colt_mesh(0.5); g.position = Vector3(0, 0.02, 0.04); fig.hands[1].add_child(g) # (a Colt, barrel along the hand)
 		fig.root.position = p; add_child(fig.root)
 		men.append({"fig": fig, "horse": h, "side": sd, "ahead": -3.5 + i * 3.0, "hp": HP, "dead": 0.0, "cool": 2.0 + randf() * 2.0, "pos": p, "hurt": 0.0})
 
@@ -121,6 +120,7 @@ func update(dt: float, train: Train, player: Player, riding: bool, hooks: Dictio
 		if not leaving and dp < FIRE_R and m.cool <= 0.0 and not player.dead:
 			m.cool = randf_range(COOL.x, COOL.y); act = "attack"
 			var hit := randf() < HIT_CHANCE
+			var aa := AimArm.on(fig); if aa: aa.raise(player.pos + Vector3(0, 1.3, 0)) # (the gun hand up at you)
 			if hooks.has("on_shoot"): hooks.on_shoot.call(m.pos + Vector3(0, 2.4, 0), player.pos)
 			if hit and hooks.has("on_hit"): hooks.on_hit.call(HIT)
 		fig.play(act if act != null else "sit", 0.2)

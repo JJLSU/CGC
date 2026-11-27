@@ -247,7 +247,10 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 					else:
 						var n := 2 if enraged else 1
 						for i in n: _throw(me, p, vel, dp, (i - (n - 1) / 2.0) * 2.6)
-					cool = (spec.cool * 0.76 if enraged else spec.cool) + randf() * 0.6; pose = "swing"; _act("throw", 0.9)
+					cool = (spec.cool * 0.76 if enraged else spec.cool) + randf() * 0.6; pose = "swing"
+					if spec.weapon == "gun": # (a gunman doesn't throw: his Colt comes up at you)
+						var aa := AimArm.on(fig); if aa: aa.raise(p + Vector3(0, 1.3, 0), 0.8)
+					else: _act("throw", 0.9)
 					if randf() < 0.45: say("riled" if enraged else "fight")
 					if hooks.has("on_throw"): hooks.on_throw.call()
 		r.rotation.y = _turn(r.rotation.y, atan2(to_p.x, to_p.z), dt * 6.0)

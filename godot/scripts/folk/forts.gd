@@ -356,6 +356,7 @@ func _fort_update(f: Dictionary, dt: float, player: Player, hooks: Dictionary, d
 			elif dp < 5.0: want = -to_p / maxf(dp, 0.01); spd = 3.0
 			if m.cool <= 0.0 and dp < 26.0:
 				m.cool = 2.2 + randf() * 0.9
+				var aa := AimArm.on(m.fig); if aa: aa.raise(p + Vector3(0, 1.3, 0)) # (the rifle up at you)
 				if hooks.has("on_shoot"): hooks.on_shoot.call(pos)
 				if randf() < 0.4 and hooks.has("on_hit"): hooks.on_hit.call(HIT)
 			r.rotation.y = _turn(r.rotation.y, atan2(to_p.x, to_p.z), dt * 8.0)

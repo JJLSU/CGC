@@ -165,8 +165,7 @@ func _man(c: Dictionary, i: int, count: int, rng, at: Vector3) -> void:
 	fig.borrow_clip("run", "folk_native_warrior")
 	var gun: bool = i % 3 == 2 or (c.get("raid", false) and i % 2 == 0)
 	if gun:
-		var g := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.05, 0.06, 0.26); g.mesh = bm
-		g.material_override = PaperMats.paper(Color("2e2c2a")); g.position = Vector3(0, 0.02, 0.1); fig.hands[1].add_child(g)
+		var g := Boss._colt_mesh(0.5); g.position = Vector3(0, 0.02, 0.04); fig.hands[1].add_child(g) # (a Colt, barrel along the hand)
 	else:
 		var h := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.03; cm.bottom_radius = 0.026; cm.height = 0.85; h.mesh = cm
 		h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3); fig.hands[1].add_child(h)
@@ -212,6 +211,7 @@ func _camp_update(c: Dictionary, dt: float, player: Player, hooks: Dictionary) -
 			if m.cool <= 0.0 and not player.dead:
 				if m.gun and dp < 22.0:
 					m.cool = 2.0 + randf() * 0.8
+					var aa := AimArm.on(m.fig); if aa: aa.raise(player.pos + Vector3(0, 1.3, 0)) # (the gun hand up at you)
 					if hooks.has("on_shoot"): hooks.on_shoot.call(pos)
 					if randf() < 0.45 and hooks.has("on_hit"): hooks.on_hit.call(HIT)
 				elif not m.gun and dp < REACH:
