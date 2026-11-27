@@ -488,7 +488,7 @@ func _ready() -> void:
 			sound.knock(); var p: Vector3 = m.fig.root.position
 			add_drop("prop_pouch", 0.45, Vector3(p.x + 0.5, 0, p.z + 0.3), "his poke", JUMPER_LOOT[randi() % JUMPER_LOOT.size()])
 			hud.toast("The claim jumper goes down hard and stays down. His poke lies in the dirt."),
-		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
+		"on_shoot": func(at: Vector3) -> void: sound.bang(); hunting.puff(at + Vector3(0, 1.4, 0), player.pos - at, 0.8), # (a puff of gunsmoke at his muzzle, toward you)
 		"on_spotted": func(_c) -> void: hud.toast("Claim jumpers! A ragged camp of hard cases, and they've seen you. They come at you swinging. Fight, or run for it."),
 	}
 	rob_hooks = {
@@ -3321,7 +3321,7 @@ func _make_forts() -> void:
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
 			if out: death_timer = 3.0; hud.toast("The troopers drag you out past the gate and leave you there. You come to a long while later."),
-		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
+		"on_shoot": func(at: Vector3) -> void: sound.bang(); hunting.puff(at + Vector3(0, 1.4, 0), player.pos - at, 0.8), # (a puff of gunsmoke at his muzzle, toward you)
 		"on_fall": func(m: Dictionary) -> void:
 			sound.knock(); var p: Vector3 = m.fig.root.position
 			add_drop("prop_pouch", 0.45, Vector3(p.x + 0.5, 0, p.z + 0.3), "his haversack", [{"cartridges": 6}, {"cartridges": 4, "dollars": 3}, {"dollars": 7}, {"cartridges": 8}][randi() % 4])
