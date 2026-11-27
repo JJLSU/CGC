@@ -150,6 +150,9 @@ var landmarks: Landmarks
 var climbs: Climbs
 var jumpers: ClaimJumpers
 var jumper_hooks := {}
+var robbers: TrainRobbers ## the gang that rides up alongside the train while you're aboard
+var rob_hooks := {}
+var rob_run := false      ## this run's chance of a hold-up already rolled
 var jumper_t = null
 var forts: ArmyForts       ## the cavalry's posts out in the county (the player's ask)
 var fort_hooks := {}
@@ -299,7 +302,9 @@ func _ready() -> void:
 	train.on_chuff = func(q: Vector3) -> void:
 		var d := Vector2(q.x - player.pos.x, q.z - player.pos.z).length()
 		if d < 70.0: sound.chuff(maxf(0.1, 1.0 - d / 70.0))
+	robbers = TrainRobbers.new(); add_child(robbers)
 	train.on_depart = func() -> void:
+		rob_run = false
 		var n := railroad.take_freight()
 		train.load_cargo(n) # (it rides out stacked in the open car)
 		train.board_riders() # (and a traveller or two with it)
@@ -427,6 +432,7 @@ func _ready() -> void:
 		if jumpers: out.append_array(jumpers.targets())
 		for b in bosses: out.append_array(b.targets())
 		if forts: out.append_array(forts.targets())
+		if robbers: out.append_array(robbers.targets())
 		for e in enemies.list: if not e.dying: out.append({"pos": Enemies.pos(e), "r": 0.65 * e.spec.scale, "h": e.spec.top * e.spec.scale, "enemy": e})
 		return out
 	hunting.on_target = func(t: Dictionary, a: Dictionary) -> void:
@@ -435,6 +441,7 @@ func _ready() -> void:
 		elif t.has("j"): jumpers.damage(t.j, a.get("dmg", 6), jumper_hooks); sound.land()
 		elif t.has("boss"): t.boss.damage(a.get("dmg", 6), t.boss.hooks); sound.land()
 		elif t.has("s"): forts.damage(t.s, a.get("dmg", 6), fort_hooks); sound.land()
+		elif t.has("rob"): robbers.damage(t.rob, a.get("dmg", 6), rob_hooks); sound.land()
 	hunting.on_hit = func(c: Dictionary) -> void:
 		if not hunt_told: hunt_told = true; hud.toast("A clean shot. The %s folds down in the grass: walk up to it to dress it." % c.type)
 	hunting.on_wound = func(c: Dictionary) -> void:
@@ -474,6 +481,18 @@ func _ready() -> void:
 			hud.toast("The claim jumper goes down hard and stays down. His poke lies in the dirt."),
 		"on_shoot": func(_at: Vector3) -> void: sound.bang(),
 		"on_spotted": func(_c) -> void: hud.toast("Claim jumpers! A ragged camp of hard cases, and they've seen you. They come at you swinging. Fight, or run for it."),
+	}
+	rob_hooks = {
+		"on_shoot": func(from: Vector3, at: Vector3) -> void: sound.bang(); hunting.puff(from, at - from, 1.0),
+		"on_hit": func(dmg: int) -> void:
+			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
+			if out: death_timer = 3.0; train.passenger = false; hud.toast("A robber's bullet finds you, and you go down among the freight. They go through your pockets while the train rolls on."),
+		"on_fall": func(_m) -> void:
+			sound.knock()
+			hud.toast(["Got him! He pitches out of the saddle into the sagebrush, and his horse runs on without him.", "Another one down: he rolls in the dust beside the line.", "He's hit, and over the horse's tail he goes."][mini(2, robbers.downed - 1)]),
+		"on_gone": func(beaten: bool) -> void:
+			if beaten: hud.toast("That's the last of them. The conductor leans out of the caboose and waves his cap: \"The Overland & Western pays $%d a head! Collect it when we're home!\"" % TrainRobbers.BOUNTY)
+			else: hud.toast("The robbers who are still in the saddle wheel away into the hills. You've seen the last of them, for today."),
 	}
 	_make_boss()
 	_make_forts()
@@ -1090,6 +1109,24 @@ func pick_tool(id: String) -> void:
 	if held != id: sound.click()
 	held = id
 
+## The train robbers: once she's well out on the line with you aboard and armed, now and then (every couple of days at
+## most, more often than not) a gang gallops up alongside; the railroad's bounty for them is paid once she's home.
+func _robbers_update(dt: float) -> void:
+	if robbers == null or not railroad.built: return
+	var out_on_line: bool = train.passenger and train.state == "run" and train.leg == 0 and absf(train.s - train.home_s()) > 120.0
+	if not robbers.active and out_on_line and not rob_run:
+		rob_run = true
+		var armed: bool = tools.has("revolver") or tools.has("rifle") or tools.has("shotgun")
+		if armed and sky.day - robbers.last_day >= TrainRobbers.EVERY and randf() < 0.6:
+			robbers.last_day = sky.day; robbers.start(train, 3 if sky.day < 12 else 4)
+			sound.whistle(0.8)
+			hud.toast("Riders coming up fast behind the train, bandannas over their faces! It's a hold-up: get your gun up and shoot them out of the saddle.")
+	robbers.update(dt, train, player, train.passenger and train.state == "run" and train.leg == 0, rob_hooks)
+	if robbers.owed > 0 and train.state == "home" and Vector2(player.pos.x - railroad.depot.x, player.pos.z - railroad.depot.z).length() < 60.0:
+		inventory.dollars = inventory.get("dollars", 0) + robbers.owed
+		hud.toast("The station agent counts out the railroad's bounty for the train robbers: $%d." % robbers.owed); sound.craft()
+		robbers.owed = 0
+
 ## Fishing takes the click when there's water ahead and a pole in hand; the bow and the guns: hold to draw (or raise
 ## and steady), let go to loose. The six-shooter holds six, the buffalo rifle one; empty, it reloads from cartridges.
 func _hunt_and_fish(active: bool) -> void:
@@ -1546,6 +1583,7 @@ func _rail(dt: float) -> void:
 			if town.street_done(-1) and town.street_done(0) and town.street_done(1):
 				railroad.build(); hud.toast("Cold Glitter Creek has come up in the world: the Overland & Western has laid a rail line out past the church, with a depot at its head and a whistle-stop in each of the wild lands.")
 	train.update(dt, sky.time, rig.camera, player)
+	_robbers_update(dt)
 	railroad.update(dt, player, sky.time > 0.24 and sky.time < 0.86) # (the trading-post keepers: out front by day)
 	if train.passenger: # (in the open car: walk about it while she runs, held in by its sides)
 		var f := player.forward(); var r := Vector3(-f.z, 0, f.x); var wish := Vector3.ZERO
