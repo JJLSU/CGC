@@ -152,7 +152,9 @@ var jumpers: ClaimJumpers
 var jumper_hooks := {}
 var robbers: TrainRobbers ## the gang that rides up alongside the train while you're aboard
 var rob_hooks := {}
-var rob_run := false      ## this run's chance of a hold-up already rolled
+var rob_run := false
+var race: HorseRace       ## Dusty Jake's horse race round the flags south of town
+var race_hooks := {}      ## this run's chance of a hold-up already rolled
 var jumper_t = null
 var forts: ArmyForts       ## the cavalry's posts out in the county (the player's ask)
 var fort_hooks := {}
@@ -550,6 +552,19 @@ func _ready() -> void:
 	add_child(Signpost.new(sp)); world.colliders.append({"x": sp.x, "z": sp.z, "r": 0.3})
 	tales_heard = tales.heard
 	grandma = Grandma.new(homestead.front_window, float(homestead.roofs[0].rot), homestead.front_door); add_child(grandma) # (her shadow in the lamplit window)
+	race = HorseRace.new(); add_child(race); race.setup(town, world)
+	race_hooks = {
+		"on_count": func(n: int) -> void: sound.knock(); hud.toast(["", "One...", "Two...", "Three..."][n]),
+		"on_go": func() -> void: sound.bang(); hud.toast("The starter's pistol cracks: GO! Round the blue flags in turn (the yellow one's next), and back to the post."),
+		"on_flag": func(i: int, behind: float) -> void:
+			sound.knock()
+			if i <= HorseRace.FLAGS: hud.toast("Flag %d of %d. %s" % [i, HorseRace.FLAGS, ("Jake's %d lengths ahead!" % maxi(1, roundi(behind / 2.5))) if behind > 2.0 else ("You're %d lengths up on him!" % maxi(1, roundi(-behind / 2.5)) if behind < -2.0 else "Neck and neck!")]) if i < HorseRace.FLAGS else hud.toast("That's the last flag: now home to the post!"),
+		"on_end": func(won: bool, why: String) -> void:
+			if won:
+				inventory.dollars = inventory.get("dollars", 0) + HorseRace.STAKE * 2; sound.craft()
+				hud.toast("You thunder past the post a length clear! Dusty Jake reins in, laughing, and slaps $%d into your hand. \"Biscuit's got wind, I'll give her that.\"%s" % [HorseRace.STAKE * 2, (" (%d wins over Jake now.)" % race.wins) if race.wins > 1 else ""])
+			else: hud.toast({"jake": "Dusty Jake crosses the post ahead of you and pockets the stakes. \"Better luck next time, neighbour. Gallop her, and cut the flags close.\"", "down": "You got down off your horse: that's the race forfeit, and Jake keeps the stakes.", "slow": "Too slow: Jake's long home, and the stakes are his.", "astray": "You've ridden clean off the course: the race is Jake's."}[why]),
+	}
 	dance = BarnDance.new(town.spot(-1, 1.2, -1, -8)); add_child(dance) # (in the street before the livery barn)
 	dance.on_note = func(f: float, d: float, v: float) -> void: sound.fiddle(f, d, v)
 	town.on_note = func(f: float, d: float, v: float) -> void: sound.fiddle(f, d, v) # (the dance hall's fiddler, of an evening)
@@ -1109,6 +1124,21 @@ func pick_tool(id: String) -> void:
 	if held != id: sound.click()
 	held = id
 
+## Dusty Jake at the starting post south of town, by day: race him round the flags on your horse, $5 a side.
+func _race_door() -> bool:
+	if race == null or not race.near_post(player.pos) or not race.shown(sky.time): return false
+	if race.state == "run" or race.state == "count": beast_prompt = "Racing Dusty Jake: flag %d of %d next" % [mini(race.you_next + 1, HorseRace.FLAGS), HorseRace.FLAGS] if race.you_next < HorseRace.FLAGS else "Racing Dusty Jake: home to the post!"; return true
+	if race.state == "done": return false
+	if not riding:
+		beast_prompt = "[E] Talk to Dusty Jake"
+		if input.hit("KeyE"): hud.toast("\"Howdy. I race anybody round them flags for five dollars a side.\" He looks you up and down. \"Come back on a horse.\"" if horse == null else "\"Fetch your mare and get up on her, and we'll see what she's got. Five dollars a side.\"")
+		return true
+	beast_prompt = "[E] Race Dusty Jake round the six flags: $%d a side (you have $%d)" % [HorseRace.STAKE, inventory.get("dollars", 0)]
+	if input.hit("KeyE"):
+		if inventory.get("dollars", 0) < HorseRace.STAKE: hud.toast("\"Five dollars a side, friend.\" Your poke's too light.")
+		else: inventory.dollars -= HorseRace.STAKE; race.begin(); hud.toast("You each put $%d on the post. Dusty Jake grins and lines up his paint horse beside you..." % HorseRace.STAKE)
+	return true
+
 ## The train robbers: once she's well out on the line with you aboard and armed, now and then (every couple of days at
 ## most, more often than not) a gang gallops up alongside; the railroad's bounty for them is paid once she's home.
 func _robbers_update(dt: float) -> void:
@@ -1584,6 +1614,7 @@ func _rail(dt: float) -> void:
 				railroad.build(); hud.toast("Cold Glitter Creek has come up in the world: the Overland & Western has laid a rail line out past the church, with a depot at its head and a whistle-stop in each of the wild lands.")
 	train.update(dt, sky.time, rig.camera, player)
 	_robbers_update(dt)
+	race.update(dt, player, riding, sky.time, race_hooks)
 	railroad.update(dt, player, sky.time > 0.24 and sky.time < 0.86) # (the trading-post keepers: out front by day)
 	if train.passenger: # (in the open car: walk about it while she runs, held in by its sides)
 		var f := player.forward(); var r := Vector3(-f.z, 0, f.x); var wish := Vector3.ZERO
@@ -2812,6 +2843,7 @@ func _pets(dt: float, active: bool) -> void:
 				player.health = player.max_health; player.stamina = player.max_stamina; player.fullness = maxf(player.fullness, 60.0)
 				hud.toast("The gaslights dim and the curtain rises on %s %s. %s You come out into the night rested and smiling." % [title, pb[1], pb[2]])
 		return
+	if _race_door(): return
 	if _rail_doors(): return
 	if _town_doors(): return
 	# a tent-dweller on Squatters' Row who wants something
