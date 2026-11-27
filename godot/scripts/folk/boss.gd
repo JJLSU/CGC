@@ -209,7 +209,9 @@ func _say_tick(dt: float) -> void:
 	if on:
 		say_card.position = fig.root.position + Vector3(0, 2.0 * float(spec.scale) + 0.9, 0)
 		var k := minf(1.0, (2.8 - say_t) / 0.15); var out := minf(1.0, say_t / 0.3) # (springs up, fades away)
-		say_card.scale = Vector3.ONE * (0.6 + 0.4 * minf(k, out)) # (springs up and settles; no fade: the paper post pass drops see-through cards)
+		var cam := get_viewport().get_camera_3d()
+		var near_k: float = clampf(cam.global_position.distance_to(say_card.position) / 14.0, 0.35, 1.0) if cam else 1.0 # (never wider than the view up close)
+		say_card.scale = Vector3.ONE * (0.6 + 0.4 * minf(k, out)) * near_k # (springs up and settles; no fade: the paper post pass drops see-through cards)
 
 ## hooks: on_hit(damage), on_throw(), on_land(at), on_slam(), on_fall(at), on_spotted()
 func update(dt: float, player: Player, hooks: Dictionary) -> void:
