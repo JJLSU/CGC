@@ -36,20 +36,45 @@ func _holder(key: String) -> Node3D:
 	models[key] = holder
 	return holder
 
+## A box-built tool (the old hatchet, hammer, fishing pole, bow: Avatar.tools_by) copied for the camera: a haft forward
+## and up as the made tools; the bow stood upright by its longest side, held out to the left.
+func _box_holder(id: String, src: Node3D) -> Node3D:
+	var key := "box:" + id
+	if models.has(key): return models[key]
+	var c := src.duplicate() as Node3D
+	c.visible = true; c.transform = Transform3D.IDENTITY
+	for gi in c.find_children("*", "GeometryInstance3D", true, false):
+		(gi as VisualInstance3D).layers = 1; (gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var holder := Node3D.new(); var pivot := Node3D.new(); holder.add_child(pivot); pivot.add_child(c)
+	if id == "bow":
+		var bb := PaperMats._aabb(c, Transform3D.IDENTITY)
+		var ax := 0 if bb.size.x >= bb.size.y and bb.size.x >= bb.size.z else (1 if bb.size.y >= bb.size.z else 2)
+		c.basis = [Basis(Vector3.BACK, PI / 2.0), Basis(), Basis(Vector3.RIGHT, -PI / 2.0)][ax] # (its long side up)
+		var mid := c.basis * bb.get_center(); c.position = -mid # (held at its middle)
+	else:
+		c.basis = Basis(Vector3.RIGHT, 0.5) * Basis(Vector3.UP, PI) # (the haft, along its +z, forward and a little up)
+	add_child(holder); holder.visible = false
+	models[key] = holder
+	return holder
+
 ## Each frame through his eyes: key the held made tool ("" for none), aiming (a gun raised), swing (0..1 through a
 ## chop, < 0 none), casting (> 0 just after a shot), speed (walking pace).
-func update(dt: float, key: String, aiming: bool, swing: float, casting: float, speed: float) -> void:
+func update(dt: float, key: String, aiming: bool, swing: float, casting: float, speed: float, box_id := "", box: Node3D = null) -> void:
 	t += dt
-	var h: Node3D = _holder(key) if key != "" else null
+	if key == "" and box != null: key = "box:" + box_id
+	var h: Node3D = (_box_holder(box_id, box) if key.begins_with("box:") else _holder(key)) if key != "" else null
 	if shown != key:
 		if models.get(shown) != null: (models[shown] as Node3D).visible = false
 		shown = key
 	if h == null: return
 	h.visible = true
 	var gun: bool = key in ["revolver", "rifle", "rifle_lever", "shotgun"]
-	aim_k = move_toward(aim_k, 1.0 if aiming and gun else 0.0, dt * 6.0)
+	var bow: bool = key == "box:bow"
+	aim_k = move_toward(aim_k, 1.0 if aiming and (gun or bow) else 0.0, dt * 6.0)
 	var bob := sin(t * 9.0) * 0.012 * clampf(speed / 6.0, 0.0, 1.0) * (1.0 - aim_k)
-	h.position = REST.lerp(AIM, aim_k) + Vector3(bob * 0.5, absf(bob), 0)
+	var rest := Vector3(-0.3, -0.18, -0.7) if bow else REST; var aim := Vector3(-0.2, -0.05, -0.65) if bow else AIM
+	h.position = rest.lerp(aim, aim_k) + Vector3(bob * 0.5, absf(bob), 0)
+	if bow: h.rotation = Vector3(0, 0, 0.25 * (1.0 - aim_k)) # (canted at rest, upright when drawn)
 	var pivot := h.get_child(0) as Node3D
 	if gun: pivot.rotation = Vector3(casting * 0.5, 0.0, 0.0) # (the kick)
 	else: pivot.rotation = Vector3(-sin(clampf(swing, 0.0, 1.0) * PI) * 1.2 if swing >= 0.0 else 0.0, 0.0, 0.0) # (the chop)

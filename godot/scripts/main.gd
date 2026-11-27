@@ -1043,7 +1043,8 @@ func _fp_tool(dt: float) -> void:
 	if av._made_on != null: # (and the one in his hand, made a frame later)
 		var gs := av._made_on.find_children("*", "GeometryInstance3D", true, false)
 		if gs.size() and (gs[0] as VisualInstance3D).layers != SELF_LAYER: _self_layers(av._made_on, true)
-	fp_view.update(dt, key, player.aiming, av.swing, av.casting, Vector2(player.vel.x, player.vel.z).length())
+	var bid: String = av.tool if key == "" and av.tools_by.has(av.tool) and not (av.seated or build.active) and av.tool != "spear" else ""
+	fp_view.update(dt, key, player.aiming, av.swing, av.casting, Vector2(player.vel.x, player.vel.z).length(), bid, av.tools_by.get(bid) if bid != "" else null)
 
 ## The camera option (Options, or V): the wide diorama view (the default) or first person; kept with the display prefs.
 func _set_view(fp: bool, keep := true) -> void:
