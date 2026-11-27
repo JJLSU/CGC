@@ -110,10 +110,27 @@ func update(dt: float, camera: Camera3D) -> void:
 			var p: Vector3 = l.group.position
 			l.puppet.update(dt, 0.0, "idle", false, atan2(cam.x - p.x, cam.z - p.z), 0.0)
 
+## Old Asa, once you've met him, hails you as you come back to his fire (once a visit), on a card over him.
+const ASA := ["Company again! Sit, sit.", "Back so soon? The kettle's on.", "Seen anything strange out there, friend?", "Ah, my mapmaker friend!"]
+var asa_card: SayCard
+var asa_hailed := false
+func _asa_hello(p: Vector3) -> void:
+	for l in live.values():
+		if l.site.mark != "hermit" or not l.has("figure"): continue
+		var fr: Node3D = (l.figure as ModelFigure).root
+		var d := Vector2(fr.global_position.x - p.x, fr.global_position.z - p.z).length()
+		if found.has(l.site.key) and d < 7.0 and not asa_hailed:
+			asa_hailed = true
+			if asa_card == null: asa_card = SayCard.make(); add_child(asa_card)
+			asa_card.say(ASA[randi() % ASA.size()], 3.0)
+		elif d > 30.0: asa_hailed = false
+		if asa_card: asa_card.tick(get_process_delta_time(), fr.global_position + Vector3(0, 2.4, 0))
+
 ## Up in the fire lookout's cabin, its roof and the walls' tops above your head are cut away so the camera sees you
 ## inside (the player couldn't see the farmer once up there); whole again as soon as you're down off its floor.
 var _cut_on := false
 func cutaway(p: Vector3) -> void:
+	_asa_hello(p) # (main calls this each frame with the farmer's place: Old Asa's hello rides along)
 	for l in live.values():
 		if l.site.mark != "lookout" or not meshy_lookout(): continue
 		var s: Dictionary = l.site
