@@ -8,6 +8,7 @@ global uniform sampler2D paper_wash : filter_linear_mipmap, repeat_enable;
 global uniform sampler2D paper_handmade : source_color, filter_linear_mipmap, repeat_enable;
 global uniform sampler2D paper_noise : filter_linear_mipmap, repeat_enable;
 global uniform vec3 paper_key_dir;
+global uniform vec4 paper_ground_reach; // (x, z, radius): how far out the real ground is built round the farmer (World sets it)
 global uniform float paper_snow;
 global uniform float paper_ice;
 global uniform float paper_cloud_shade;

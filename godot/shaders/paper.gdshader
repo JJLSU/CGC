@@ -34,7 +34,9 @@ float planar_fiber(float s) {
 	return mix(side, fiber_at(p.xz), smoothstep(0.45, 0.75, n.y));
 }
 
+instance uniform float near_only = 0.0; // (1: drawn only over the built ground, never hanging over the flat sheet past it)
 void fragment() {
+	if (near_only > 0.0 && distance(wpos.xz, paper_ground_reach.xy) > paper_ground_reach.z) discard;
 	float tone = planar_hand(0.55) * 0.75 + 0.25 + (planar_fiber2(0.9) - 0.5) * 0.12;
 	vec3 base = albedo.rgb * COLOR.rgb;
 	float up = snow ? paper_snow * smoothstep(0.5, 0.85, wnor.y) : 0.0;

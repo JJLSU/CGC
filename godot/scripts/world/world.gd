@@ -43,6 +43,10 @@ static var inst: World
 ## a hillside out there hangs in the air (the player saw one floating): the camps keep hidden till their ground is in.
 static func ground_ready(x: float, z: float) -> bool:
 	return inst == null or inst.chunks.has(key(floori(x / Terrain.CHUNK), floori(z / Terrain.CHUNK)))
+## Mark a whole branch near_only: drawn only over the built ground (a rail line or train seen far off would hang in the air).
+static func near_only(n: Node) -> void:
+	if n is GeometryInstance3D: (n as GeometryInstance3D).set_instance_shader_parameter("near_only", 1.0)
+	for c in n.get_children(): near_only(c)
 ## Show or hide a camp's pieces and people together.
 static func show_all(nodes: Array, on: bool) -> void:
 	for n in nodes: if n is Node3D and is_instance_valid(n) and (n as Node3D).visible != on: (n as Node3D).visible = on
@@ -66,6 +70,7 @@ static func key(cx: int, cz: int) -> String: return "%d,%d" % [cx, cz]
 func update(px: float, pz: float, dt: float) -> void:
 	time += dt
 	ground.position = Vector3(roundf(px), -0.05, roundf(pz))
+	RenderingServer.global_shader_parameter_set("paper_ground_reach", Vector4(px, pz, (VIEW_RADIUS - 0.1) * Terrain.CHUNK, 0.0)) # (the near_only shapes stop where the built ground does)
 	var pcx := floori(px / Terrain.CHUNK); var pcz := floori(pz / Terrain.CHUNK)
 	var best := [1 << 30, 0, 0]
 	for dz in range(-VIEW_RADIUS, VIEW_RADIUS + 1):

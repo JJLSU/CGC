@@ -270,6 +270,7 @@ func build() -> void:
 	if town_ref: town_ref.cross_sheet(far * (Town.STREET_OFF + 7.0), far * (TRACK_O - 4.0), Town.CROSS_N) # (the cross street's run out to the depot)
 	freight_at = depot_group.to_global(Vector3(-4.6, 0.3, 2.4)) # (the freight office's end of the platform)
 	for s in stops: _make_stop(s)
+	World.near_only(self) # (the line, its poles and its stops: never hanging over the flat sheet past the built ground)
 
 ## The line on past the depot (tail): ties and rails as on the main line, level with the depot, running out of sight.
 func _lay_tail() -> void:

@@ -42,6 +42,10 @@ paper_noise={
 "type": "sampler2D",
 "value": "res://assets/baked/paper/noise.png"
 }
+paper_ground_reach={
+"type": "vec4",
+"value": Vector4(0, 0, 100000, 0)
+}
 paper_key_dir={
 "type": "vec3",
 "value": Vector3(-0.5, 0.7, 0.5)

@@ -62,6 +62,7 @@ func _init(railroad: Railroad) -> void:
 			Homestead.bake_materials(car)
 			add_child(car); cars.append(car); lens.append(c[1])
 	visible = false
+	for c in cars: World.near_only(c) # (she never hangs in the air over the flat sheet past the built ground)
 	# where along the line (metres) each whistle-stop's platform lies (worked out once the line is built)
 	end = (rr.path.size() - 1) * TIE
 	s = rr.depot_i * TIE # (she waits at the depot, beside the town)
@@ -72,6 +73,7 @@ func _init(railroad: Railroad) -> void:
 		pts.append(Vector2(cos(a) * r, sin(a) * r * 0.85))
 	puffs.transform_format = MultiMesh.TRANSFORM_3D; puffs.mesh = CardMesh.build(pts, 0.02); puffs.instance_count = 24; puffs.visible_instance_count = 0
 	var pmi := MultiMeshInstance3D.new(); pmi.multimesh = puffs; pmi.material_override = PaperMats.card(null, {"albedo": Color.hex(0xe8e0d0ff), "snow": 0.0, "self_fill": 0.3})
+	pmi.set_instance_shader_parameter("near_only", 1.0) # (her smoke too: no puffs hanging over the flat sheet)
 	pmi.custom_aabb = AABB(Vector3(-1e5, -100, -1e5), Vector3(2e5, 400, 2e5)); add_child(pmi)
 	for i in 24: pp.append({"age": 9.0, "pos": Vector3.ZERO, "s": 1.0})
 
