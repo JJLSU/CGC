@@ -45,7 +45,12 @@ static func ground_ready(x: float, z: float) -> bool:
 	return inst == null or inst.chunks.has(key(floori(x / Terrain.CHUNK), floori(z / Terrain.CHUNK)))
 ## Mark a whole branch near_only: drawn only over the built ground (a rail line or train seen far off would hang in the air).
 static func near_only(n: Node) -> void:
-	if n is GeometryInstance3D: (n as GeometryInstance3D).set_instance_shader_parameter("near_only", 1.0)
+	if n is GeometryInstance3D:
+		var gi := n as GeometryInstance3D
+		gi.set_instance_shader_parameter("near_only", 1.0)
+		# small pieces (a crate, a pole, a barrel: ~8k triangles each, dozens in the yard) not drawn past ~70 m; the long
+		# track itself (one mesh kilometres long) keeps drawing
+		if gi.get_aabb().size.length() < 30.0: gi.visibility_range_end = 70.0; gi.visibility_range_end_margin = 6.0
 	for c in n.get_children(): near_only(c)
 ## Show or hide a camp's pieces and people together.
 static func show_all(nodes: Array, on: bool) -> void:
