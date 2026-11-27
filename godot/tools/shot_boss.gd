@@ -23,6 +23,9 @@ func _initialize() -> void:
 		var st: Vector3 = B.at + dir * 40.0
 		var t3 := Time.get_ticks_msec()
 		while Time.get_ticks_msec() - t3 < 5000: main.player.pos = Vector3(st.x, Terrain.get_height(st.x, st.z), st.z); await process_frame
+		if args.has("scatter"): # (step into his notice: the fight starts, his men scatter, the first shouts)
+			var st2: Vector3 = B.at + dir * 20.0
+			for i in 40: main.player.pos = Vector3(st2.x, Terrain.get_height(st2.x, st2.z), st2.z); await process_frame
 		main.set_process(false); var cam: Camera3D = main.rig.camera
 		var side := dir.cross(Vector3.UP)
 		cam.global_position = B.at + dir * 12.0 + side * 5.0 + Vector3(0, 6.0, 0); cam.look_at(B.at + Vector3(0, 1.0, 0), Vector3.UP); cam.fov = 55.0

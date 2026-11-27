@@ -189,6 +189,11 @@ func say(kind: String, force := false) -> void:
 	var lines: Array = TAUNTS[id][kind]
 	say_card.text = lines[randi() % lines.size()]
 	say_t = 2.8; say_cool = SAY_EVERY + randf() * 3.0
+	# the paper behind fitted to the lines the words wrap to (a long line ran past its top and bottom)
+	var tw: float = say_card.font.get_string_size(say_card.text, HORIZONTAL_ALIGNMENT_LEFT, -1, say_card.font_size).x
+	var rows := maxi(1, ceili(tw * 1.6 / say_card.width)) # (wrapping at word breaks leaves each row short of the full width)
+	var bk := say_card.get_child(0) as MeshInstance3D
+	if bk: (bk.mesh as QuadMesh).size = Vector2(4.6, 0.25 + rows * float(say_card.font_size) * say_card.pixel_size * 1.25)
 
 func _say_tick(dt: float) -> void:
 	if say_card == null: return
