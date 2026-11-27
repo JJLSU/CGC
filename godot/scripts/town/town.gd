@@ -1043,6 +1043,7 @@ func update(night: float, dt: float) -> void:
 			var dl := (lamps[id] as Node).get_node_or_null("door_glow") as OmniLight3D
 			if dl: dl.light_energy = 1.8 if on else 0.0
 	update_people(night, dt)
+	_sermon(dt)
 	var abed := bedtime or raining
 	if assayer: assayer.root.visible = not abed and not far; if assayer.root.visible: assayer.update(dt, 0.0, "clipboard")
 	for B in beasts: B.group.visible = not bedtime and not far; if B.group.visible: B.update(dt, 0.0, "idle", false, 0.0)
@@ -1154,6 +1155,23 @@ func fill(c: Dictionary, inventory: Dictionary, today: int, bonus := 0) -> Dicti
 	inventory[item] -= n; inventory.dollars = inventory.get("dollars", 0) + pay
 	c.want = null; c.day = today + 1; c.note.visible = false
 	return {"ok": true, "text": "%s takes the %s gratefully and presses $%d into your hand. \"God bless you, neighbor.\"" % [c.name, item, pay]}
+
+## On the Sabbath (every seventh day, by day) the preacher at the church door has a word for you as you pass, once that
+## day, on a card over him.
+const SERMON := ["Rest your hands this Sabbath, neighbour.", "Come in, come in! There's room on the bench.", "The Lord loves a cheerful giver.",
+	"Gold rusts, friend, but a good name keeps.", "Blessed are the peacemakers, and the sheriff too."]
+var sermon_card: SayCard
+var sermon_day := -1
+func _sermon(dt: float) -> void:
+	if not folk.has("church") or player_pos == null: return
+	var fr: Node3D = folk.church.fig.root
+	if not is_instance_valid(fr): return
+	var d := Vector2(fr.global_position.x - player_pos.x, fr.global_position.z - player_pos.z).length()
+	if day % 7 == 6 and not bedtime and fr.is_visible_in_tree() and d < 9.0 and sermon_day != day:
+		sermon_day = day
+		if sermon_card == null: sermon_card = SayCard.make(); add_child(sermon_card)
+		sermon_card.say(SERMON[randi() % SERMON.size()], 3.2)
+	if sermon_card: sermon_card.tick(dt, fr.global_position + Vector3(0, 2.5, 0))
 
 ## Pop a greeting card up over a keeper's head (one at a time).
 func say_hello(r: Node3D) -> void:
