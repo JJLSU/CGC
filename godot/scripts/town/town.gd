@@ -290,7 +290,7 @@ func _init(w: World, home: Vector3) -> void:
 	if pg == null: pg = Node3D.new(); var plac := card([[-0.62, 0], [0.64, 0.03], [0.6, 0.62], [-0.64, 0.6]], "placard"); plac.position.y = 1.15; plac.rotation.z = 0.04; pg.add_child(plac); pg.add_child(posts([0.0]))
 	pg.position = Vector3(pp.x, y0, pp.z); pg.rotation.y = face; add_child(pg)
 	# the church closes the far end of the street, facing back down it
-	var ch := church(0); church_at = at + along * 22.0
+	var ch := church(0); church_at = at + along * CHURCH_S # (forward enough that the bigger church, raised in its place front to front, clears the cross street behind)
 	ch.position = Vector3(church_at.x, y0, church_at.z); ch.rotation.y = atan2(-along.x, -along.z); add_child(ch); parts.church = ch
 	for t in [-0.2, 0.2]: world.colliders.append({"x": church_at.x + along.x * 4.0 + toward.x * t * 10.0, "z": church_at.z + along.z * 4.0 + toward.z * t * 10.0, "r": 3.0})
 	doors.church = church_at - along * 1.5
@@ -416,7 +416,13 @@ func church(tier: int) -> Node3D:
 ## The new church (the player's bigger church with its bell tower): once the old one's mended, $120 puts it up in its
 ## place, its front a few paces further down Main Street (it's twice as long), the preacher and his wife at its door.
 const CHURCH2_W := 6.2
+const CHURCH_S := 13.3
 const CHURCH2_COST := 120
+## The church's front and back along Main Street (x, y).
+func _church_span() -> Vector2:
+	var cg: Node3D = parts.church; var cbb := PaperMats._aabb(cg, Transform3D.IDENTITY); var lo := 1e9; var hi := -1e9
+	for i in 8: var d: float = (cbb.get_endpoint(i) - at).dot(along); lo = minf(lo, d); hi = maxf(hi, d)
+	return Vector2(lo, hi)
 func _church2_door() -> Vector3:
 	# (in the church's own frame its front is +z, toward the street: the step before it, 1.4 m out)
 	var g: Node3D = parts.church; var bb := PaperMats._aabb(g, g.transform.affine_inverse()) # (_aabb takes in the node's own transform: undone, its own frame)
@@ -540,11 +546,13 @@ func dress_up(id: String) -> void:
 
 func mend(id: String) -> void:
 	if id == "church2":
+		var front0 := _church_span().x
 		tiers.church2 = 1; rebuild("church", 1, -1)
-		# (twice as long as the old one: slid down Main Street till its back stands clear of the north cross street)
-		var cg: Node3D = parts.church; var cbb := PaperMats._aabb(cg, Transform3D.IDENTITY); var back := -1e9
-		for i in 8: back = maxf(back, (cbb.get_endpoint(i) - at).dot(along))
-		var over := back - (CROSS_N - CROSS_HW - 0.8)
+		# (raised where the old one stood, front to front: it reaches back toward the cross street, never out over you;
+		# and if it would still reach the cross street, slid forward just enough)
+		var cg: Node3D = parts.church; var sp := _church_span()
+		cg.position += along * (front0 - sp.x)
+		var over := sp.y + (front0 - sp.x) - (CROSS_N - CROSS_HW - 0.8)
 		if over > 0.0: cg.position -= along * over
 		doors.church = _church2_door()
 		for key in folk.keys():
@@ -1385,6 +1393,8 @@ const MARKET_S := CROSS_N + CROSS_HW + 2.2 # (right at the street's edge: behind
 const MARKET_O := [-30.0, -18.0, -6.0, 6.0, 18.0, 30.0]
 const MARKET := ["mkt_stall_green", "mkt_tent_ochre", "mkt_wagon_burgundy", "mkt_stall_red", "mkt_tent_blue", "mkt_wagon_ochre"]
 const MARKET_NAMES := ["green produce stall", "ochre market tent", "burgundy market wagon", "red-striped food stall", "blue-trimmed market tent", "ochre market wagon"]
+## (a model made turned from the rest, put square to the street: measured off its canopy)
+const MARKET_TURN := {"mkt_tent_ochre_1": PI / 2.0, "mkt_stall_red_0": deg_to_rad(14.0)}
 const MARKET_COST := [15, 12, 18, 15, 12, 18]
 const MARKET_FOLK := ["cgc_woman_blueapron", "cgc_man_youth", "cgc_woman_greenapron", "cgc_man_suspenders", "cgc_woman_patched", "cgc_woman_calico"]
 var market_tier := ""
@@ -1404,8 +1414,8 @@ func market_refresh() -> void:
 		var tier: int = tiers.get("mkt_%d" % i, 0)
 		var p: Vector3 = at + along * MARKET_S + toward * MARKET_O[i]
 		var wagon: bool = String(MARKET[i]).contains("wagon")
-		var g := model_building(MARKET[i], tier, 4.2 if wagon else 4.6, 3.6)
-		g.position = Vector3(p.x, y0, p.z); g.rotation.y = face + (0.12 if wagon else 0.0); add_child(g); market_parts.append(g)
+		var g := model_building(MARKET[i], tier, 4.0 if wagon else 4.37, 3.42) # (a twentieth smaller: the player)
+		g.position = Vector3(p.x, y0, p.z); g.rotation.y = face + float(MARKET_TURN.get("%s_%d" % [MARKET[i], tier], 0.0)); add_child(g); market_parts.append(g)
 		if not market_cols: world.colliders.append({"x": p.x, "z": p.z, "r": 1.8})
 		if tier:
 			var bq: Vector3 = p + toward * (2.9 if i % 2 else -2.9) - along * 1.2
