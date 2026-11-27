@@ -121,6 +121,8 @@ var fortune := 0          ## dollars the assayer has paid you, all told (the far
 var pan_t := 0.0
 var pan_mesh: MeshInstance3D
 var bounty = null         ## the sheriff's posted bounty: {key, guards, x, z, name, pay}
+var gang_paid: Array = []  ## per claim jumpers' camp, the day it was cleared that the sheriff has already paid for
+const GANG_REWARD := 35   ## the sheriff's reward for breaking up an outlaw camp
 var poster: Node3D
 var hotel_night := false
 var blessed_day := -1
@@ -1382,6 +1384,17 @@ func _town_doors() -> bool:
 	# the sheriff: a price on one guarded den out in the county; beat every guardian there and come back for the reward
 	if _at_door("jail"):
 		# the bosses: a reward on each one's head, paid once he's beaten (on top of the assayer's fee for his prize)
+		# an outlaw camp broken up (the player's outlaws, living with the claim jumpers): a reward, once each time it's
+		# cleared
+		while gang_paid.size() < jumpers.camps.size(): gang_paid.append(-999)
+		var gang := -1
+		for i in jumpers.camps.size(): if jumpers.camps[i].cleared_day > -999 and gang_paid[i] != jumpers.camps[i].cleared_day: gang = i; break
+		if gang >= 0:
+			beast_prompt = "[E] Claim the sheriff's $%d reward for breaking up the outlaws' camp" % GANG_REWARD
+			if input.hit("KeyE"):
+				gang_paid[gang] = jumpers.camps[gang].cleared_day; inv.dollars = inv.get("dollars", 0) + GANG_REWARD; sound.craft(); journal.record("bounty")
+				hud.toast("The sheriff thumbs through his WANTED bills and pulls a fistful. \"That whole gang? Ride on out of here, the lot of 'em.\" +$%d" % GANG_REWARD)
+			return true
 		var owed = null
 		for bo in bosses: if bo.beaten and not bo.back and not bo.bounty_paid: owed = bo; break
 		if owed != null:
@@ -2314,6 +2327,8 @@ func _apply_save(d: Dictionary) -> void:
 	town.load_state(d.get("town"))
 	town.on_street = on_street
 	if d.get("bounty") != null: bounty = d.bounty; _set_poster(bounty)
+	gang_paid = []
+	for x in d.get("gangPaid", []): gang_paid.append(int(x))
 	var ce = d.get("cellar")
 	if ce != null:
 		if ce.get("built", false): extras.build_cellar()
@@ -2390,7 +2405,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
