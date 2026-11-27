@@ -279,7 +279,14 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	else: fig.update(dt, speed / spec.scale * 1.6, pose)
 
 ## Cole's gang: idle by the fire; once he's fighting, each runs to his horse, mounts and gallops off out of the county.
+const SCATTER := {"hideout": ["Every man for himself!", "You're on your own, boss!"], "logging": ["Run for it!", "I ain't paid enough for this!"],
+	"mansion": ["Somebody fetch the sheriff!", "Not in my good suit!"]}
+var gang_card: SayCard
 func _gang_update(dt: float) -> void:
+	if not gang.is_empty() and gang[0].run == 0.0 and state == "fight" and SCATTER.has(spec.lair): # (the first of them shouts as they scatter)
+		if gang_card == null: gang_card = SayCard.make(); add_child(gang_card); nodes.append(gang_card)
+		var L: Array = SCATTER[spec.lair]; gang_card.say(L[randi() % L.size()], 2.2)
+	if gang_card and not gang.is_empty() and is_instance_valid(gang[0].fig.root): gang_card.tick(dt, gang[0].fig.root.position + Vector3(0, 2.6, 0))
 	for g in gang:
 		var f: ModelFigure = g.fig; var h: Puppet = g.horse
 		if not is_instance_valid(f.root): continue
@@ -516,7 +523,7 @@ func _unbuild() -> void:
 	for g in gang:
 		if is_instance_valid(g.fig.root): g.fig.root.queue_free()
 		if g.horse != null and is_instance_valid(g.horse.group): g.horse.group.queue_free()
-	gang = []
+	gang = []; gang_card = null
 	say_card = null
 
 func _weapon(length: float) -> Node3D:
