@@ -70,7 +70,8 @@ const TOWNSFOLK := {
 	"cn_laundry": {"new": "cgc_woman_cn_thin", "model": "trades_6", "hue": 0.9, "with": [{"new": "cgc_man_cn_rust", "model": "trades_1", "at": -2.4, "out": 0.6, "turn": 0.3, "pose": "work"}, {"new": "cgc_woman_cn_curvy", "model": "trades_6", "at": 2.6, "out": 0.5, "turn": -0.35}]},
 	"cn_herbalist": {"new": "cgc_man_cn_young", "model": "trades_7", "hue": -0.8, "with": [{"new": "cgc_man_cn_strong", "model": "prospectors_1", "at": -2.6, "out": 0.6, "turn": 0.35}]},
 	"cn_boarding": {"new": "cgc_woman_cn_sultry", "model": "trades_2", "hue": 1.4, "with": [{"new": "cgc_man_cn_olive", "model": "prospectors_1", "at": -2.5, "out": 0.6, "turn": 0.35},
-		{"new": "cgc_girl_cn", "model": "townsfolk_4", "at": 3.2, "out": 0.5, "turn": -0.4}]},
+		{"new": "cgc_girl_cn", "model": "townsfolk_4", "at": 3.2, "out": 0.5, "turn": -0.4},
+		{"new": "trades_3", "model": "trades_3", "at": -4.6, "out": 1.0, "turn": 0.6, "pose": "work"}]}, # (the carpenter with his toolbox, at work on the boarding house's porch)
 	"bakery": {"new": "cgc_woman_stripe", "model": "trades_6"},
 	"church": {"at": 2.2, "new": "cgc_man_preacher", "model": "trades_1", "with": [{"new": "cgc_woman_preacher_wife", "model": "trades_2", "at": -3.3, "out": 0.6, "turn": -0.3}]}, # (the player's frontier preacher and his prim wife)
 }
