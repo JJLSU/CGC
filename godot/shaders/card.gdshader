@@ -24,6 +24,7 @@ uniform bool no_haze = false;      // (the paper clouds: fog: false)
 uniform bool ghosts = false;
 uniform float alpha_cut = 0.0;     // a cut-out print (its own transparent ground, e.g. the twister's frames): cut where the print's alpha is below this       // a pool whose cards can stand between camera and farmer: INSTANCE_CUSTOM.x is the fade
 
+instance uniform vec4 cutaway = vec4(0.0); // (x, z, from y, radius): a cutaway roof, cut off above y within radius (the farmer up in a cabin)
 varying vec3 wnor;
 varying vec3 wpos;
 varying float fade;
@@ -55,6 +56,7 @@ void vertex() {
 void fragment() {
 	// dissolving to a faint ghost through a fine even stipple (interleaved-gradient noise), no movement
 	if (fade > 0.0) { float ign = fract(52.9829189 * fract(FRAGCOORD.x * 0.06711056 + FRAGCOORD.y * 0.00583715)); if (fade > ign) discard; }
+	if (cutaway.w > 0.0 && wpos.y > cutaway.z && distance(wpos.xz, cutaway.xy) < cutaway.w) discard;
 	vec2 muv = flip_map ? vec2(UV.x, 1.0 - UV.y) : UV;
 	if (alpha_cut > 0.0 && texture(map, muv).a < alpha_cut) discard;
 	// (the paper's own grain runs in three.js uv space, v up)

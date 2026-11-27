@@ -654,6 +654,7 @@ func _process(dt: float) -> void:
 		meeting_day = sky.day
 		if not town.far: hud.toast("Sunday morning. The bell has rung, and the families from Squatters’ Row walk up Main Street in their Sunday best for meeting at the church.")
 	landmarks.update(dt, rig.camera)
+	landmarks.cutaway(player.pos) # (the lookout's roof cut away while you're up in its cabin)
 	_pm("landmarks.update")
 	_landmark_reached()
 	_pm("_landmark_reached")

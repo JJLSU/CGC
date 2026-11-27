@@ -110,6 +110,20 @@ func update(dt: float, camera: Camera3D) -> void:
 			var p: Vector3 = l.group.position
 			l.puppet.update(dt, 0.0, "idle", false, atan2(cam.x - p.x, cam.z - p.z), 0.0)
 
+## Up in the fire lookout's cabin, its roof and the walls' tops above your head are cut away so the camera sees you
+## inside (the player couldn't see the farmer once up there); whole again as soon as you're down off its floor.
+var _cut_on := false
+func cutaway(p: Vector3) -> void:
+	for l in live.values():
+		if l.site.mark != "lookout" or not meshy_lookout(): continue
+		var s: Dictionary = l.site
+		var inside: bool = p.y > float(s.y) + 8.0 and Vector2(p.x - s.x, p.z - s.z).length() < 3.2
+		if inside == _cut_on and l.has("cut_meshes"): continue
+		_cut_on = inside
+		if not l.has("cut_meshes"): l.cut_meshes = (l.group as Node).find_children("*", "MeshInstance3D", true, false)
+		var v := Vector4(float(s.x), float(s.z), float(s.y) + LOOKOUT_CLIMB.decks[0].y + 1.7, 4.5) if inside else Vector4.ZERO
+		for mi in l.cut_meshes: (mi as GeometryInstance3D).set_instance_shader_parameter("cutaway", v)
+
 ## The landmark you've just reached for the first time ({site} then it's remembered), or a hint ({site, hint}) when
 ## Babe wants apples you haven't got (now and then), or null.
 func reached(pos: Vector3, inv: Dictionary, r := 7.5):
