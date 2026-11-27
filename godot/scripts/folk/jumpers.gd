@@ -48,6 +48,14 @@ func end_raid() -> void:
 func raid_beaten() -> bool: return raid != null and raid.men.all(func(m): return m.dead)
 var day := 0
 var told_first := false
+## What they shout (a card over the one who calls): when they come for you, and as one of them falls.
+const LINES := {"come": ["Git off our claim!", "Get him, boys!", "That's the one been jumping us!"], "fall": ["He got Jed!", "Rush him!", "Watch that one!"],
+	"rob": ["Hands up, everybody!", "Nobody move!", "Fill the sack!"]}
+var card: SayCard
+var card_on = null        ## the man it's over
+func _shout(kind: String, m: Dictionary) -> void:
+	if card == null: card = SayCard.make(); add_child(card)
+	var L: Array = LINES[kind]; card.say(L[randi() % L.size()]); card_on = m
 var blocker: Callable ## (pos) -> pos pushed out of anything built (main: build.collide)
 
 ## Pick the camps' spots for this world. avoid: points to keep well clear of (the town, the native camps).
@@ -105,6 +113,10 @@ func damage(m: Dictionary, n: int, hooks: Dictionary) -> bool:
 	m.dead = 0.001
 	if hooks.has("on_fall"): hooks.on_fall.call(m)
 	for c in _all():
+		if m in c.men:
+			var up: Array = c.men.filter(func(o): return not o.dead)
+			if up.size(): _shout("fall", up[0])
+	for c in _all():
 		if m in c.men and c.men.all(func(o): return o.dead): c.cleared_day = day
 	return true
 
@@ -121,6 +133,10 @@ func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 		elif c.built and d > FAR and not c.men.any(func(m): return not m.dead and m.state == "chase"): _unbuild(c)
 		if c.built: _camp_update(c, dt, player, hooks)
 	if raid != null: _camp_update(raid, dt, player, hooks)
+	if card:
+		var over: Vector3 = card_on.fig.root.position if card_on != null and is_instance_valid(card_on.fig.root) else card.global_position - Vector3(0, 2.6, 0)
+		card.tick(dt, over + Vector3(0, 2.6, 0))
+		if card.t < -4.0: card_on = null
 
 func _build(c: Dictionary) -> void:
 	c.built = true
@@ -201,6 +217,7 @@ func _camp_update(c: Dictionary, dt: float, player: Player, hooks: Dictionary) -
 		# the mood: they see you, and come
 		if m.state != "chase" and not player.dead and (dp < AGGRO or m.angry) and from_fire < LEASH:
 			m.state = "chase"
+			if card == null or card.t <= -2.0 or card_on == null: _shout("rob" if c.get("raid", false) else "come", m)
 			if not told_first: told_first = true; if hooks.has("on_spotted"): hooks.on_spotted.call(c)
 		if m.state == "chase" and (player.dead or from_fire > LEASH): m.state = "home"; m.angry = false
 		var want := Vector3.ZERO; var spd := 0.0; var pose = null
