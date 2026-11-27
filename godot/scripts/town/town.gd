@@ -139,6 +139,30 @@ static func box(w: float, h: float, d: float, hex: int) -> MeshInstance3D:
 	var b := BoxMesh.new(); b.size = Vector3(w, h, d)
 	var m := MeshInstance3D.new(); m.mesh = b; m.material_override = _mat(hex); return m
 ## beams2: a post (or posts) at each x, 1.4 m tall.
+## A board on one of the player's Meshy posts (the signposts, the wide two-post sign): the model standing h tall, and
+## the printed board tex fitted to the model's own board (measured off it: the part of it from 50% to 85% of its
+## height, between its post(s)), on its front and back. null if the model isn't in (the caller keeps its own).
+static func board_post(model_name: String, h: float, tex: String, aspect: float) -> Node3D:
+	var m := model(model_name, h, 1)
+	if m == null: return null
+	var g := Node3D.new(); g.add_child(m)
+	var lo := Vector3(INF, INF, INF); var hi := -lo
+	for mi in m.find_children("*", "MeshInstance3D", true, false):
+		var xf := Railroad._rel(mi as MeshInstance3D, g)
+		var verts: PackedVector3Array = (mi as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for i in range(0, verts.size(), 2):
+			var q := xf * verts[i]
+			if q.y > h * 0.5 and q.y < h * 0.86: lo = lo.min(q); hi = hi.max(q)
+	if lo.x == INF: return g
+	# (the board's own band: its top and bottom where the most of its points lie, so a post cap or a brace doesn't count)
+	var bw := hi.x - lo.x; var bh := (hi.y - lo.y) * 0.7
+	var w := minf(bw * 0.8, bh * aspect); var ht := w / aspect
+	var c := Vector3((lo.x + hi.x) / 2.0, (lo.y + hi.y) / 2.0, 0.0)
+	for back in [false, true]:
+		var cd := card([[-w / 2.0, 0], [w / 2.0, 0], [w / 2.0, ht], [-w / 2.0, ht]], tex, 0.015)
+		cd.position = Vector3(c.x, c.y - ht / 2.0, (lo.z - 0.012) if back else (hi.z + 0.012)); cd.rotation.y = PI if back else 0.0; g.add_child(cd)
+	return g
+
 static func posts(xs: Array) -> Node3D:
 	var g := Node3D.new()
 	for x in xs: var p := box(0.16, 1.4, 0.16, 0x6a4a30); p.position = Vector3(x, 0.7, -0.06); g.add_child(p)
@@ -262,7 +286,8 @@ func _init(w: World, home: Vector3) -> void:
 	if bench: bench.rotation.y = PI; tbl.add_child(bench)
 	var tp: Vector3 = d + along * 1.6 + toward * 0.45; tbl.position = Vector3(tp.x, y0 + 0.14, tp.z); tbl.rotation.y = face; add_child(tbl)
 	var pp: Vector3 = d - along * 1.7 + toward * 1.0
-	var pg := Node3D.new(); var plac := card([[-0.62, 0], [0.64, 0.03], [0.6, 0.62], [-0.64, 0.6]], "placard"); plac.position.y = 1.15; plac.rotation.z = 0.04; pg.add_child(plac); pg.add_child(posts([0.0]))
+	var pg := board_post("prop_signpost_small", 2.0, "placard", 2.0) # (the player's signpost)
+	if pg == null: pg = Node3D.new(); var plac := card([[-0.62, 0], [0.64, 0.03], [0.6, 0.62], [-0.64, 0.6]], "placard"); plac.position.y = 1.15; plac.rotation.z = 0.04; pg.add_child(plac); pg.add_child(posts([0.0]))
 	pg.position = Vector3(pp.x, y0, pp.z); pg.rotation.y = face; add_child(pg)
 	# the church closes the far end of the street, facing back down it
 	var ch := church(0); church_at = at + along * 22.0
@@ -298,7 +323,8 @@ func _init(w: World, home: Vector3) -> void:
 		folk["row_%d" % ri] = {"fig": f, "pose": null, "face": rface}
 		ri += 1
 	var sp: Vector3 = at + along * -31.0 + toward * -3.6
-	var sg := Node3D.new(); var rs := card([[-1.0, 0], [1.05, 0.05], [1.0, 0.5], [-1.05, 0.48]], "rowsign"); rs.position.y = 1.1; rs.rotation.z = -0.06; sg.add_child(rs); sg.add_child(posts([0.0]))
+	var sg := board_post("prop_signpost_long", 2.6, "rowsign", 3.56)
+	if sg == null: sg = Node3D.new(); var rs := card([[-1.0, 0], [1.05, 0.05], [1.0, 0.5], [-1.05, 0.48]], "rowsign"); rs.position.y = 1.1; rs.rotation.z = -0.06; sg.add_child(rs); sg.add_child(posts([0.0]))
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
 	# the dirt street: a long torn sheet of ochre with wheel ruts
 	var holder := street_sheet("street_main"); holder.position = Vector3(at.x, y0 + 0.03, at.z); add_child(holder)
@@ -414,8 +440,12 @@ func tent(rng: PNoise.Mulberry32) -> Node3D:
 func make_sign() -> void:
 	if sign: sign.queue_free()
 	var mended := tiers.values().filter(func(v): return v).size()
-	var c := card([[-1.6, 0], [1.6, 0], [1.7, 0.9], [-1.7, 0.95]], "sign_%d" % mini(mended, 19))
-	var sg := Node3D.new(); c.position.y = 1.2; sg.add_child(c); sg.add_child(posts([-1.3, 1.3]))
+	var sg := Node3D.new()
+	var wide := board_post("prop_sign_wide", 2.6, "sign_%d" % mini(mended, 19), 384.0 / 112.0)
+	if wide: sg.add_child(wide) # (the player's Meshy two-post sign, the printed board on its planks, front and back)
+	else:
+		var c := card([[-1.6, 0], [1.6, 0], [1.7, 0.9], [-1.7, 0.95]], "sign_%d" % mini(mended, 19))
+		c.position.y = 1.2; sg.add_child(c); sg.add_child(posts([-1.3, 1.3]))
 	sg.position = Vector3(sign_at.x, Terrain.get_height(sign_at.x, sign_at.z), sign_at.z); sg.rotation.y = atan2(-along.x, -along.z); sg.rotation.z = 0.0 if mended else 0.04
 	add_child(sg); sign = sg
 
@@ -466,7 +496,8 @@ func open_street(k: int) -> void:
 	for o in street_offs: if signf(o) == signf(off) and absf(o) < absf(off): inner = o if absf(o) > absf(inner) else inner
 	for cs in [CROSS_N, CROSS_S]: cross_sheet(inner + signf(off) * 7.0, off + signf(off) * 7.0, cs)
 	var sp: Vector3 = at + along * -18.0 + toward * (off - signf(off) * 5.2)
-	var sg := Node3D.new(); var c := card([[-1.1, 0], [1.1, 0.03], [1.05, 0.42], [-1.1, 0.4]], "streetsign_%d" % k); c.position.y = 1.6; sg.add_child(c); sg.add_child(posts([0.0]))
+	var sg := board_post("prop_signpost_long", 2.8, "streetsign_%d" % k, 4.0)
+	if sg == null: sg = Node3D.new(); var c := card([[-1.1, 0], [1.1, 0.03], [1.05, 0.42], [-1.1, 0.4]], "streetsign_%d" % k); c.position.y = 1.6; sg.add_child(c); sg.add_child(posts([0.0]))
 	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
 	grow_row(k)
 	if on_street.is_valid(): on_street.call(st.name)
@@ -582,10 +613,16 @@ func rebuild(id: String, tier: int, k: int) -> void:
 	if k >= 0 and tier:
 		var b := find_b(id); var d: Vector3 = doors[id]; var lamp := Node3D.new()
 		var p: Vector3 = d + along * (b.w / 2.0) * 0.55 - toward * b.side * 0.9
-		var post := box(0.09, 2.1, 0.09, 0x4a3424); post.position.y = 1.05; lamp.add_child(post)
-		var arm := box(0.42, 0.06, 0.06, 0x3a2a1c); arm.position = Vector3(0.18, 2.0, 0); lamp.add_child(arm)
-		var cage := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.2, 0.28, 0.2); cage.mesh = bm; cage.material_override = _glass(); cage.position = Vector3(0.36, 1.78, 0); lamp.add_child(cage)
-		var cap := box(0.26, 0.06, 0.26, 0x2e2a28); cap.position = Vector3(0.36, 1.95, 0); lamp.add_child(cap)
+		var lp := model("prop_lantern_post", 2.3, 1)
+		if lp: # (the player's Meshy lantern post, its lantern hung out over the boardwalk; a glow inside it after dark)
+			lamp.add_child(lp)
+			var cage := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.2, 0.2, 0.2); cage.mesh = bm; cage.material_override = _glass()
+			lamp.add_child(cage); cage.position = _lantern_spot(lp, lamp, 2.3)
+		else:
+			var post := box(0.09, 2.1, 0.09, 0x4a3424); post.position.y = 1.05; lamp.add_child(post)
+			var arm := box(0.42, 0.06, 0.06, 0x3a2a1c); arm.position = Vector3(0.18, 2.0, 0); lamp.add_child(arm)
+			var cage := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.2, 0.28, 0.2); cage.mesh = bm; cage.material_override = _glass(); cage.position = Vector3(0.36, 1.78, 0); lamp.add_child(cage)
+			var cap := box(0.26, 0.06, 0.26, 0x2e2a28); cap.position = Vector3(0.36, 1.95, 0); lamp.add_child(cap)
 		lamp.position = Vector3(p.x, y0, p.z); lamp.rotation.y = atan2(along.x, along.z) - PI / 2.0; add_child(lamp)
 		lamps[id] = lamp
 	# a hitching rail before the feed barn and the stage stables once mended (and the Golden Garter's), a horse tied
@@ -734,6 +771,25 @@ func _lantern_at(lp: Node3D, lamp: Node3D) -> Vector3:
 	lantern_size = Vector3(0.27, 0.25, 0.27) # (just proud of its panes, so the glow shows through them)
 	return _lantern_cache
 static var lantern_size := Vector3(0.22, 0.32, 0.22)
+
+## Where a lantern post of height h hangs its lantern, in the lamp's frame (the middle of its points from 52% to 76% of
+## the height lying well off the post), measured once per height.
+static var _spots := {}
+func _lantern_spot(lp: Node3D, lamp: Node3D, h: float) -> Vector3:
+	if _spots.has(h): return _spots[h]
+	var pts := []
+	for mi in lp.find_children("*", "MeshInstance3D", true, false):
+		var xf := Railroad._rel(mi as MeshInstance3D, lamp)
+		var verts: PackedVector3Array = (mi as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for i in range(0, verts.size(), 2): pts.append(xf * verts[i])
+	var post := Vector3.ZERO; var np := 0
+	for q in pts: if q.y > h * 0.2 and q.y < h * 0.3: post += q; np += 1
+	if np: post /= np
+	var c := Vector3.ZERO; var n := 0
+	for q in pts:
+		if q.y > h * 0.53 and q.y < h * 0.68 and Vector2(q.x - post.x, q.z - post.z).length() > 0.12: c += q; n += 1
+	_spots[h] = c / n + Vector3(0, 0.03, 0) if n else Vector3(0.3, h * 0.62, 0)
+	return _spots[h]
 
 ## The six street lamps of Main Street (made once), each with its pool of warm light on the dirt.
 const LAMP_H := 3.4

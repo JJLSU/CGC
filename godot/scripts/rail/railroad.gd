@@ -421,8 +421,11 @@ func _make_depot() -> void:
 	if house:
 		var bb := PaperMats._aabb(house.get_child(0), Transform3D.IDENTITY)
 		house.scale = Vector3.ONE * (7.0 / maxf(bb.size.x, bb.size.z)); house.position = Vector3(0, 0, -1.4); g.add_child(house)
-	var sign := Town.card([[-2.1, 0], [2.1, 0.02], [2.15, 0.62], [-2.1, 0.6]], "res://assets/baked/rail/depot_sign", 0.04); sign.position = Vector3(5.2, 2.1, 4.6); g.add_child(sign)
-	for x in [3.3, 7.1]: g.add_child(_box(0.14, 2.6, 0.14, Vector3(x, 1.3, 4.6), wood()))
+	var dsign := Town.board_post("prop_sign_wide", 3.0, "res://assets/baked/rail/depot_sign", 5.33) # (the player's two-post sign)
+	if dsign: dsign.position = Vector3(5.2, 0, 4.6); g.add_child(dsign)
+	else:
+		var sign := Town.card([[-2.1, 0], [2.1, 0.02], [2.15, 0.62], [-2.1, 0.6]], "res://assets/baked/rail/depot_sign", 0.04); sign.position = Vector3(5.2, 2.1, 4.6); g.add_child(sign)
+		for x in [3.3, 7.1]: g.add_child(_box(0.14, 2.6, 0.14, Vector3(x, 1.3, 4.6), wood()))
 	var a: Vector3 = path[depot_i]; var b: Vector3 = path[depot_i + 6]; var yaw := atan2(b.x - a.x, b.z - a.z); var side := Vector3(cos(yaw), 0, -sin(yaw))
 	g.rotation.y = yaw + PI / 2.0 # (its front and platform toward the track)
 	var p: Vector3 = path[depot_i + 3] - side * 5.4; g.position = Vector3(p.x, y, p.z)
@@ -445,8 +448,11 @@ func _make_post(s: Dictionary) -> void:
 	put.call("bldg_cottage_restored", 6.2, 0.0, -0.6)
 	put.call("prop_barrel", 0.95, 2.7, 2.6, 0.4, true); put.call("prop_crates", 1.0, -2.8, 2.4, -0.3, true)
 	for k in 5: var pl := _box(1.3, 0.06, 0.32, Vector3((k % 2) * 0.08 - 0.04, 0.03, 3.1 + k * 0.62), wood()); g.add_child(pl)
-	var sign := Town.card([[-1.5, 0], [1.5, 0.03], [1.52, 0.56], [-1.48, 0.54]], "res://assets/baked/rail/post_" + s.land, 0.04); sign.position = Vector3(-2.6, 1.9, 3.0); g.add_child(sign)
-	for x in [-3.8, -1.4]: g.add_child(_box(0.12, 2.3, 0.12, Vector3(x, 1.15, 3.0), wood()))
+	var psign := Town.board_post("prop_sign_wide", 2.6, "res://assets/baked/rail/post_" + s.land, 5.12)
+	if psign: psign.position = Vector3(-2.6, 0, 3.0); g.add_child(psign)
+	else:
+		var sign := Town.card([[-1.5, 0], [1.5, 0.03], [1.52, 0.56], [-1.48, 0.54]], "res://assets/baked/rail/post_" + s.land, 0.04); sign.position = Vector3(-2.6, 1.9, 3.0); g.add_child(sign)
+		for x in [-3.8, -1.4]: g.add_child(_box(0.12, 2.3, 0.12, Vector3(x, 1.15, 3.0), wood()))
 	add_child(g); s.post_group = g
 	s.door = g.to_global(Vector3(0, 0, 2.6)) # (where you trade: the step before the door)
 	var K: Dictionary = KEEPERS[s.land]
