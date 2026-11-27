@@ -26,7 +26,9 @@ var day := 0
 var told := false
 var blocker: Callable
 
+var world_ref: World = null
 func setup(home: Vector3, avoid: Array, world: World = null) -> void:
+	world_ref = world
 	var rng := PNoise.Mulberry32.new(PNoise.hash2(31, 73, Terrain.SEED + 5150))
 	var want := 2 + int(rng.next() * 2.0) # (two or three)
 	var names := NAMES.duplicate()
@@ -306,6 +308,9 @@ func _build(f: Dictionary) -> void:
 			"t": rng.next() * 6.0, "goal": hm, "speed": 0.0})
 
 func _unbuild(f: Dictionary) -> void:
+	if world_ref and f.has("gate_cols"):
+		for c in f.gate_cols: world_ref.colliders.erase(c)
+		f.erase("gate_cols")
 	f.built = false
 	for n in f.nodes: if is_instance_valid(n): (n as Node).queue_free()
 	for m in f.men: m.fig.root.queue_free()
@@ -317,6 +322,17 @@ func _fort_update(f: Dictionary, dt: float, player: Player, hooks: Dictionary, d
 	if f.has("flag"): (f.flag as Node3D).rotation.z = sin(Time.get_ticks_msec() / 700.0) * 0.06 # (the colours stirring)
 	# the gate: swung in by day (and while the fort's turned out against you, shut), shut at night
 	var want_open := 1.0 if clock > 0.26 and clock < 0.8 and not f.angry else 0.0
+	# (shut, the gate stops you as the wall does: posts across the gateway in the world's colliders; open, they're gone)
+	if world_ref and f.has("leaves"):
+		var shut: bool = f.leaves.size() > 0 and f.leaves[0].open < 0.3
+		if shut and not f.has("gate_cols"):
+			f.gate_cols = []
+			for k in 5:
+				var q: Vector3 = at + fz * (SIDE / 2.0) + fx * (-2.8 + k * 1.4)
+				var c := {"x": q.x, "z": q.z, "r": 0.75}; world_ref.colliders.append(c); f.gate_cols.append(c)
+		elif not shut and f.has("gate_cols"):
+			for c in f.gate_cols: world_ref.colliders.erase(c)
+			f.erase("gate_cols")
 	for L in f.get("leaves", []):
 		L.open = move_toward(L.open, want_open, dt * 0.4)
 		var a: float = smoothstep(0.0, 1.0, L.open) * 1.6 * -float(L.side) # (swung inward on its post)
