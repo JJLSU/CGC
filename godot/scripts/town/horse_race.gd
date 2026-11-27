@@ -87,10 +87,10 @@ func setup(town: Town, world: World = null) -> void:
 	var nm: String = "prospectors_1"
 	for n in RIVAL: if ModelFigure.has_folk(n): nm = n; break
 	jake = ModelFigure.new(nm, {"hue": 0.0}); add_child(jake.root)
-	say_card = Label3D.new(); say_card.billboard = BaseMaterial3D.BILLBOARD_ENABLED; say_card.font_size = 64; say_card.pixel_size = 0.0065
+	say_card = Label3D.new(); say_card.billboard = BaseMaterial3D.BILLBOARD_ENABLED; say_card.font_size = 64; say_card.pixel_size = 0.0042
 	say_card.modulate = Color("3a2f25"); say_card.outline_size = 0; say_card.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS; say_card.render_priority = 10
 	var sf := SystemFont.new(); sf.font_names = PackedStringArray(["Patrick Hand", "Segoe Print", "Comic Sans MS"]); say_card.font = sf
-	var back := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(3.2, 0.7); back.mesh = qm; back.position.z = -0.02
+	var back := MeshInstance3D.new(); var qm := QuadMesh.new(); qm.size = Vector2(3.3, 0.5); back.mesh = qm; back.position.z = -0.02
 	var bm := StandardMaterial3D.new(); bm.albedo_color = Color("f4ecd8"); bm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED; bm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED; bm.render_priority = 9
 	back.material_override = bm; back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; say_card.add_child(back)
 	say_card.visible = false; add_child(say_card)
@@ -164,7 +164,7 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 	jake.root.visible = on; horse.group.visible = on
 	bob += dt
 	say_t -= dt
-	if say_card: say_card.visible = say_t > 0.0 and on_ok(sky_time); if say_card and say_card.visible: say_card.position = jpos + Vector3(0, 4.2, 0)
+	if say_card: say_card.visible = say_t > 0.0 and on_ok(sky_time); if say_card and say_card.visible: say_card.position = jpos + Vector3(0, 3.7, 0)
 	for i in posts.size():
 		var pen: MeshInstance3D = posts[i].get_meta("pennant")
 		var k := "flag"

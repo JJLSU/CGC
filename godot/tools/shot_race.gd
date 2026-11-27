@@ -30,6 +30,11 @@ func _initialize() -> void:
 	R.begin()
 	var p := R.start; var course: Array = R.flags + [R.start]; var k := 0
 	while R.state != "run": main.player.pos = p; await process_frame
+	main.rig.target_node = R.jake.root; main.rig.dist = 10.0; main.rig.pitch = 0.25
+	for i in 20: main.player.pos = p; await process_frame # (just after the off: Jake's call on its card)
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_go.png"))
+	main.rig.target_node = main.player.avatar.root
 	while R.jake_next < 2 and R.state == "run":
 		var tgt: Vector3 = course[k]; var d := Vector3(tgt.x - p.x, 0, tgt.z - p.z)
 		p += d.normalized() * minf(d.length(), 15.0 * main.get_process_delta_time()); if d.length() < 1.0: k += 1
