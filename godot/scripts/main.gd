@@ -810,6 +810,7 @@ func _process(dt: float) -> void:
 	_pm("RenderingServer.global_shader_parameter_set")
 	if active_view_key(): _toggle_view()
 	rig.update_camera(dt)
+	_fp_tool(dt)
 	_pm("rig.update_camera")
 	world.update_occlusion(rig.camera.global_position, player.pos, dt)
 	_pm("world.update_occlusion")
@@ -1028,6 +1029,22 @@ func active_view_key() -> bool: return input.hit("KeyV") and not panel.open and 
 func _toggle_view() -> void:
 	_set_view(not rig.first_person)
 	hud.toast("Through your own eyes (V for the wide view again)." if rig.first_person else "The wide view (V to see through your own eyes).")
+## Through his eyes, the tool in hand drawn on the camera (FirstPersonView); his own copy kept off it.
+var fp_view: FirstPersonView
+var _fp_key := "-"
+func _fp_tool(dt: float) -> void:
+	if not rig.first_person or player.dead:
+		if fp_view: fp_view.hide_all()
+		_fp_key = "-"; return
+	if fp_view == null: fp_view = FirstPersonView.new(); rig.camera.add_child(fp_view)
+	var av: Avatar = player.avatar
+	var key: String = "" if (av.seated or build.active) else av._made_key()
+	if key != _fp_key: _fp_key = key; _self_layers(av.root, true) # (a tool he's just taken up, made after the switch, off the camera too)
+	if av._made_on != null: # (and the one in his hand, made a frame later)
+		var gs := av._made_on.find_children("*", "GeometryInstance3D", true, false)
+		if gs.size() and (gs[0] as VisualInstance3D).layers != SELF_LAYER: _self_layers(av._made_on, true)
+	fp_view.update(dt, key, player.aiming, av.swing, av.casting, Vector2(player.vel.x, player.vel.z).length())
+
 ## The camera option (Options, or V): the wide diorama view (the default) or first person; kept with the display prefs.
 func _set_view(fp: bool, keep := true) -> void:
 	rig.first_person = fp

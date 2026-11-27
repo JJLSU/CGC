@@ -26,6 +26,26 @@ func _initialize() -> void:
 	for i in 20: await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_gun.png"))
+	main.input.mouse_down = true # (raised to aim)
+	for i in 30: await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_aim.png"))
+	if OS.get_environment("FP_DBG") != "":
+		for gi in main.find_children("*", "GeometryInstance3D", true, false):
+			var g3 := gi as GeometryInstance3D
+			if g3.is_visible_in_tree() and (g3.layers & 1) and g3.global_position.distance_to(cam.global_position) < 1.6: print("near the eye: %s (%s) %.2f m" % [main.get_path_to(g3), g3.get_class(), g3.global_position.distance_to(cam.global_position)])
+	main.input.mouse_down = false
+	main.tools["ironaxe"] = true; main.tools["axe"] = true; main.pick_tool("axe")
+	for i in 20: await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_axe.png"))
+	main.player.avatar.start_swing()
+	for i in 200:
+		await process_frame
+		if main.player.avatar.swing > 0.45: break
+	await RenderingServer.frame_post_draw
+	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_chop.png"))
+	main.pick_tool("revolver")
 	main.make_horse(at.x + 1.5, at.z); main.riding = true; main.player.riding = true; main.player.avatar.riding = true
 	for i in 40: main.player.pos = Vector3(at.x, Terrain.get_height(at.x, at.z), at.z); await process_frame
 	print("mounted: eye %.2f m above the ground" % (cam.global_position.y - Terrain.get_height(at.x, at.z)))
