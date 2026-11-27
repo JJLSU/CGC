@@ -517,6 +517,11 @@ func _init(w: World, home: Vector3) -> void:
 const CROSS_N := 36.0 # (behind the church's back: at 31 the player found the church standing in it)
 const CROSS_S := -29.0
 const CROSS_HW := 4.6 ## (half its width; its sides straight, where the streets end flush against them)
+## The streets printed a step darker, as the ground is (the player: the land and the streets read pale and washed out).
+const STREET_TONE := Color(0.8, 0.77, 0.74)
+static func _street_tone(sheet: MeshInstance3D) -> void:
+	var m := sheet.material_override as ShaderMaterial
+	if m: m.set_shader_parameter("albedo", STREET_TONE)
 func cross_sheet(o0: float, o1: float, cs: float) -> void:
 	var a := minf(o0, o1); var b := maxf(o0, o1)
 	var n := maxi(1, ceili((b - a) / 40.0)); var L := (b - a) / n
@@ -524,7 +529,7 @@ func cross_sheet(o0: float, o1: float, cs: float) -> void:
 		var mid := a + L * (i + 0.5)
 		var hl := L / 2.0 # (pieces end to end, flush; straight sides at the streets' ends)
 		var sheet := card([[-CROSS_HW, -hl], [CROSS_HW, -hl], [CROSS_HW, hl], [-CROSS_HW, hl]], "street_new", 0.03, 0.45)
-		sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0
+		sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0; _street_tone(sheet)
 		var holder := Node3D.new(); holder.add_child(sheet); holder.rotation.y = atan2(toward.x, toward.z)
 		var p: Vector3 = at + along * cs + toward * mid; holder.position = Vector3(p.x, y0 + 0.03, p.z); add_child(holder) # (level with the streets)
 
@@ -549,7 +554,7 @@ func street_sheet(tex: String) -> Node3D:
 	# (it ends square at the cross streets' near edges, flush with them: no overlap to flicker, the player saw)
 	var e0 := -(CROSS_N - CROSS_HW); var e1 := -(CROSS_S + CROSS_HW) # (the card's +y runs down -along once laid flat and turned)
 	var sheet := card([[-4.6, e0], [4.6, e0], [5.2, -10], [4.4, 8], [4.6, e1], [-4.6, e1], [-4.2, 10], [-5.0, -9]], tex, 0.03, 0.45)
-	sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0
+	sheet.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; sheet.rotation.x = -PI / 2.0; _street_tone(sheet)
 	var holder := Node3D.new(); holder.add_child(sheet); holder.rotation.y = atan2(along.x, along.z)
 	return holder
 

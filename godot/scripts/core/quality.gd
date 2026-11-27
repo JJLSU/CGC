@@ -50,6 +50,11 @@ func apply(lv: String) -> void:
 	main.sky.sun.shadow_blur = q.soft / 5.0
 	var env: Environment = main.env.environment
 	env.ssao_enabled = q.ao
+	# screen-space indirect light (the engine's own bounce: sunlit ground and walls tint the shade beside them), on high
+	# and medium; on low the post pass's faked bounce does it alone (its share back to whole)
+	env.ssil_enabled = q.ao; env.ssil_radius = 6.0; env.ssil_intensity = 1.4; env.ssil_sharpness = 0.98; env.ssil_normal_rejection = 1.0
+	main.post.set_shader_parameter("bounce_k", 0.45 if q.ao else 1.0)
+	RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_MEDIUM, true, 0.5, 4, 50.0, 300.0) # (half resolution: its bounce is soft anyway)
 	env.glow_enabled = q.bloom
 	main.post.set_shader_parameter("line_enabled", q.line)
 	_set_dof()

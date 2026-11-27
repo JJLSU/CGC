@@ -25,6 +25,12 @@ uniform float shadow_warmth = 0.7;
 uniform float contrast = 0.32;
 uniform float dof_enabled = 1.0;
 uniform float bounce = 0.5;
+// the look (the player: the land read pale and washed out): the engine's own screen-space bounce (SSIL) now carries
+// light into the shade, so the faked one is taken down; a touch less exposure and less orange in the darks
+uniform float bounce_k = 0.45;      // (share of the faked bounce kept; 1.0 = as before)
+uniform float exposure_k = 0.9;
+uniform float warmth_k = 0.65;
+uniform float contrast_add = 0.08;
 uniform bool line_enabled = true;
 
 void vertex() {
@@ -40,7 +46,7 @@ float view_z(vec2 uv, mat4 inv_proj) {
 vec3 neutral(vec3 color) {
 	const float start = 0.8 - 0.04;
 	const float desat = 0.15;
-	color *= exposure;
+	color *= exposure * mix(exposure_k, 1.0, night); // (the trim by day only: night is dark enough)
 	float x = min(color.r, min(color.g, color.b));
 	float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
 	color -= offset;
@@ -74,7 +80,7 @@ void fragment() {
 	float L = lum(base);
 	vec3 albedo = clamp(base / max(L, 0.12) * 0.55, 0.0, 1.4);
 	float shade = 1.0 - smoothstep(0.18, 0.7, L);
-	base += around * albedo * bounce * (shade * 0.75 + 0.25);
+	base += around * albedo * bounce * bounce_k * (shade * 0.75 + 0.25);
 	// ---- thin silhouette line where a card stands in front of something farther away (~1 px, warm)
 	if (line_enabled) {
 		float farther = max(max(view_z(uv + vec2(px.x, 0.0), INV_PROJECTION_MATRIX), view_z(uv - vec2(px.x, 0.0), INV_PROJECTION_MATRIX)),
@@ -91,10 +97,10 @@ void fragment() {
 	float l = lum(c);
 	c = mix(vec3(l), c, mix(saturation, saturation * 0.9, night));
 	float shadow_w = 1.0 - smoothstep(0.0, 0.5, l);
-	c = mix(c, c * vec3(1.16, 0.9, 0.78), shadow_w * shadow_warmth);
+	c = mix(c, c * vec3(1.16, 0.9, 0.78), shadow_w * shadow_warmth * warmth_k);
 	c *= vec3(1.03, 0.985, 0.95);
 	c += vec3(0.227, 0.125, 0.047) * 0.03 * (1.0 - smoothstep(0.0, 0.45, l));
-	c = mix(c, c * c * (3.0 - c * 2.0), contrast);
+	c = mix(c, c * c * (3.0 - c * 2.0), contrast + contrast_add);
 	c = mix(c, c * vec3(0.82, 0.9, 1.1), night * (1.0 - smoothstep(0.3, 0.75, l)) * 0.5);
 	float asp = VIEWPORT_SIZE.x / VIEWPORT_SIZE.y;
 	float d = length((uv - 0.5) * vec2(asp, 1.0));

@@ -39,6 +39,9 @@ vec3 sheet(float vA, float vB, float thr, float amp, float width, float tA, floa
 	return vec3(inside, max(rim, hairs), shadow);
 }
 
+const float GROUND_TONE = 0.78; // (how much darker the ground sheet prints)
+const float GROUND_SAT = 1.0;   // (and how much deeper its colour)
+
 void fragment() {
 	vec2 p = wpos.xz;
 	vec2 sv = -normalize(paper_key_dir.xz) * 0.14;
@@ -154,6 +157,10 @@ void fragment() {
 	vec3 landDye = texture(land_tex, (p + 0.5) / MAPN).rgb * 1.25;
 	col *= mix(vec3(1.0), landDye, landMask * (1.0 - snowAmt * 0.7));
 	col *= mix(vec3(1.0), min(landDye, vec3(1.0)), (1.0 - landMask) * 0.85);
+	// the ground a deeper, richer sheet (the player: the land read pale and washed out under the bright sun): darker,
+	// its colour a step more saturated, so the cards and figures stand out on it; the paths and rims stay paler
+	float gl = dot(col, vec3(0.299, 0.587, 0.114));
+	col = mix(vec3(gl), col, GROUND_SAT) * GROUND_TONE;
 	float hz = haze_factor(wpos);
 	ALBEDO = col * (1.0 - hz);
 	EMISSION = haze_color(wpos) * hz;
