@@ -394,11 +394,12 @@ class Camp extends Node3D:
 				# out to meet you, stopping a stone's throw off; a signal to turn back, then an arrow at your feet
 				face = atan2(dx, dz)
 				if dP > 10.0: speed = 4.0
-				else:
-					act = "wave" if alarm_t < 4.5 else "idle"
-					if not warn_shot and alarm_t > 3.0:
-						warn_shot = true; shoot(pos, p, false, hooks, true)
-						if hooks.has("on_warn"): hooks.on_warn.call()
+				else: act = "wave" if alarm_t < 4.5 else "idle"
+				# the arrow at your feet once you've had a moment to turn back, from bowshot (he needn't be close: from a far
+				# post he'd not reach you before the grace ran out, and the fight came with no warning shot)
+				if not warn_shot and alarm_t > 3.0 and dP < 25.0:
+					warn_shot = true; shoot(pos, p, false, hooks, true)
+					if hooks.has("on_warn"): hooks.on_warn.call()
 			else: # about the camp: from one spot to another, a pause, then on
 				var g: Vector3 = w.goal; var gx := g.x - pos.x; var gz := g.z - pos.z; var gd := sqrt(gx * gx + gz * gz)
 				if gd > 0.4: speed = 2.4 if alarm == "none" and pos.distance_to(at) > R * 0.6 else 1.2; face = atan2(gx, gz)
