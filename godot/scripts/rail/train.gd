@@ -132,6 +132,22 @@ func load_cargo(n: int) -> void:
 func unload() -> void:
 	for c in cargo: if is_instance_valid(c): c.queue_free()
 	cargo = []
+	for f in riders: f.root.queue_free()
+	riders = []
+
+## Other folk riding out (the player's ask: passengers in the open car): one or two travellers stand in the gondola,
+## a pace or two apart, looking out over the side; off again when she's home.
+const RIDERS := ["cgc_man_gent", "cgc_woman_floral", "cgc_man_glasses", "cgc_woman_plumstripe", "cgc_man_elder", "cgc_woman_calico", "cgc_man_youth"]
+var riders: Array = []
+func board_riders() -> void:
+	if ride_i < 0: return
+	var car := ride_car(); var n := 1 + randi() % 2
+	var pool := RIDERS.filter(func(nm): return ModelFigure.has_folk(nm)); pool.shuffle()
+	for i in mini(n, pool.size()):
+		var f := ModelFigure.new(pool[i]); f.t = randf() * 4.0
+		f.root.position = ride_floor + Vector3((-0.45 + i * 0.9) * ride_half.x, 0, -ride_half.y * 0.55 + i * 0.8)
+		f.root.rotation.y = PI / 2.0 if i % 2 == 0 else -PI / 2.0 # (looking out over the side)
+		car.add_child(f.root); riders.append(f)
 ## Walk about the open car while she runs (the player's ask): wish is the way you'd walk, in the world; held inside
 ## its sides and ends. Returns your velocity in the world (for the walk), and turns you the way you go.
 func move_rider(wish: Vector3, dt: float) -> Vector3:
@@ -182,6 +198,7 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 		if wait <= 0.0:
 			state = "run"; at_stop = -1
 			if on_whistle.is_valid(): on_whistle.call(at(s).pos)
+	for f in riders: if f.root.is_visible_in_tree(): f.update(dt, 0.0, null)
 	# the cars along the line, coupled one behind another
 	var cp := camera.global_position; var head := at(s)
 	var far := not passenger and Vector2(cp.x - head.pos.x, cp.z - head.pos.z).length() > 170.0 # (never while you ride her)

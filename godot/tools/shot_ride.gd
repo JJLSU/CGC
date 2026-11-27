@@ -20,7 +20,7 @@ func _initialize() -> void:
 	await process_frame; await process_frame; await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_depot.png"))
 	main.set_process(true); main.player.avatar.root.visible = true
-	TR.load_cargo(6)
+	TR.load_cargo(6); TR.board_riders()
 	TR.passenger = true; TR.state = "run"; TR.leg = 0; TR.dir = 1; TR.s = TR.home_s() + 200.0
 	for i in 60: await process_frame
 	main.input.keys["KeyD"] = true # (a few steps across the car)

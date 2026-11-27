@@ -302,6 +302,7 @@ func _ready() -> void:
 	train.on_depart = func() -> void:
 		var n := railroad.take_freight()
 		train.load_cargo(n) # (it rides out stacked in the open car)
+		train.board_riders() # (and a traveller or two with it)
 		if n and Vector2(player.pos.x - railroad.depot.x, player.pos.z - railroad.depot.z).length() < 80.0: hud.toast("The freight hands stack your %d crate%s in the open car, and the train pulls out for the East." % [n, "s" if n > 1 else ""])
 	town.on_street = func(nm: String) -> void: hud.toast("Word spreads that Cold Glitter Creek is coming up in the world: folk are putting up %s beside the old street. Its buildings want mending too." % nm)
 	enemies = Enemies.new(world); enemies.on_windup = func(_e) -> void: sound.growl()
