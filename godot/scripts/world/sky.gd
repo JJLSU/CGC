@@ -28,6 +28,7 @@ var day := 1
 var night := 0.0
 var dusk := 0.0
 var rain := 0.0
+var wet := 0.0 ## the ground's wetness: soaks in over a minute of rain, dries over a few after
 var sun_dir := Vector3.UP
 var key_dir := Vector3.UP
 var sun: DirectionalLight3D
@@ -152,6 +153,8 @@ func update(dt: float, center: Vector3, camera: Camera3D) -> void:
 	# the haze follows the hero
 	haze = PAL.hazeDay.lerp(PAL.hazeDusk, dusk).lerp(PAL.hazeNight, ss(0.3, 0.85, night_amt))
 	haze_amt = 0.24 + 0.41 * dusk + 0.5 * ss(0.3, 0.85, night_amt)
+	wet = move_toward(wet, rain, dt * (1.0 / 40.0 if rain > wet else 1.0 / 240.0))
+	RenderingServer.global_shader_parameter_set("paper_wet", wet)
 	# a passing shower: the key softens and greys, the haze thickens to a pale rainy blue-grey
 	if rain > 0.001:
 		sun.light_energy *= 1.0 - 0.55 * rain

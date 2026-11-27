@@ -161,6 +161,7 @@ void fragment() {
 	// its colour a step more saturated, so the cards and figures stand out on it; the paths and rims stay paler
 	float gl = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(vec3(gl), col, GROUND_SAT) * GROUND_TONE;
+	col *= 1.0 - paper_wet * 0.22 * landMask; // (wet ground prints darker)
 	float hz = haze_factor(wpos);
 	ALBEDO = col * (1.0 - hz);
 	EMISSION = haze_color(wpos) * hz;

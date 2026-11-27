@@ -521,7 +521,7 @@ const CROSS_HW := 4.6 ## (half its width; its sides straight, where the streets 
 const STREET_TONE := Color(0.8, 0.77, 0.74)
 static func _street_tone(sheet: MeshInstance3D) -> void:
 	var m := sheet.material_override as ShaderMaterial
-	if m: m.set_shader_parameter("albedo", STREET_TONE)
+	if m: m.set_shader_parameter("albedo", STREET_TONE); m.set_shader_parameter("wet_k", 1.0)
 func cross_sheet(o0: float, o1: float, cs: float) -> void:
 	var a := minf(o0, o1); var b := maxf(o0, o1)
 	var n := maxi(1, ceili((b - a) / 40.0)); var L := (b - a) / n

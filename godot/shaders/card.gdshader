@@ -22,6 +22,7 @@ uniform float self_fill = 0.0;     // emissive share of the print (0.28 for the 
 uniform vec3 night_glow = vec3(0.0); // windows: their dark panes glow amber at night (x paper_glow)
 uniform bool no_haze = false;      // (the paper clouds: fog: false)
 uniform bool ghosts = false;
+uniform float wet_k = 0.0;        // a sheet laid on the ground (the streets): darkens as the ground does in a shower
 uniform float alpha_cut = 0.0;     // a cut-out print (its own transparent ground, e.g. the twister's frames): cut where the print's alpha is below this       // a pool whose cards can stand between camera and farmer: INSTANCE_CUSTOM.x is the fade
 
 instance uniform float near_only = 0.0; // (1: drawn only over the built ground, never hanging over the flat sheet past it)
@@ -74,7 +75,7 @@ void fragment() {
 	if (snow > 0.0) col = mix(ink, snowc, paper_snow * snow * smoothstep(0.5, 0.85, wnor.y));
 	if (snow_cap > 0.0) col = mix(col, snowc, paper_snow * smoothstep(snow_cap, snow_cap + 0.06, puv.y + (fib - 0.5) * 0.12));
 	float hz = no_haze ? 0.0 : haze_factor(wpos);
-	ALBEDO = col * (1.0 - hz);
+	ALBEDO = col * (1.0 - hz) * (1.0 - paper_wet * 0.22 * wet_k);
 	EMISSION = ink * self_fill * (1.0 - hz) + haze_color(wpos) * hz;
 	if (night_glow != vec3(0.0)) EMISSION += night_glow * clamp(1.0 - texture(map, muv).r * 1.4, 0.0, 1.0) * paper_glow;
 	ROUGHNESS = 1.0;
