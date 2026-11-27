@@ -204,6 +204,44 @@ func _draw() -> void:
 		_poly(chit, Color("f3ead6"), 1.0)
 		_label("Cold Glitter Creek", Vector2(tp.x, cy), 17, serif_bi); _label(pop, Vector2(tp.x, cy + 12), 12, serif_i)
 		draw_line(Vector2(tp.x, cy + 16), Vector2(tp.x, tp.y - 6), INK, 1.0)
+	# the Overland & Western: the line as a ticked track through the country you've seen, the depot by the town, and
+	# each whistle-stop's trading post by name
+	var rail = ctx.get("rail")
+	if rail != null:
+		var P: PackedVector2Array = rail.pts
+		for i in P.size() - 1:
+			if not (seen(P[i].x, P[i].y) and seen(P[i + 1].x, P[i + 1].y)): continue
+			var a := _px(P[i].x, P[i].y); var b := _px(P[i + 1].x, P[i + 1].y)
+			if not (_on(a) or _on(b)): continue
+			draw_line(a, b, Color("4a3a2c"), 2.0, true)
+			var d := b - a; var n := Vector2(-d.y, d.x).normalized() * 4.0; var steps := maxi(1, int(d.length() / 7.0))
+			for k in steps: var q := a.lerp(b, (k + 0.5) / steps); draw_line(q - n, q + n, Color("4a3a2c"), 1.2, true)
+		var dp: Vector3 = rail.depot
+		if seen(dp.x, dp.z):
+			var p := _px(dp.x, dp.z)
+			if _on(p):
+				_poly(PackedVector2Array([p + Vector2(-9, 5), p + Vector2(-9, -3), p + Vector2(0, -9), p + Vector2(9, -3), p + Vector2(9, 5)]), Color("b8875a"), 1.5)
+				_label("Depot", p + Vector2(0, 22), 14, serif_b)
+		for st in rail.posts:
+			var at: Vector3 = st.at
+			if not seen(at.x, at.z): continue
+			var p := _px(at.x, at.z)
+			if not _on(p): continue
+			draw_rect(Rect2(p - Vector2(6, 5), Vector2(12, 10)), Color("c9a46a")); draw_rect(Rect2(p - Vector2(6, 5), Vector2(12, 10)), INK, false, 1.2)
+			_poly(PackedVector2Array([p + Vector2(-8, -5), p + Vector2(0, -11), p + Vector2(8, -5)]), Color("8a5a3a"), 1.0)
+			_label(String(st.name) + " post", p + Vector2(0, 22), 13, null, Color(INK, 0.85))
+	# Dusty Jake's race course: the starting post and the flags round it, a dotted loop
+	var race = ctx.get("race")
+	if race != null and seen(race.start.x, race.start.z):
+		var loop: Array = [race.start] + race.flags + [race.start]
+		for i in loop.size() - 1:
+			var a := _px(loop[i].x, loop[i].z); var b := _px(loop[i + 1].x, loop[i + 1].z); var n := int(a.distance_to(b) / 8.0)
+			for k in n: if k % 2 == 0: draw_line(a.lerp(b, float(k) / n), a.lerp(b, float(k + 1) / n), Color("b8402e"), 1.5, true)
+		for f in race.flags:
+			var q := _px(f.x, f.z); draw_line(q, q + Vector2(0, -9), INK, 1.2); _poly(PackedVector2Array([q + Vector2(0, -9), q + Vector2(7, -7), q + Vector2(0, -5)]), Color("3e6a8a"), 0.8)
+		var sp := _px(race.start.x, race.start.z)
+		draw_line(sp, sp + Vector2(0, -12), INK, 1.5); _poly(PackedVector2Array([sp + Vector2(0, -12), sp + Vector2(9, -9.5), sp + Vector2(0, -7)]), Color("b8402e"), 1.0)
+		_label("Horse race", sp + Vector2(0, -18), 13, serif_b, Color("8a2a20")) # (above its pennant: the farm lies close by)
 	if ctx.tinker != null and seen(ctx.tinker.x, ctx.tinker.z):
 		var p := _px(ctx.tinker.x, ctx.tinker.z); _circle(p, 6, Color("d9a441"), 2.0); _label("Tinker", p + Vector2(30, 5))
 	for o in ctx.orchards:

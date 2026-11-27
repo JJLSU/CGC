@@ -2559,9 +2559,18 @@ func _open_map(rewash := true) -> void:
 	for k in town.opened: offs.append(town.street_offs[k])
 	M.paint({"player": player.pos, "fwd": player.forward(), "home": homestead.spawn, "sites": sites, "tinker": tinker.pos if tinker.here else null, "orchards": orchards,
 		"pieces": build.pieces, "fair": fair.at if fair.open(sky) else null, "star": falling_stars.at if falling_stars.state == "landed" else null,
-		"town": {"at": town.at, "along": town.along, "toward": town.toward, "offs": offs, "mended": mended}}, rewash)
+		"town": {"at": town.at, "along": town.along, "toward": town.toward, "offs": offs, "mended": mended}, "rail": _map_rail(), "race": {"start": race.start, "flags": race.flags} if race != null and not race.flags.is_empty() else null}, rewash)
 	hud.map_card.visible = true
 	if rewash and not _map_filling: _fill_map(pcx, pcz)
+
+## The rail line for the map, once it's laid: its course every ~20 m, the depot, the yard and each whistle-stop's post.
+var _map_rail_pts := PackedVector2Array()
+func _map_rail():
+	if not railroad.built or railroad.path.is_empty(): return null
+	if _map_rail_pts.is_empty():
+		for i in range(0, railroad.path.size(), 22): _map_rail_pts.append(Vector2(railroad.path[i].x, railroad.path[i].z))
+		var last: Vector3 = railroad.path[-1]; _map_rail_pts.append(Vector2(last.x, last.z))
+	return {"pts": _map_rail_pts, "depot": railroad.depot, "posts": railroad.stops.map(func(st): return {"name": st.name, "at": st.at})}
 
 ## Can this chunk hold an iron vein at all? (Props._place puts a site 8-24 m into its chunk and makes it a vein only on
 ## highland or peak ground: no such ground in that square, no vein, so no need to lay the chunk out for the map.)
