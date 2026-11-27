@@ -26,6 +26,7 @@ func _initialize() -> void:
 	print("before: Second opened %s, trophies %d" % [0 in T.opened, T.trophies.get_child_count()])
 	var ok: bool = 0 in T.opened and T.trophies.get_child_count() == 1
 	m1.save_all()
+	m1.reset_world() # (as the game does before its own reload: the old county's terrain statics forgotten)
 	reload_current_scene()
 	var t0 := Time.get_ticks_msec()
 	while (current_scene == m1 or current_scene == null) and Time.get_ticks_msec() - t0 < 30000: await process_frame
