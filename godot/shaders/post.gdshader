@@ -25,6 +25,7 @@ uniform float shadow_warmth = 0.7;
 uniform float contrast = 0.32;
 uniform float dof_enabled = 1.0;
 uniform float bounce = 0.5;
+global uniform float paper_snow; // (snow lying: the grade cools, the shade on it goes blue, as snow light does)
 // the look (the player: the land read pale and washed out): the engine's own screen-space bounce (SSIL) now carries
 // light into the shade, so the faked one is taken down; a touch less exposure and less orange in the darks
 uniform float bounce_k = 0.45;      // (share of the faked bounce kept; 1.0 = as before)
@@ -97,7 +98,9 @@ void fragment() {
 	float l = lum(c);
 	c = mix(vec3(l), c, mix(saturation, saturation * 0.9, night));
 	float shadow_w = 1.0 - smoothstep(0.0, 0.5, l);
-	c = mix(c, c * vec3(1.16, 0.9, 0.78), shadow_w * shadow_warmth * warmth_k);
+	c = mix(c, c * vec3(1.16, 0.9, 0.78), shadow_w * shadow_warmth * warmth_k * (1.0 - paper_snow * 0.8));
+	c = mix(c, c * vec3(0.8, 0.91, 1.15), (1.0 - smoothstep(0.35, 0.85, l)) * paper_snow); // (snow in shade is still bright: a wider weight) // (blue shade on the snow)
+	c = mix(c, c * vec3(0.93, 0.97, 1.05), paper_snow * (1.0 - night)); // (a cooler day)
 	c *= vec3(1.03, 0.985, 0.95);
 	c += vec3(0.227, 0.125, 0.047) * 0.03 * (1.0 - smoothstep(0.0, 0.45, l));
 	c = mix(c, c * c * (3.0 - c * 2.0), contrast + contrast_add);
