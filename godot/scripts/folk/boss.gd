@@ -216,6 +216,7 @@ func update(dt: float, player: Player, hooks: Dictionary) -> void:
 	if not built and d < NEAR: _build()
 	elif built and d > FAR and state != "fight": _unbuild()
 	if not built: return
+	visible = World.ground_ready(at.x, at.z) # (no hanging in the air over the flat sheet before his ground is built)
 	if dt > 0.0: vel = vel.lerp((p - last_p) / dt, minf(1.0, dt * 4.0))
 	last_p = p
 	_picks_update(dt, player, hooks)

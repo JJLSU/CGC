@@ -197,7 +197,9 @@ func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 		if not f.built and d < NEAR: _build(f)
 		elif f.built and d > FAR: _unbuild(f)
 		if f.angry and today > f.angry_day: f.angry = false # (a day on, it's forgotten)
-		if f.built: _fort_update(f, dt, player, hooks, d)
+		if f.built:
+			World.show_all(f.nodes + f.men.map(func(m): return m.fig.root), World.ground_ready(f.at.x, f.at.z)) # (no floating before its ground is in)
+			_fort_update(f, dt, player, hooks, d)
 		# a sentry's word as you come up to the gate in peace (once a visit)
 		if f.built and not f.angry:
 			var sentries: Array = f.men.filter(func(o): return not o.dead and o.role == "sentry")

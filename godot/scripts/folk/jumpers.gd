@@ -131,7 +131,10 @@ func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 		var d := Vector2(c.at.x - p.x, c.at.z - p.z).length()
 		if not c.built and d < NEAR: _build(c)
 		elif c.built and d > FAR and not c.men.any(func(m): return not m.dead and m.state == "chase"): _unbuild(c)
-		if c.built: _camp_update(c, dt, player, hooks)
+		if c.built:
+			var ok := World.ground_ready(c.at.x, c.at.z) # (hidden till the ground under the camp is built: no floating)
+			World.show_all(c.nodes + c.men.map(func(m): return m.fig.root) + c.women.map(func(w): return w.fig.root), ok)
+			_camp_update(c, dt, player, hooks)
 	if raid != null: _camp_update(raid, dt, player, hooks)
 	if card:
 		var over: Vector3 = card_on.fig.root.position if card_on != null and is_instance_valid(card_on.fig.root) else card.global_position - Vector3(0, 2.6, 0)

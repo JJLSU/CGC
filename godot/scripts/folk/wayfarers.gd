@@ -87,6 +87,11 @@ func update(dt: float, player: Player, today := 0) -> void:
 		var d := Vector2(c.at.x - p.x, c.at.z - p.z).length()
 		if not c.built and d < NEAR: _build(c)
 		elif c.built and d > FAR: _unbuild(c)
+		if c.built: # (hidden till the ground under the camp is built: no floating over the flat sheet)
+			var extra: Array = []
+			if c.fig != null: extra.append(c.fig.root)
+			if c.get("kid") != null: extra.append(c.kid.root)
+			World.show_all(c.nodes + extra, World.ground_ready(c.at.x, c.at.z))
 		if c.built and c.fig != null:
 			var fig: ModelFigure = c.fig; var r := fig.root
 			var to := Vector3(p.x - r.position.x, 0, p.z - r.position.z)

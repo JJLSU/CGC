@@ -38,7 +38,17 @@ var ducking := {}
 var _seen_frame := 0
 const TALL := {"snag": 1.25, "birch": 1.3, "pine": 1.35, "maple": 1.35, "goldtree": 1.35, "sagetree": 1.35, "appletree": 1.3}
 
+static var inst: World
+## Is the real ground built under (x, z)? Out past the built chunks there's only the flat sheet at 0, so a camp set on
+## a hillside out there hangs in the air (the player saw one floating): the camps keep hidden till their ground is in.
+static func ground_ready(x: float, z: float) -> bool:
+	return inst == null or inst.chunks.has(key(floori(x / Terrain.CHUNK), floori(z / Terrain.CHUNK)))
+## Show or hide a camp's pieces and people together.
+static func show_all(nodes: Array, on: bool) -> void:
+	for n in nodes: if n is Node3D and is_instance_valid(n) and (n as Node3D).visible != on: (n as Node3D).visible = on
+
 func _ready() -> void:
+	inst = self
 	map_img = Image.create(Terrain.MAP, Terrain.MAP, false, Image.FORMAT_RGBA8)
 	land_img = Image.create(Terrain.MAP, Terrain.MAP, false, Image.FORMAT_RGBA8)
 	land_img.fill(Color8(204, 204, 204, 204))
