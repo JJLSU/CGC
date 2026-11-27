@@ -18,7 +18,7 @@ func _initialize() -> void:
 	var said: String = C.hand_card.text if C.hand_card else ""
 	print("the hand says: '%s' (shown %s, %.1f m off, day %s)" % [said, C.hand.root.visible, Vector2(hp.x - main.player.pos.x, hp.z - main.player.pos.z).length(), main.sky.time])
 	if out != "":
-		main.rig.target_node = C.hand.root; main.rig.dist = 8.0; main.rig.pitch = 0.3; main.rig.snap()
+		main.rig.dist = 12.0; main.rig.pitch = 0.3; main.rig.yaw = atan2(a.x - hp.x, a.z - hp.z); main.rig.snap() # (from where you stand, outside)
 		for i in 3: await process_frame
 		await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(out)

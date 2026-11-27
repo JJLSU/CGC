@@ -159,7 +159,9 @@ func update(dt: float, day: int, is_day: bool, player: Player) -> void:
 		if hand_card == null: hand_card = SayCard.make(); add_child(hand_card)
 		hand_card.say(_hand_word(), 3.0)
 	elif dh > 40.0: hand_greeted = false
-	if hand_card: hand_card.tick(dt, hand.root.global_position + Vector3(0, 2.5, 0))
+	if hand_card: # (out toward you, at the adit's mouth: over his head, down in the drift, it sat in the rock)
+		var hr := hand.root.global_position; var to_p := Vector3(player.pos.x - hr.x, 0, player.pos.z - hr.z)
+		hand_card.tick(dt, hr + to_p.normalized() * minf(6.0, to_p.length() * 0.6) + Vector3(0, 2.4, 0))
 	if mill:
 		if is_day and near:
 			thump_t -= dt
