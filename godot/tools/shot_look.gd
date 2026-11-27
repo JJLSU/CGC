@@ -19,7 +19,9 @@ func _initialize() -> void:
 	var T: Town = main.town; var h: Vector3 = main.spawn
 	var views := [["farm", h + Vector3(4, 0, 6), 0.36, 0.55, 15.0, 0.7], ["street", T.at - T.along * 20.0, 0.5, 0.3, 14.0, atan2(T.along.x, T.along.z) + PI],
 		["wide", h, 0.45, 1.0, 42.0, 0.9], ["golden", h + Vector3(4, 0, 6), 0.71, 0.4, 18.0, 2.4], ["night", T.at - T.along * 15.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI], ["far", T.at, 0.42, 0.18, 42.0, atan2(T.along.x, T.along.z)]]
+	var only := OS.get_environment("LOOK_ONLY")
 	for v in views:
+		if only != "" and v[0] != only: continue
 		var at: Vector3 = v[1]
 		main.sky.time = v[2]
 		for i in 90:

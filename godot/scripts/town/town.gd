@@ -1011,7 +1011,7 @@ func _make_street_lamps() -> void:
 			var gb := BoxMesh.new(); gb.size = Vector3(0.22, 0.32, 0.22); glass.mesh = gb; glass.material_override = _glass(); glass.visible = false
 			lamp.add_child(glass); glass.position = _lantern_at(lp, lamp) # (measured off the model itself)
 			(glass.mesh as BoxMesh).size = lantern_size
-			var glow := OmniLight3D.new(); glow.light_color = Color(1.0, 0.72, 0.4); glow.omni_range = 4.5; glow.light_energy = 0.0; glow.shadow_enabled = false
+			var glow := OmniLight3D.new(); glow.light_color = Color(1.0, 0.72, 0.4); glow.omni_range = 9.0; glow.omni_attenuation = 1.6; glow.light_energy = 0.0; glow.shadow_enabled = false
 			glow.position = glass.position; lamp.add_child(glow); lamp.set_meta("glow", glow)
 		else:
 			var post := box(0.12, 3.0, 0.12, 0x342b25); post.position.y = 1.5; lamp.add_child(post)
@@ -1183,7 +1183,7 @@ func _light(S: Dictionary, on: bool) -> void:
 	if S.lit != on:
 		S.lit = on; S.glass.albedo_color = Color.hex(0xffc060ff if on else 0x5a5248ff); S.pool.visible = on
 		if S.has("pane"): S.pane.visible = on # (the model lantern's own panes by day; lit, the glow shows through them)
-		if S.has("glow"): S.glow.light_energy = 1.4 if on else 0.0
+		if S.has("glow"): S.glow.light_energy = 2.4 if on else 0.0 # (a pool across the boardwalk and out into the street)
 
 func _lamplighter(dt: float) -> void:
 	var dusk := clock > 0.745 or clock < 0.235
