@@ -58,10 +58,10 @@ func apply(lv: String) -> void:
 	# contact shadow: where a card stands on the ground, a wall meets a porch, a figure a step: a little deeper and a little
 	# wider, and a touch of it in the sun too (so things sit on the land, not just in the shade)
 	env.ssao_radius = 1.1; env.ssao_intensity = 1.7; env.ssao_power = 1.4; env.ssao_detail = 0.6; env.ssao_light_affect = 0.25
-	# screen-space indirect light (the engine's own bounce: sunlit ground and walls tint the shade beside them), on high
-	# and medium; on low the post pass's faked bounce does it alone (its share back to whole)
-	env.ssil_enabled = q.ao; env.ssil_radius = 6.0; env.ssil_intensity = 1.4; env.ssil_sharpness = 0.98; env.ssil_normal_rejection = 1.0
-	main.post.set_shader_parameter("bounce_k", 0.45 if q.ao else 1.0)
+	# no screen-space indirect light (SSIL): the player found the warm bounce it adds glowy and oversaturated (the first
+	# second, before this ran, looked right to them); the post pass's faked bounce stays low on every level instead
+	env.ssil_enabled = false
+	main.post.set_shader_parameter("bounce_k", 0.45)
 	RenderingServer.environment_set_ssil_quality(RenderingServer.ENV_SSIL_QUALITY_MEDIUM, true, 0.5, 4, 50.0, 300.0) # (half resolution: its bounce is soft anyway)
 	env.glow_enabled = q.bloom
 	main.post.set_shader_parameter("line_enabled", q.line)
@@ -94,7 +94,7 @@ func tick() -> String:
 	fps_rate = roundi(_frames * 1000.0 / (now - _since)); _frames = 0; _since = now
 	if mode == "auto" and auto_ok and now - started_at > 6000 and DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_MINIMIZED:
 		low_seconds = low_seconds + 1 if fps_rate < 50 else 0
-		if low_seconds >= 3 and level != "low":
-			apply("medium" if level == "high" else "low"); low_seconds = 0
+		if low_seconds >= 3 and level == "high": # (auto stops at medium: low drops the lighting that makes the look; O picks low by hand)
+			apply("medium"); low_seconds = 0
 			return "Graphics lowered to %s for smoother play (O to change)" % level
 	return ""
