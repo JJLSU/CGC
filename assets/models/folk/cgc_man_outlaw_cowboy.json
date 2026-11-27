@@ -1,10 +1,17 @@
 {
   "name": "cgc_man_outlaw_cowboy",
   "height": 1.75,
-  "tris": 20749,
-  "tris_before": 20749,
+  "tris": 20720,
+  "tris_before": 20720,
   "clips": [
-    "Armature|clip0|baselayer"
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "walk",
+    "wave",
+    "work"
   ],
   "hand": "RightHand"
 }

@@ -1,0 +1,17 @@
+{
+  "name": "cgc_man_outlaw_rustler",
+  "height": 1.75,
+  "tris": 20735,
+  "tris_before": 20735,
+  "clips": [
+    "attack",
+    "dance",
+    "idle",
+    "run",
+    "sit",
+    "walk",
+    "wave",
+    "work"
+  ],
+  "hand": "RightHand"
+}
