@@ -22,6 +22,7 @@ func _initialize() -> void:
 	var only := OS.get_environment("LOOK_ONLY")
 	for v in views:
 		if only != "" and v[0] != only: continue
+		if v[0] != "snow" and not v[0].begins_with("rain"): main.weather.target = 0; main.weather.rain = 0.0; main.weather.snow = 0.0; main.sky.wet = 0.0 # (each frame starts dry)
 		if v[0] == "snow": main.weather.next_kind = "snow"; main.weather.next_storm = false; main.weather.start(); main.weather.rain = 1.0; main.weather.snow = 1.0
 		if v[0].begins_with("rain"): main.weather.next_kind = "rain"; main.weather.next_storm = false; main.weather.start(); main.weather.rain = 1.0; main.sky.wet = 1.0
 		var at: Vector3 = v[1]
