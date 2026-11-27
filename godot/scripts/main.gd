@@ -301,7 +301,8 @@ func _ready() -> void:
 		if d < 70.0: sound.chuff(maxf(0.1, 1.0 - d / 70.0))
 	train.on_depart = func() -> void:
 		var n := railroad.take_freight()
-		if n and Vector2(player.pos.x - railroad.depot.x, player.pos.z - railroad.depot.z).length() < 80.0: hud.toast("The freight hands swing your %d crate%s into the boxcar, and the train pulls out for the East." % [n, "s" if n > 1 else ""])
+		train.load_cargo(n) # (it rides out stacked in the open car)
+		if n and Vector2(player.pos.x - railroad.depot.x, player.pos.z - railroad.depot.z).length() < 80.0: hud.toast("The freight hands stack your %d crate%s in the open car, and the train pulls out for the East." % [n, "s" if n > 1 else ""])
 	town.on_street = func(nm: String) -> void: hud.toast("Word spreads that Cold Glitter Creek is coming up in the world: folk are putting up %s beside the old street. Its buildings want mending too." % nm)
 	enemies = Enemies.new(world); enemies.on_windup = func(_e) -> void: sound.growl()
 	add_child(enemies) # (the guardians come with the world's sites: hooked up before the first chunks)
@@ -1334,7 +1335,7 @@ func _rail_doors() -> bool:
 		beast_prompt = "[E] Trade at the %s trading post" % pst.name
 		if input.hit("KeyE"): _open_craft()
 		return true
-	if stop != null and Vector2(player.pos.x - train.ride_car().position.x, player.pos.z - train.ride_car().position.z).length() < 5.0:
+	if stop != null and Vector2(player.pos.x - train.ride_car().position.x, player.pos.z - train.ride_car().position.z).length() < 7.0:
 		beast_prompt = "[E] Board the train ($1): she leaves at once" if stop.depot else "[E] Board the train at %s ($1)" % stop.name
 		if input.hit("KeyE"):
 			if inventory.get("dollars", 0) < 1: hud.toast("The fare is a dollar, and your poke is empty.")
@@ -1544,7 +1545,16 @@ func _rail(dt: float) -> void:
 				railroad.build(); hud.toast("Cold Glitter Creek has come up in the world: the Overland & Western has laid a rail line out past the church, with a depot at its head and a whistle-stop in each of the wild lands.")
 	train.update(dt, sky.time, rig.camera, player)
 	railroad.update(dt, player, sky.time > 0.24 and sky.time < 0.86) # (the trading-post keepers: out front by day)
-	if train.passenger: player.pos = train.ride_point(); player.vel = Vector3.ZERO # (standing on the coach's back platform)
+	if train.passenger: # (in the open car: walk about it while she runs, held in by its sides)
+		var f := player.forward(); var r := Vector3(-f.z, 0, f.x); var wish := Vector3.ZERO
+		if input.down("KeyW"): wish += f
+		if input.down("KeyS"): wish -= f
+		if input.down("KeyD"): wish += r
+		if input.down("KeyA"): wish -= r
+		var v := train.move_rider(wish.normalized() if wish.length_squared() > 0.0 else wish, dt)
+		player.pos = train.ride_point(); player.vel = v; player.vel_y = 0.0; player.on_ground = true
+		if v.length_squared() > 0.01: player.facing = lerp_angle(player.facing, atan2(v.x, v.z), minf(1.0, dt * 12.0))
+		player.avatar.root.position = player.pos; player.avatar.root.rotation.y = player.facing # (drawn where he stands, not where his own fall left him)
 	if claim.group == null and railroad.built and tools.has("claim"):
 		claim.build() # (staked out once it's filed)
 		var ca: Vector3 = claim.at(); hud.county_map.reveal(ca.x, ca.z, 30.0)

@@ -7,6 +7,8 @@ extends Node3D
 ## whistle-stop a platform and name board and a trading post behind it with its keeper out front by day.
 
 const TIE := 0.9
+const GAUGE := 1.5     ## between the rails, m (a full-size line: the cars big enough to ride in)
+const TIE_W := 2.6
 const LAND_KEYS := ["hollows", "breaks", "fen", "prairie", "pines"]
 const NAMES := {"hollows": "Silver Birch Hollows", "breaks": "Redrock Breaks", "fen": "Misty Fen", "prairie": "Golden Prairie", "pines": "Bluepine Highlands"}
 ## (each a figure of the player's new folk, re-dyed, once made: "new"; else the old model)
@@ -90,7 +92,7 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 	for j in path.size(): if path[j].distance_to(depot) < path[depot_i].distance_to(depot): depot_i = j
 	_grade()
 	# the right-of-way: nothing grows on it
-	for i in range(0, path.size(), 5): world.exclusions.append({"x": path[i].x, "z": path[i].z, "r": 3.4})
+	for i in range(0, path.size(), 5): world.exclusions.append({"x": path[i].x, "z": path[i].z, "r": 4.4})
 	world.exclusions.append({"x": depot.x, "z": depot.z, "r": 9.0})
 	# a trading post in each wild land (no longer a stop on the line: the train calls only at town): its nearest good
 	# stretch out in the county, never in the town or by the farm, and well off the track
@@ -238,13 +240,13 @@ func build() -> void:
 	built = true; visible = true
 	var ys := range(path.size()).map(func(i): return grade_at(i))
 	# ties, one MultiMesh down the whole line; trestle legs down to the water's bottom
-	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(1.7, 0.08, 0.24); tm.mesh = tb; tm.instance_count = path.size()
+	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(TIE_W, 0.1, 0.28); tm.mesh = tb; tm.instance_count = path.size()
 	var posts := SurfaceTool.new(); posts.begin(Mesh.PRIMITIVE_TRIANGLES); var any_post := false
 	for i in path.size():
 		var a: Vector3 = path[maxi(0, i - 1)]; var b: Vector3 = path[mini(path.size() - 1, i + 1)]; var yaw := atan2(b.x - a.x, b.z - a.z)
 		tm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, yaw), Vector3(path[i].x, ys[i], path[i].z))) # (square across the rails: the web turns them a quarter too far, lying along the track)
 		if ys[i] > Terrain.get_height(path[i].x, path[i].z) + 0.3 and i % 3 == 0:
-			for s in [-0.7, 0.7]:
+			for s in [-GAUGE * 0.6, GAUGE * 0.6]:
 				var px: float = path[i].x + cos(yaw) * s; var pz: float = path[i].z - sin(yaw) * s; var h: float = ys[i] - minf(0.0, Terrain.get_height(px, pz)) + 0.2
 				var bm := BoxMesh.new(); bm.size = Vector3(0.14, h, 0.14); posts.append_from(bm, 0, Transform3D(Basis(), Vector3(px, ys[i] - h / 2.0, pz))); any_post = true
 	var tmi := MultiMeshInstance3D.new(); tmi.multimesh = tm; tmi.material_override = wood(); tmi.custom_aabb = AABB(Vector3(-1e5, -100, -1e5), Vector3(2e5, 400, 2e5)); add_child(tmi)
@@ -254,7 +256,7 @@ func build() -> void:
 	var i := 0
 	while i + 3 < path.size():
 		var a: Vector3 = path[i]; var b: Vector3 = path[i + 3]; var ya: float = ys[i] + 0.08; var yb: float = ys[i + 3] + 0.08; var yaw := atan2(b.x - a.x, b.z - a.z)
-		for s in [-0.55, 0.55]:
+		for s in [-GAUGE / 2.0, GAUGE / 2.0]:
 			var from := Vector3(a.x + cos(yaw) * s, ya, a.z - sin(yaw) * s); var to := Vector3(b.x + cos(yaw) * s, yb, b.z - sin(yaw) * s)
 			var bm := BoxMesh.new(); bm.size = Vector3(0.07, 0.07, from.distance_to(to) + 0.02)
 			bars.append_from(bm, 0, Transform3D(Basis.looking_at(to - from, Vector3.UP), (from + to) * 0.5))
@@ -274,13 +276,13 @@ func _lay_tail() -> void:
 	if tail.is_empty(): return
 	var y: float = grade_at(0)
 	var line := [path[0]] + tail
-	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(1.7, 0.08, 0.24); tm.mesh = tb; tm.instance_count = line.size()
+	var tm := MultiMesh.new(); tm.transform_format = MultiMesh.TRANSFORM_3D; var tb := BoxMesh.new(); tb.size = Vector3(TIE_W, 0.1, 0.28); tm.mesh = tb; tm.instance_count = line.size()
 	var yaw := atan2(line[1].x - line[0].x, line[1].z - line[0].z)
 	for i in line.size(): tm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, yaw), Vector3(line[i].x, y, line[i].z)))
 	var tmi := MultiMeshInstance3D.new(); tmi.multimesh = tm; tmi.material_override = wood(); add_child(tmi)
 	var bars := SurfaceTool.new(); bars.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var a: Vector3 = line[0]; var b: Vector3 = line[-1]
-	for sd in [-0.55, 0.55]:
+	for sd in [-GAUGE / 2.0, GAUGE / 2.0]:
 		var from := Vector3(a.x + cos(yaw) * sd, y + 0.08, a.z - sin(yaw) * sd); var to := Vector3(b.x + cos(yaw) * sd, y + 0.08, b.z - sin(yaw) * sd)
 		var bm := BoxMesh.new(); bm.size = Vector3(0.07, 0.07, from.distance_to(to)); bars.append_from(bm, 0, Transform3D(Basis.looking_at(to - from, Vector3.UP), (from + to) * 0.5))
 	var rails := MeshInstance3D.new(); rails.mesh = bars.commit(); rails.material_override = PaperMats.paper(Color.hex(0x3a3632ff)); add_child(rails)
@@ -373,7 +375,7 @@ func _string_wire(ys: Array) -> void:
 	var i := 8
 	while i < path.size() - 4:
 		var a: Vector3 = path[i - 1]; var b: Vector3 = path[i + 1]; var yaw := atan2(b.x - a.x, b.z - a.z)
-		var x: float = path[i].x - cos(yaw) * 2.9; var z: float = path[i].z + sin(yaw) * 2.9
+		var x: float = path[i].x - cos(yaw) * 3.9; var z: float = path[i].z + sin(yaw) * 3.9
 		if Terrain.is_water(x, z) or ys[i] > Terrain.get_height(path[i].x, path[i].z) + 0.3 or not clear_of.call(x, z): last = null; i += 24; continue
 		var y := Terrain.get_height(x, z); var lean := ((i * 7919) % 100) / 100.0 - 0.5 # (each pole a little off true)
 		var ends: Array
@@ -428,7 +430,7 @@ func _make_depot() -> void:
 		for x in [3.3, 7.1]: g.add_child(_box(0.14, 2.6, 0.14, Vector3(x, 1.3, 4.6), wood()))
 	var a: Vector3 = path[depot_i]; var b: Vector3 = path[depot_i + 6]; var yaw := atan2(b.x - a.x, b.z - a.z); var side := Vector3(cos(yaw), 0, -sin(yaw))
 	g.rotation.y = yaw + PI / 2.0 # (its front and platform toward the track)
-	var p: Vector3 = path[depot_i + 3] - side * 5.4; g.position = Vector3(p.x, y, p.z)
+	var p: Vector3 = path[depot_i + 3] - side * 6.6; g.position = Vector3(p.x, y, p.z)
 	add_child(g); depot_group = g
 
 ## A whistle-stop: a short plank platform beside the line and a name board on two posts; and its trading post.

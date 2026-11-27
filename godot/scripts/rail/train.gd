@@ -7,17 +7,18 @@ extends Node3D
 
 const SPEED := 3.5 ## m/s at full steam (the web runs 6.5; the player found that too fast)
 const DWELL := 18.0
-const CAR_GAP := 0.6
+const CAR_GAP := 0.9
 const TIE := 0.9
 const RUNS := [0.33, 0.6]
 const CARS := [["locomotive", 5.2], ["tender", 2.8], ["boxcar", 5.6], ["coach", 6.2]]
 ## (the Meshy cars, once in: the engine and its tender, a boxcar, a tank car, a gondola, and the caboose you ride on)
-const MESHY_CARS := [["veh_rail_engine", 7.6], ["veh_rail_boxcar", 6.0], ["veh_rail_tankcar", 5.6], ["veh_rail_gondola", 5.4], ["veh_rail_caboose", 5.4]]
+const MESHY_CARS := [["veh_rail_engine", 12.0], ["veh_rail_boxcar", 9.6], ["veh_rail_tankcar", 9.0], ["veh_rail_gondola", 8.6], ["veh_rail_caboose", 8.6]] # (full size: you ride in the gondola)
 const ENGINE_TURN := PI / 2.0 ## (model -x to the car's +z: the smokestack end leading, the tender behind)
 var stack_at := Vector3(0, 3.0, 1.6)
 var ride_at := Vector3(0.35, 0.83, -3.35)
-## The car you ride on (the coach, or the caboose).
-func ride_car() -> Node3D: return cars[-1]
+## The car you ride on (the coach, or the open gondola: you stand in it and watch the county go by).
+var ride_i := -1
+func ride_car() -> Node3D: return cars[ride_i]
 
 var rr: Railroad
 var cars: Array = []
@@ -54,7 +55,7 @@ func _init(railroad: Railroad) -> void:
 			add_child(car); cars.append(car); lens.append(c[1])
 		var eh: float = PaperMats._aabb(cars[0], Transform3D.IDENTITY).size.y
 		stack_at = Vector3(0, eh + 0.2, float(lens[0]) * 0.3)
-		ride_at = Vector3(0.0, 0.95, -float(lens[-1]) / 2.0 + 0.45) # (the caboose's back platform)
+		ride_i = 3; _measure_ride_car()
 	else:
 		for c in CARS:
 			var car: Node3D = (load("res://assets/baked/rail/%s.glb" % c[0]) as PackedScene).instantiate()
@@ -97,6 +98,52 @@ func stopped_at():
 	return null
 ## The coach's back platform, where a passenger stands to ride.
 func ride_point() -> Vector3: return ride_car().to_global(ride_at)
+## The open car's floor and its inside (measured off the model, in the car's own frame: x across, z along): its floor
+## the top of the planking in the middle of it, its inside a little in from its sides and ends.
+var ride_half := Vector2(0.6, 2.0)
+func _measure_ride_car() -> void:
+	var car: Node3D = cars[ride_i]
+	var pts := []
+	for mi in car.find_children("*", "MeshInstance3D", true, false):
+		var xf := Railroad._rel(mi as MeshInstance3D, car)
+		var verts: PackedVector3Array = (mi as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		for i in range(0, verts.size(), 2): pts.append(xf * verts[i])
+	var lo := Vector3(INF, INF, INF); var hi := -lo
+	for q in pts: lo = lo.min(q); hi = hi.max(q)
+	var hw := (hi.x - lo.x) / 2.0; var hl := (hi.z - lo.z) / 2.0; var cx := (hi.x + lo.x) / 2.0; var cz := (hi.z + lo.z) / 2.0
+	var ys := []
+	for q in pts: if absf(q.x - cx) < hw * 0.45 and absf(q.z - cz) < hl * 0.55: ys.append(q.y)
+	ys.sort()
+	var floor_y: float = ys[int(ys.size() * 0.9)] if ys.size() else (hi.y - lo.y) * 0.5
+	ride_at = Vector3(cx, floor_y, cz); ride_half = Vector2(hw * 0.78, hl * 0.85)
+	ride_floor = ride_at
+var ride_floor := Vector3.ZERO
+## The depot's freight rides in the open car (the player's ask: stack boxes in it), crates two high along its floor
+## at the far end from where you'd stand; unloaded when she's home.
+var cargo: Array = []
+func load_cargo(n: int) -> void:
+	if ride_i < 0 or not ResourceLoader.exists("res://assets/models/props/prop_crates.glb"): return
+	var car := ride_car()
+	for i in mini(n, 8):
+		var h := PaperMats.seated(load("res://assets/models/props/prop_crates.glb"), 1.0, true)
+		var col := i / 2; var up := i % 2
+		h.position = ride_floor + Vector3(-ride_half.x * 0.45 + (col % 2) * ride_half.x * 0.9, up * 0.98, ride_half.y * 0.75 - floori(col / 2.0) * 1.15)
+		h.rotation.y = fmod(i * 1.3, 0.4) - 0.2; car.add_child(h); cargo.append(h)
+func unload() -> void:
+	for c in cargo: if is_instance_valid(c): c.queue_free()
+	cargo = []
+## Walk about the open car while she runs (the player's ask): wish is the way you'd walk, in the world; held inside
+## its sides and ends. Returns your velocity in the world (for the walk), and turns you the way you go.
+func move_rider(wish: Vector3, dt: float) -> Vector3:
+	var car := ride_car()
+	if wish.length_squared() < 0.01: return Vector3.ZERO
+	var local := car.global_basis.orthonormalized().inverse() * wish
+	local.y = 0.0
+	var nx := clampf(ride_at.x + local.x * 2.6 * dt, ride_floor.x - ride_half.x, ride_floor.x + ride_half.x)
+	var zmax := ride_floor.z + ride_half.y - (2.6 if cargo.size() else 0.0) # (the crates' end of the car is theirs)
+	var nz := clampf(ride_at.z + local.z * 2.6 * dt, ride_floor.z - ride_half.y, zmax)
+	ride_at = Vector3(nx, ride_floor.y, nz)
+	return wish * 2.6
 ## The next stop she'll draw up at, by name.
 func next_stop_name() -> String: return "Cold Glitter Creek" # (her only stop)
 ## All aboard from the depot: she leaves straight away.
@@ -127,7 +174,7 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 		var d := absf(target - s); var v := minf(SPEED, 0.6 + d * 0.5) # (easing in)
 		if d < 0.3:
 			s = target
-			if leg == 2: state = "home"; leg = 0; dir = 1
+			if leg == 2: state = "home"; leg = 0; dir = 1; unload()
 			else: state = "dwell"; wait = DWELL; leg += 1; dir = -1 if leg == 1 else 1
 		else: s += signf(target - s) * v * dt; moving = true
 	elif state == "dwell":
@@ -137,7 +184,7 @@ func update(dt: float, clock: float, camera: Camera3D, player: Player) -> void:
 			if on_whistle.is_valid(): on_whistle.call(at(s).pos)
 	# the cars along the line, coupled one behind another
 	var cp := camera.global_position; var head := at(s)
-	var far := Vector2(cp.x - head.pos.x, cp.z - head.pos.z).length() > 170.0
+	var far := not passenger and Vector2(cp.x - head.pos.x, cp.z - head.pos.z).length() > 170.0 # (never while you ride her)
 	visible = not far
 	if not far:
 		var off := 0.0
