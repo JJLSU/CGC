@@ -45,7 +45,7 @@ func _initialize() -> void:
 	t0 = Time.get_ticks_msec()
 	while (R.state == "run" or R.state == "count") and Time.get_ticks_msec() - t0 < 120000:
 		main.player.pos = R.start + Vector3(0, 0, 0.5); await process_frame
-	var lost2: bool = R.wins == 1 and main.inventory.dollars == 20 and R.state == "done"
+	var lost2: bool = R.wins == 1 and main.inventory.dollars == 15 and R.state == "done" # (the stake doubled to $10 after his first loss)
 	print("race 2 (sat still): lost %s ($%d), Jake's next %d" % [lost2, main.inventory.dollars, R.jake_next])
 	var ok: bool = R.flags.size() == 6 and bad < 6 and on_foot_state == "idle" and began and won1 and lost2
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

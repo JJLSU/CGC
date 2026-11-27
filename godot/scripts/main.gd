@@ -559,10 +559,10 @@ func _ready() -> void:
 		"on_flag": func(i: int, behind: float) -> void:
 			sound.knock()
 			if i <= HorseRace.FLAGS: hud.toast("Flag %d of %d. %s" % [i, HorseRace.FLAGS, ("Jake's %d lengths ahead!" % maxi(1, roundi(behind / 2.5))) if behind > 2.0 else ("You're %d lengths up on him!" % maxi(1, roundi(-behind / 2.5)) if behind < -2.0 else "Neck and neck!")]) if i < HorseRace.FLAGS else hud.toast("That's the last flag: now home to the post!"),
-		"on_end": func(won: bool, why: String) -> void:
+		"on_end": func(won: bool, why: String, pot: int) -> void:
 			if won:
-				inventory.dollars = inventory.get("dollars", 0) + HorseRace.STAKE * 2; sound.craft()
-				hud.toast("You thunder past the post a length clear! Dusty Jake reins in, laughing, and slaps $%d into your hand. \"Biscuit's got wind, I'll give her that.\"%s" % [HorseRace.STAKE * 2, (" (%d wins over Jake now.)" % race.wins) if race.wins > 1 else ""])
+				inventory.dollars = inventory.get("dollars", 0) + pot; sound.craft()
+				hud.toast("You thunder past the post a length clear! Dusty Jake reins in and slaps $%d into your hand. %s" % [pot, ["\"Biscuit's got wind, I'll give her that. Double or nothing next time?\"", "\"Again! Well, I'll be. Twenty a side next time, and I won't go easy.\"", "\"That's %d times you've had me. I'm going to have to buy a faster horse.\"" % race.wins][mini(race.wins - 1, 2)]])
 			else: hud.toast({"jake": "Dusty Jake crosses the post ahead of you and pockets the stakes. \"Better luck next time, neighbour. Gallop her, and cut the flags close.\"", "down": "You got down off your horse: that's the race forfeit, and Jake keeps the stakes.", "slow": "Too slow: Jake's long home, and the stakes are his.", "astray": "You've ridden clean off the course: the race is Jake's."}[why]),
 	}
 	dance = BarnDance.new(town.spot(-1, 1.2, -1, -8)); add_child(dance) # (in the street before the livery barn)
@@ -1133,10 +1133,11 @@ func _race_door() -> bool:
 		beast_prompt = "[E] Talk to Dusty Jake"
 		if input.hit("KeyE"): hud.toast("\"Howdy. I race anybody round them flags for five dollars a side.\" He looks you up and down. \"Come back on a horse.\"" if horse == null else "\"Fetch your mare and get up on her, and we'll see what she's got. Five dollars a side.\"")
 		return true
-	beast_prompt = "[E] Race Dusty Jake round the six flags: $%d a side (you have $%d)" % [HorseRace.STAKE, inventory.get("dollars", 0)]
+	var st := race.stake()
+	beast_prompt = "[E] Race Dusty Jake round the six flags: $%d a side (you have $%d)%s" % [st, inventory.get("dollars", 0), (" · you've beaten him %d time%s" % [race.wins, "s" if race.wins > 1 else ""]) if race.wins else ""]
 	if input.hit("KeyE"):
-		if inventory.get("dollars", 0) < HorseRace.STAKE: hud.toast("\"Five dollars a side, friend.\" Your poke's too light.")
-		else: inventory.dollars -= HorseRace.STAKE; race.begin(); hud.toast("You each put $%d on the post. Dusty Jake grins and lines up his paint horse beside you..." % HorseRace.STAKE)
+		if inventory.get("dollars", 0) < st: hud.toast("\"%d dollars a side, friend.\" Your poke's too light." % st)
+		else: inventory.dollars -= st; race.begin(); hud.toast("You each put $%d on the post. Dusty Jake grins and lines up his paint horse beside you..." % st)
 	return true
 
 ## The train robbers: once she's well out on the line with you aboard and armed, now and then (every couple of days at
@@ -2418,6 +2419,7 @@ func _apply_save(d: Dictionary) -> void:
 	gang_paid = []
 	for x in d.get("gangPaid", []): gang_paid.append(int(x))
 	holdup_day = int(d.get("holdupDay", -1))
+	race.wins = int(d.get("raceWins", 0)); robbers.last_day = int(d.get("robDay", -99)); robbers.owed = int(d.get("robOwed", 0))
 	var ce = d.get("cellar")
 	if ce != null:
 		if ce.get("built", false): extras.build_cellar()
@@ -2494,7 +2496,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day, "raceWins": race.wins, "robDay": robbers.last_day, "robOwed": robbers.owed,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),

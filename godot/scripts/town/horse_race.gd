@@ -118,6 +118,11 @@ func _place_jake(dt: float, speed: float, face) -> void:
 	jake.play("sit", 0.2); NativeCamps.astride(jake); NativeCamps.seat(horse, jake)
 
 ## He's about (by day, or while a race runs).
+## The stake a side for the next race: $5, then doubled after each win, $20 at most.
+func stake() -> int: return STAKE * (1 << mini(wins, 2))
+## His pace for the next race: a touch harder each time he's lost to you.
+func pace0() -> float: return JAKE * (1.0 + 0.03 * mini(wins, 4))
+
 func shown(sky_time: float) -> bool: return state != "idle" or (sky_time > 0.28 and sky_time < 0.76)
 func near_post(p: Vector3, r := 7.0) -> bool: return Vector2(p.x - start.x, p.z - start.z).length() < r
 
@@ -160,7 +165,7 @@ func update(dt: float, player: Player, riding: bool, sky_time: float, hooks: Dic
 			# Jake: flag to flag, at his pace (a touch of give: a little quicker when you're ahead, easier when far behind)
 			var tgt: Vector3 = flags[jake_next] if jake_next < FLAGS else start
 			var lead := _progress(you_next, player.pos) - _progress(jake_next, jpos)
-			var pace := JAKE * (1.0 + 0.05 * sin(t * 0.7)) * (1.06 if lead > 8.0 else (0.92 if lead < -40.0 else 1.0))
+			var pace := pace0() * (1.0 + 0.05 * sin(t * 0.7)) * (1.06 if lead > 8.0 else (0.92 if lead < -40.0 else 1.0))
 			var d := Vector3(tgt.x - jpos.x, 0, tgt.z - jpos.z)
 			jpos += d.normalized() * minf(pace * dt, d.length()); jpos.y = Terrain.get_height(jpos.x, jpos.z)
 			if d.length() < 2.0:
@@ -190,5 +195,6 @@ func _off_course(p: Vector3) -> bool:
 
 func _end(won: bool, why: String, hooks: Dictionary) -> void:
 	state = "done"; t = 6.0
+	var pot := stake() * 2
 	if won: wins += 1
-	if hooks.has("on_end"): hooks.on_end.call(won, why)
+	if hooks.has("on_end"): hooks.on_end.call(won, why, pot)
