@@ -3225,6 +3225,14 @@ var _known_n := -1
 func _update_boss_chip() -> void:
 	var kn := bosses.filter(func(q): return _boss_known(q)).size()
 	if kn != _known_n: _known_n = kn; _boss_board() # (a boss newly known: his poster goes up)
+	# (a hold-up on at the bank comes first: the chip points you there till the gang's beaten or gone)
+	if jumpers.raid != null and not jumpers.raid_beaten() and not player.dead:
+		var rp: Vector3 = jumpers.raid.at; var rh := Vector2(rp.x - player.pos.x, rp.z - player.pos.z); var rd := rh.length()
+		if rd < 25.0: hud.set_boss_chip(false); return
+		var rc := rig.camera; var ra := rc.unproject_position(player.pos); var re := rc.unproject_position(player.pos + Vector3(rh.x / rd, 0, rh.y / rd) * 4.0)
+		var left: int = jumpers.raid.men.filter(func(m): return not m.dead).size()
+		hud.set_boss_chip(true, rad_to_deg(atan2(re.x - ra.x, -(re.y - ra.y))), "Hold-up at the bank (%d outlaws), %d paces" % [left, roundi(rd * 1.3 / 10.0) * 10])
+		return
 	var b = null
 	for q in bosses:
 		if not _boss_known(q): continue

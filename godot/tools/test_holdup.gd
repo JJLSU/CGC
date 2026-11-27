@@ -27,6 +27,9 @@ func _initialize() -> void:
 		await process_frame; await process_frame; await RenderingServer.frame_post_draw
 		root.get_viewport().get_texture().get_image().save_png(args[0])
 		main.set_process(true); main.player.avatar.root.visible = true
+	for i in 5: main.player.pos = T.at - T.along * 60.0; main.player.health = main.player.max_health; await process_frame
+	var chip: String = main.hud.boss_chip_label.text if main.hud.get("boss_chip_label") != null else "?"
+	print("chip [%s]" % chip)
 	# beat them
 	main.inventory.dollars = 0
 	for m in J.raid.men: J.damage(m, 99, main.jumper_hooks)
