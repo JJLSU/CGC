@@ -130,6 +130,7 @@ func load_cargo(n: int) -> void:
 		h.position = ride_floor + Vector3(-ride_half.x * 0.45 + (col % 2) * ride_half.x * 0.9, up * 0.98, ride_half.y * 0.75 - floori(col / 2.0) * 1.15)
 		h.rotation.y = fmod(i * 1.3, 0.4) - 0.2; car.add_child(h); cargo.append(h)
 func unload() -> void:
+	ride_at.y = ride_floor.y # (back down on the floor when the freight's off)
 	for c in cargo: if is_instance_valid(c): c.queue_free()
 	cargo = []
 	for f in riders: f.root.queue_free()
@@ -156,10 +157,21 @@ func move_rider(wish: Vector3, dt: float) -> Vector3:
 	var local := car.global_basis.orthonormalized().inverse() * wish
 	local.y = 0.0
 	var nx := clampf(ride_at.x + local.x * 2.6 * dt, ride_floor.x - ride_half.x, ride_floor.x + ride_half.x)
-	var zmax := ride_floor.z + ride_half.y - (2.6 if cargo.size() else 0.0) # (the crates' end of the car is theirs)
-	var nz := clampf(ride_at.z + local.z * 2.6 * dt, ride_floor.z - ride_half.y, zmax)
-	ride_at = Vector3(nx, ride_floor.y, nz)
+	var nz := clampf(ride_at.z + local.z * 2.6 * dt, ride_floor.z - ride_half.y, ride_floor.z + ride_half.y)
+	# up onto the freight (the player: stack boxes in the open car, stand on them): he scrambles up the stack (two high)
+	# and stands on top while she runs
+	var here := stack_top(ride_at.x, ride_at.z); var there := stack_top(nx, nz)
+	if there - here > 2.1: return Vector3.ZERO # (a scramble up a two-high stack; never more)
+	ride_at = Vector3(nx, ride_floor.y + there, nz)
 	return wish * 2.6
+## How high the freight stands at (x, z) in the car's frame, above its floor (0 where there's none).
+func stack_top(x: float, z: float) -> float:
+	var top := 0.0
+	for c in cargo:
+		if not is_instance_valid(c): continue
+		var q: Vector3 = (c as Node3D).position
+		if absf(x - q.x) < 0.5 and absf(z - q.z) < 0.5: top = maxf(top, q.y - ride_floor.y + 0.98)
+	return top
 ## The next stop she'll draw up at, by name.
 func next_stop_name() -> String: return "Cold Glitter Creek" # (her only stop)
 ## All aboard from the depot: she leaves straight away.
