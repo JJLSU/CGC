@@ -15,7 +15,8 @@ func _initialize() -> void:
 	var w := func(q: Vector3) -> Vector3: return g.global_transform * q
 	print("mine cols %d; vein at %s (local), shown %s" % [C.mine_cols.size(), C.vein_rich.position if C.vein_rich else null, C.vein_rich.visible if C.vein_rich else null])
 	var mid: Vector3 = w.call(Vector3(-15.0, 0, 0))
-	for v in [["top", w.call(Vector3(-13, 34, 8)), mid], ["side", w.call(Vector3(-8, 9, 14)), w.call(Vector3(-15, 0, 0))], ["face", w.call(Vector3(-19, 3.2, 3.0)), w.call(Vector3(-23.5, 0.9, 0))], ["over", w.call(Vector3(-16, 14, 6)), w.call(Vector3(-16, 0, 0))]]:
+	if OS.get_environment("DUG") != "": C.dig(main.sky.day, main.tools)
+	for v in [["top", w.call(Vector3(-13, 34, 8)), mid], ["side", w.call(Vector3(-8, 9, 14)), w.call(Vector3(-15, 0, 0))], ["face", w.call(Vector3(-19, 3.2, 3.0)), w.call(Vector3(-23.5, 0.9, 0))], ["over", w.call(Vector3(-16, 14, 6)), w.call(Vector3(-16, 0, 0))], ["vein", w.call(Vector3(-19.5, 5.0, 1.2)), w.call(Vector3(-23.6, 0.9, 0))]]:
 		main.set_process(true)
 		for i in 60: main.player.pos = w.call(Vector3(-5, 0, 3)); await process_frame
 		main.set_process(false); main.player.avatar.root.visible = false

@@ -99,6 +99,7 @@ func _build_mine() -> void:
 	var s1: Node3D = piece.call("mine_tunnel_straight", L, -6.9 - L / 2.0, 0.0)
 	var t: Node3D = piece.call("mine_tunnel_t", L, -6.9 - L * 1.5, 1.4)
 	var s2: Node3D = piece.call("mine_tunnel_straight", L, -6.9 - L * 2.5, 0.0)
+	if s2: s2.scale.x = -s2.scale.x # (mirrored end for end: its loose roof planks over the junction end, the face left open to see)
 	vein_rich = piece.call("mine_vein_rich", 2.6, -6.9 - L * 3.0 + 0.4, 0.0, PI / 2.0)
 	vein_worked = piece.call("mine_vein_depleted", 2.6, -6.9 - L * 3.0 + 0.4, 0.0, PI / 2.0)
 	var fall: Node3D = piece.call("mine_collapsed", 3.7, -6.9 - L * 1.5 - 0.2, 1.4 + L * 0.5 + 1.85) # (scaled to the drifts' height)
