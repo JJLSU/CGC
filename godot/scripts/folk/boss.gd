@@ -284,8 +284,15 @@ func _gang_update(dt: float) -> void:
 		var f: ModelFigure = g.fig; var h: Puppet = g.horse
 		if not is_instance_valid(f.root): continue
 		if state != "fight" and g.run <= 0.0:
-			f.update(dt, 0.0, null); h.update(dt, 0.0, "idle", false, 0.0, 0.0); continue
+			f.update(dt, 0.0, g.get("pose") if g.get("pose") == "work" else null)
+			if h: h.update(dt, 0.0, "idle", false, 0.0, 0.0)
+			continue
 		g.run += dt
+		if h == null: # (afoot: off at a run, away from the fight)
+			var p2: Vector3 = f.root.position + g.dir * 5.5 * dt; p2.y = Terrain.get_height(p2.x, p2.z); f.root.position = p2
+			f.root.rotation.y = atan2(g.dir.x, g.dir.z); f.update(dt, 5.5, null)
+			if g.run > 12.0: f.root.visible = false
+			continue
 		if not g.mounted:
 			var to: Vector3 = h.group.position - f.root.position; to.y = 0.0
 			if to.length() < 0.8: g.mounted = true
@@ -378,6 +385,15 @@ func _build() -> void:
 	elif spec.lair == "mansion": _build_mansion(place, rng, face, side, outw)
 	elif spec.lair == "hideout": _build_hideout(place, rng, face, side, outw)
 	else: _build_diggings(place, rng, face, side, outw)
+	# Angus's loggers at the woodpile, Crane's clerks on his porch: at work till the fight starts, then they run for it
+	var crew: Array = {"logging": [["folk_farmhand_02", "work"], ["prospectors_6", "work"]], "mansion": [["cgc_man_gent", "idle"], ["cgc_man_glasses", "idle"]]}.get(spec.lair, [])
+	if not beaten or back:
+		for i in crew.size():
+			if not ModelFigure.has_folk(crew[i][0]): continue
+			var q: Vector3 = mouth + side * (3.0 if i == 0 else -3.2) + outw * (2.0 + i * 0.6)
+			var f := ModelFigure.new(crew[i][0], {"hue": 0.9 + i * 1.4}); f.root.position = Vector3(q.x, Terrain.get_height(q.x, q.z), q.z)
+			f.root.rotation.y = atan2(mouth.x - q.x, mouth.z - q.z); add_child(f.root)
+			gang.append({"fig": f, "horse": null, "pose": crew[i][1], "dir": (side * (1.0 if i == 0 else -1.0) + outw * 0.5).normalized(), "run": 0.0, "mounted": false})
 	ring = MeshInstance3D.new(); var tm := TorusMesh.new(); tm.inner_radius = 0.9; tm.outer_radius = 1.0; tm.rings = 40; tm.ring_segments = 4
 	ring.mesh = tm; ring.material_override = PaperMats.paper(Color("a8352a")); ring.visible = false; add_child(ring); nodes.append(ring)
 	if beaten and not back: return
@@ -468,7 +484,7 @@ func _build_hideout(place: Callable, rng: PNoise.Mulberry32, face: float, side: 
 func _build_logging(place: Callable, rng: PNoise.Mulberry32, face: float, side: Vector3, outw: Vector3) -> void:
 	place.call("prop_woodpile", 4.5, mouth - outw * 1.5, face)
 	place.call("prop_woodpile", 3.5, mouth + side * 5.0 + outw * 0.5, face + 0.4)
-	place.call("bldg_leanto", 5.0, mouth - side * 7.0 + outw * 1.0, face - 0.3)
+	place.call("prop_tent", 3.8, mouth - side * 7.0 + outw * 1.0, face - 0.3) # (not the lean-to model: it carries Old Asa's sign)
 	place.call("veh_freight_wagon", 5.5, at + side * 8.0 + outw * 3.0, face + 1.4)
 	place.call("prop_toolbench", 2.0, mouth - side * 3.0 + outw * 2.5, face)
 	place.call("prop_cookfire", 1.1, at, 0.0)
@@ -497,7 +513,9 @@ func _unbuild() -> void:
 	for k in picks: (k.node as Node).queue_free(); if is_instance_valid(k.mark): (k.mark as Node).queue_free()
 	nodes = []; picks = []; ring = null
 	if fig: fig.root.queue_free(); fig = null; hand_pick = null
-	for g in gang: if is_instance_valid(g.fig.root): g.fig.root.queue_free(); if is_instance_valid(g.horse.group): g.horse.group.queue_free()
+	for g in gang:
+		if is_instance_valid(g.fig.root): g.fig.root.queue_free()
+		if g.horse != null and is_instance_valid(g.horse.group): g.horse.group.queue_free()
 	gang = []
 	say_card = null
 

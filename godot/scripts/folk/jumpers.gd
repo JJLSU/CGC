@@ -136,7 +136,7 @@ func _build(c: Dictionary) -> void:
 		n.rotation.y = (atan2(at.x - x, at.z - z) if face < 0.0 else face) + (rng.next() - 0.5) * 0.4 # (facing the fire, roughly)
 		add_child(n); c.nodes.append(n); return n
 	# a ragged camp: three tents and a lean-to shack round the cookfire, and the clutter of men working a stolen claim
-	place.call("bldg_leanto", 5.5, 0.0, -10.5)
+	place.call("prop_tent", 3.6, 0.0, -10.5) # (not the lean-to model: it carries Old Asa's sign)
 	c.shack = at + Vector3(Vector2(0.0, -14.0).rotated(turn).x, 0, Vector2(0.0, -14.0).rotated(turn).y) # (behind it, out of the way)
 	for t in [[-8.5, -3.0], [8.0, -4.5], [-6.0, 7.5]]: place.call("prop_tent", 3.2, t[0], t[1])
 	place.call("prop_cookfire", 1.1, 0.0, 0.0)
