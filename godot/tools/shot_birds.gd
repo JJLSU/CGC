@@ -27,5 +27,11 @@ func _initialize() -> void:
 	for i in 20: await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_close.png"))
+	if tk != null: # (the turkey up close)
+		var tp: Vector3 = C.pos(tk)
+		main.rig.target_node = tk.puppet.group; main.rig.dist = 3.5; main.rig.pitch = 0.2; main.rig.yaw += 1.2; main.rig.snap()
+		for i in 20: await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_turkey.png"))
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	quit()
