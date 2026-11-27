@@ -3162,7 +3162,9 @@ func _boss_hooks(b: Boss) -> Dictionary:
 		"on_hit": func(dmg: int) -> void:
 			var out := player.hurt(dmg, 0.33 if tools.has("coat") else 0.0); hud.hurt(); sound.knock()
 			if out: death_timer = 3.0; hud.toast("%s laughs over you. You come to a long while later, far from his camp." % nm),
-		"on_throw": func() -> void: (sound.bang() if b.spec.weapon == "gun" else sound.tear()),
+		"on_throw": func() -> void:
+			if b.spec.weapon != "gun": sound.tear(); return
+			sound.bang(); var bp := b.pos(); hunting.puff(bp + Vector3(0, 1.9, 0), player.pos - bp, 1.0), # (Cole's Colt: the bang and a puff of smoke)
 		"on_land": func(at: Vector3) -> void:
 			if b.spec.weapon == "dynamite": sound.bang(true); confetti.burst(at + Vector3(0, 0.4, 0), [0xe8a030, 0xc4362f, 0x6b5b49], 22, 1.8) # (a blast of dirt and sparks)
 			elif b.spec.weapon == "gun": sound.knock(); confetti.burst(at + Vector3(0, 0.2, 0), [0x8a6a48, 0xc8b48a], 6, 0.8) # (a spurt of dust where it strikes)
