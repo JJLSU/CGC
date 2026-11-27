@@ -19,6 +19,13 @@ func _initialize() -> void:
 		var near: Vector3 = fr.global_position + T.along * 3.0
 		for i in 20: main.player.pos = Vector3(near.x, Terrain.get_height(near.x, near.z), near.z); await process_frame
 		said.append(T.sermon_day == d)
+	var args := OS.get_cmdline_user_args()
+	if args.size():
+		var fr2: Node3D = T.folk.church.fig.root
+		main.rig.dist = 12.0; main.rig.pitch = 0.3; main.rig.yaw = atan2(-T.along.x, -T.along.z); main.rig.snap()
+		for i in 3: await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(args[0])
 	print("day 5 sermon %s, day 6 (Sabbath) sermon %s: '%s'" % [said[0], said[1], T.sermon_card.text if T.sermon_card else "-"])
 	var ok: bool = not said[0] and said[1]
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

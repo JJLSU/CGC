@@ -1171,7 +1171,9 @@ func _sermon(dt: float) -> void:
 		sermon_day = day
 		if sermon_card == null: sermon_card = SayCard.make(); add_child(sermon_card)
 		sermon_card.say(SERMON[randi() % SERMON.size()], 3.2)
-	if sermon_card: sermon_card.tick(dt, fr.global_position + Vector3(0, 2.5, 0))
+	if sermon_card: # (out in front of the church porch, toward you: over his head it sat in the porch roof)
+		var to_p := Vector3(player_pos.x - fr.global_position.x, 0, player_pos.z - fr.global_position.z)
+		sermon_card.tick(dt, fr.global_position + to_p.normalized() * minf(2.5, to_p.length() * 0.5) + Vector3(0, 2.3, 0))
 
 ## Pop a greeting card up over a keeper's head (one at a time).
 func say_hello(r: Node3D) -> void:
