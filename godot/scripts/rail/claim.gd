@@ -133,6 +133,13 @@ func hire(day: int) -> void:
 
 ## Each new day the hand works, his takings go in the cart (five days' worth at most); by day he swings his pick at
 ## the adit (animated only while you're near); after dark he's in his tent. The stamps thump away by day.
+## Your hired hand's word as you come up to the claim by day (once a visit), on a card over him: how the cart stands.
+var hand_card: SayCard
+var hand_greeted := false
+func _hand_word() -> String:
+	if stock.gold >= 10: return ["Cart's near full, boss!", "She's a fair vein, boss. Come see the cart."][randi() % 2]
+	if stock.gold > 0: return ["A few pinches in the cart, boss.", "Slow going today, but she's giving."][randi() % 2]
+	return ["Morning, boss. Nothing yet.", "Just getting started, boss."][randi() % 2]
 func update(dt: float, day: int, is_day: bool, player: Player) -> void:
 	if vein_rich: vein_rich.visible = dug_day != day
 	if vein_worked: vein_worked.visible = dug_day == day
@@ -146,6 +153,13 @@ func update(dt: float, day: int, is_day: bool, player: Player) -> void:
 	var near := d < 60.0
 	hand.root.visible = is_day and near
 	if hand.root.visible: hand.update(dt, 0.0, "work")
+	var dh := Vector2(hand.root.global_position.x - player.pos.x, hand.root.global_position.z - player.pos.z).length() # (from him, not the claim's marker)
+	if hand.root.visible and dh < 14.0 and not hand_greeted:
+		hand_greeted = true
+		if hand_card == null: hand_card = SayCard.make(); add_child(hand_card)
+		hand_card.say(_hand_word(), 3.0)
+	elif dh > 40.0: hand_greeted = false
+	if hand_card: hand_card.tick(dt, hand.root.global_position + Vector3(0, 2.5, 0))
 	if mill:
 		if is_day and near:
 			thump_t -= dt
