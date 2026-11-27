@@ -121,6 +121,8 @@ var fortune := 0          ## dollars the assayer has paid you, all told (the far
 var pan_t := 0.0
 var pan_mesh: MeshInstance3D
 var bounty = null         ## the sheriff's posted bounty: {key, guards, x, z, name, pay}
+var holdup_day := -1      ## the last day outlaws held up the bank
+const RAID_EVERY := 5     ## days between hold-ups, give or take
 var gang_paid: Array = []  ## per claim jumpers' camp, the day it was cleared that the sheriff has already paid for
 const GANG_REWARD := 35   ## the sheriff's reward for breaking up an outlaw camp
 var poster: Node3D
@@ -737,6 +739,7 @@ func _process(dt: float) -> void:
 	_pm("homestead.update")
 	storm.update(dt, rig.camera, player.pos, weather.storm and weather.rain > 0.6)
 	_twister_update(dt)
+	_raid_update()
 	_pm("storm.update")
 	sky.rain = weather.rain * 0.45 if weather.kind == "snow" else weather.rain
 	_pm("sky.rain")
@@ -2329,6 +2332,7 @@ func _apply_save(d: Dictionary) -> void:
 	if d.get("bounty") != null: bounty = d.bounty; _set_poster(bounty)
 	gang_paid = []
 	for x in d.get("gangPaid", []): gang_paid.append(int(x))
+	holdup_day = int(d.get("holdupDay", -1))
 	var ce = d.get("cellar")
 	if ce != null:
 		if ce.get("built", false): extras.build_cellar()
@@ -2405,7 +2409,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),
@@ -3257,7 +3261,7 @@ func _dismiss_escort() -> void:
 func _escort_targets() -> Array:
 	var out := []
 	for b in bosses: if b.fighting(): out.append_array(b.targets())
-	for c in jumpers.camps:
+	for c in jumpers._all():
 		for m in c.men: if not m.dead and m.state == "chase": out.append({"pos": m.fig.root.position, "j": m})
 	for e in enemies.list: if not e.dying and Enemies.pos(e).distance_to(player.pos) < 20.0: out.append({"pos": Enemies.pos(e), "enemy": e})
 	return out
@@ -3301,7 +3305,7 @@ func _danger_near() -> bool:
 	var near := func(q: Vector3) -> bool: return Vector2(q.x - p.x, q.z - p.z).length() < 30.0
 	var d := false
 	for e in enemies.list: if not e.dying and near.call(Enemies.pos(e)): d = true; break
-	if not d: for c in jumpers.camps: for m in c.men: if not m.dead and m.state == "chase" and near.call(m.fig.root.position): d = true; break
+	if not d: for c in jumpers._all(): for m in c.men: if not m.dead and m.state == "chase" and near.call(m.fig.root.position): d = true; break
 	if not d: for b in bosses: if b.fighting(): d = true; break
 	if not d: for f in forts.forts: if f.angry and near.call(f.at): d = true; break
 	if not d: for c in camp.list: if c.alarm == "fight": d = true; break
@@ -3422,3 +3426,31 @@ func _twister_wreck(dt: float) -> void:
 		if Vector2(g.x - at.x, g.z - at.z).length() < TWISTER_TOWN_R + 3.0 and town.unmend(id):
 			confetti.burst(g + Vector3(0, 3, 0), [0x8a6038, 0xb5473a, 0xefe3c4], 40, 1.6); sound.tear(); sound.knock()
 			hud.toast("The twister tears through the %s! It'll need mending again." % String(Town.find_b(id).get("name", id)))
+
+# ------------------------------------------------------------------ the bank hold-up (the player's outlaws ride into town)
+## Once the Miners' bank is mended, every five days or so at dusk a gang of three to five outlaws rides in and holds
+## it up, standing about its door. Beat the lot and the bank manager pays you a reward ($15 a man); leave them and at
+## midnight they ride off with a fifth of your savings (up to $60). Not while the town has no bank, nor in the first days.
+func _raid_update() -> void:
+	if jumpers.raid != null:
+		if jumpers.raid_beaten() and not jumpers.raid.get("paid", false):
+			jumpers.raid.paid = true
+			var pay: int = 15 * jumpers.raid.men.size()
+			inventory.dollars = inventory.get("dollars", 0) + pay; sound.craft(); journal.record("bounty")
+			hud.toast("The bank manager comes out from under his counter, shaking your hand with both of his. \"Not a dollar gone! Take this, with the bank's gratitude.\" +$%d" % pay)
+		elif not jumpers.raid_beaten() and (sky.time > 0.98 or sky.time < 0.2):
+			var lost := mini(60, floori(inventory.get("savings", 0) * 0.2))
+			inventory.savings = inventory.get("savings", 0) - lost
+			hud.toast(("The outlaws ride off into the night with the bank's strongbox, and $%d of your savings in it." % lost) if lost > 0 else "The outlaws ride off into the night with the bank's strongbox. Your account was empty, at least.")
+			jumpers.end_raid()
+		elif jumpers.raid_beaten() and sky.time < 0.2: jumpers.end_raid() # (the undertaker's been by)
+		return
+	if not town.tiers.get("bank", 0) or not town.doors.has("bank") or sky.day < 3 or sky.day - holdup_day < RAID_EVERY: return
+	if sky.time < 0.72 or sky.time > 0.8 or absi(hash(sky.day)) % 3 != 0: return # (a dusk, most weeks)
+	start_raid()
+## The gang rides in (also the dev's way to see one).
+func start_raid() -> void:
+	holdup_day = sky.day
+	var b := Town.find_b("bank"); var d: Vector3 = town.doors.bank - town.toward * float(b.side) * 4.5
+	jumpers.start_raid(Vector3(d.x, Terrain.get_height(d.x, d.z), d.z), 3 + randi() % 3)
+	sound.bang(); hud.toast("Gunshots on Second Street! A gang of outlaws is holding up the Miners' bank.")

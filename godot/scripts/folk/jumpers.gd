@@ -29,6 +29,23 @@ const OUTLAWS := ["cgc_man_outlaw_rawboned", "cgc_man_outlaw_bruiser", "cgc_man_
 const WOMEN := ["trades_2", "trades_5", "folk_calico_01", "folk_calico_02", "folk_calico_03", "cgc_woman_patched", "cgc_woman_gingham", "cgc_woman_greenapron"]
 
 var camps: Array = []      ## {at, seed, cleared_day, built, nodes: [], men: []}
+## A gang of outlaws holding up the bank (the player's outlaws ride into town): a camp with no camp, its men standing
+## about the bank's door; null when there's none. {at, men, raid: true, cleared_day, built, nodes, women, shack}
+var raid = null
+func _all() -> Array: return camps + ([raid] if raid != null else [])
+
+## The gang rides in: count men about the bank door at.
+func start_raid(at: Vector3, count: int) -> void:
+	end_raid()
+	raid = {"at": at, "seed": randi(), "cleared_day": -999, "built": true, "nodes": [], "men": [], "women": [], "shack": at, "raid": true}
+	var rng := PNoise.Mulberry32.new(int(raid.seed))
+	for i in count: _man(raid, i, count, rng, at)
+## The gang gone (ridden off with the money, or carried off by the undertaker).
+func end_raid() -> void:
+	if raid == null: return
+	for m in raid.men: m.fig.root.queue_free()
+	raid = null
+func raid_beaten() -> bool: return raid != null and raid.men.all(func(m): return m.dead)
 var day := 0
 var told_first := false
 var blocker: Callable ## (pos) -> pos pushed out of anything built (main: build.collide)
@@ -64,14 +81,14 @@ func load_state(d) -> void:
 ## Every live man, for the hunting (arrows and bullets): [{pos, r, h, j}]
 func targets() -> Array:
 	var out := []
-	for c in camps:
+	for c in _all():
 		for m in c.men: if not m.dead: out.append({"pos": m.fig.root.position, "r": 0.6, "h": 1.9, "j": m})
 	return out
 
 ## The man in front of the farmer within reach, for a blow.
 func find_target(player: Player, reach: float):
 	var f := player.forward(); var best = null; var bd := INF
-	for c in camps:
+	for c in _all():
 		for m in c.men:
 			if m.dead: continue
 			var p: Vector3 = m.fig.root.position; var dx := p.x - player.pos.x; var dz := p.z - player.pos.z; var d := sqrt(dx * dx + dz * dz)
@@ -83,11 +100,11 @@ func find_target(player: Player, reach: float):
 func damage(m: Dictionary, n: int, hooks: Dictionary) -> bool:
 	if m.dead: return false
 	m.hp -= n; m.hurt = 0.3
-	for c in camps: if m in c.men: for o in c.men: o.angry = true
+	for c in _all(): if m in c.men: for o in c.men: o.angry = true
 	if m.hp > 0: return false
 	m.dead = 0.001
 	if hooks.has("on_fall"): hooks.on_fall.call(m)
-	for c in camps:
+	for c in _all():
 		if m in c.men and c.men.all(func(o): return o.dead): c.cleared_day = day
 	return true
 
@@ -103,6 +120,7 @@ func update(dt: float, today: int, player: Player, hooks: Dictionary) -> void:
 		if not c.built and d < NEAR: _build(c)
 		elif c.built and d > FAR and not c.men.any(func(m): return not m.dead and m.state == "chase"): _unbuild(c)
 		if c.built: _camp_update(c, dt, player, hooks)
+	if raid != null: _camp_update(raid, dt, player, hooks)
 
 func _build(c: Dictionary) -> void:
 	c.built = true
@@ -135,26 +153,29 @@ func _build(c: Dictionary) -> void:
 		c.women.append({"fig": wf, "home": hm, "goal": hm, "t": rng.next() * 6.0, "speed": 0.0, "hide": Vector3((i - 0.5) * 1.6, 0, rng.next() - 0.5)})
 	if day < c.cleared_day + RESPAWN_DAYS: return # (cleared out, and nobody back yet)
 	var count := 3 + int(rng.next() * 3.0) # (three to five fighting men)
-	for i in count:
-		var have_outlaws := OUTLAWS.filter(func(n): return ModelFigure.has_folk(n))
-		var outlaw := have_outlaws.size() > 0 and rng.next() < 0.75
-		var nm: String = have_outlaws[int(rng.next() * have_outlaws.size())] if outlaw else MEN[int(rng.next() * MEN.size())]
-		if not ModelFigure.has_folk(nm): continue
-		var fig := ModelFigure.new(nm, {"hue": 0.0 if outlaw else 0.35 + rng.next() * 2.2}) # (borrowed townsfolk re-dyed, never the skin; an outlaw in his own clothes)
-		fig.borrow_clip("run", "folk_native_warrior")
-		var gun := i % 3 == 2
-		if gun:
-			var g := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.05, 0.06, 0.26); g.mesh = bm
-			g.material_override = PaperMats.paper(Color("2e2c2a")); g.position = Vector3(0, 0.02, 0.1); fig.hands[1].add_child(g)
-		else:
-			var h := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.03; cm.bottom_radius = 0.026; cm.height = 0.85; h.mesh = cm
-			h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3); fig.hands[1].add_child(h)
-		var a := i * TAU / count + rng.next() * 0.6
-		var home := Vector3(at.x + cos(a) * 3.6, 0, at.z + sin(a) * 3.6)
-		fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z)
-		fig.root.rotation.y = atan2(at.x - home.x, at.z - home.z)
-		add_child(fig.root)
-		c.men.append({"fig": fig, "gun": gun, "home": home, "state": "idle", "angry": false, "hp": 8, "dead": 0.0, "hurt": 0.0, "cool": 1.0 + rng.next(), "t": rng.next() * 4.0, "goal": home, "speed": 0.0})
+	for i in count: _man(c, i, count, rng, at)
+
+## One fighting man of camp c, the i-th of count, standing round at.
+func _man(c: Dictionary, i: int, count: int, rng, at: Vector3) -> void:
+	var have_outlaws := OUTLAWS.filter(func(n): return ModelFigure.has_folk(n))
+	var outlaw: bool = have_outlaws.size() > 0 and (rng.next() < 0.75 or c.get("raid", false))
+	var nm: String = have_outlaws[int(rng.next() * have_outlaws.size())] if outlaw else MEN[int(rng.next() * MEN.size())]
+	if not ModelFigure.has_folk(nm): return
+	var fig := ModelFigure.new(nm, {"hue": 0.0 if outlaw else 0.35 + rng.next() * 2.2}) # (borrowed townsfolk re-dyed, never the skin; an outlaw in his own clothes)
+	fig.borrow_clip("run", "folk_native_warrior")
+	var gun: bool = i % 3 == 2 or (c.get("raid", false) and i % 2 == 0)
+	if gun:
+		var g := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.05, 0.06, 0.26); g.mesh = bm
+		g.material_override = PaperMats.paper(Color("2e2c2a")); g.position = Vector3(0, 0.02, 0.1); fig.hands[1].add_child(g)
+	else:
+		var h := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.03; cm.bottom_radius = 0.026; cm.height = 0.85; h.mesh = cm
+		h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3); fig.hands[1].add_child(h)
+	var a: float = i * TAU / count + rng.next() * 0.6
+	var home := Vector3(at.x + cos(a) * 3.6, 0, at.z + sin(a) * 3.6)
+	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z)
+	fig.root.rotation.y = atan2(at.x - home.x, at.z - home.z)
+	add_child(fig.root)
+	c.men.append({"fig": fig, "gun": gun, "home": home, "state": "idle", "angry": false, "hp": 8, "dead": 0.0, "hurt": 0.0, "cool": 1.0 + rng.next(), "t": rng.next() * 4.0, "goal": home, "speed": 0.0})
 
 func _unbuild(c: Dictionary) -> void:
 	c.built = false
