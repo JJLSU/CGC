@@ -11,6 +11,7 @@ func _initialize() -> void:
 	await process_frame
 	main.force_active = true; main.weather.rain = 0.0
 	var f: Dictionary = main.forts.forts[0]
+	if OS.get_environment("CLEARED") != "": f.cleared_day = main.sky.day # (its garrison beaten)
 	var fz := Vector3(sin(f.face), 0, cos(f.face)); var fx := Vector3(fz.z, 0, -fz.x); var H := ArmyForts.SIDE / 2.0
 	var gate: Vector3 = f.at + fz * H
 	var views := [["gate_day", 0.45, gate + fz * 9.0 + fx * 3.0, gate], ["gate_night", 0.9, gate + fz * 9.0 + fx * 3.0, gate],

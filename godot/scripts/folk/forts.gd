@@ -223,7 +223,9 @@ func _build(f: Dictionary) -> void:
 			for k in n:
 				var u := -run / 2.0 + (k + 0.5) * (run / n)
 				if side == 0 and absf(u) < 3.2: continue
-				if side == 1 and k == n / 2 and _piece(f, "prop_fort_wall_breached", _wall_point(at, fx, fz, side, u), Basis(along_v, Vector3.UP, out_v)): continue # (one section broken through, at the back)
+				if side == 1 and k == n / 2: # (one section broken through at the back; fallen right down while the fort stands empty, its garrison beaten)
+					var ruin := "prop_fort_wall_collapsed" if day < f.cleared_day + RESPAWN_DAYS else "prop_fort_wall_breached"
+					if _piece(f, ruin, _wall_point(at, fx, fz, side, u), Basis(along_v, Vector3.UP, out_v)): continue
 				var q: Vector3 = _wall_point(at, fx, fz, side, u); var y := Terrain.get_height(q.x, q.z) - float(kit.sink) # (its foot sunk into the ground)
 				var hh := 1.0 + (rng.next() - 0.5) * 0.12
 				var b := Basis(along_v, Vector3.UP * hh, out_v) # (its x along the wall, a touch taller or shorter section to section)
