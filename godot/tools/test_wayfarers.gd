@@ -36,6 +36,13 @@ func _initialize() -> void:
 		print("  %s: built %s, met %s, prompt '%s', got %s, health %.0f, then again %s" % [c.kind.id, c.built, c.met, prompt, got, p.health, again])
 		var did: bool = not got.is_empty() or (c.kind.id == "preacher" and p.health == p.max_health) or c.kind.id == "surveyor"
 		ok = ok and c.built and c.met and prompt.begins_with("[E]") and did and again.is_empty() and c.day == main.sky.day
+	# a traveller you've met says hello as you come back (once a visit)
+	var c0 = W.camps.filter(func(c): return c.fig != null)[0]; var fp0: Vector3 = c0.fig.root.position
+	p.pos = Vector3(fp0.x + 50.0, Terrain.get_height(fp0.x + 50.0, fp0.z), fp0.z); await _wait(0.3)
+	p.pos = Vector3(fp0.x + 3.0, Terrain.get_height(fp0.x + 3.0, fp0.z), fp0.z); await _wait(0.3)
+	var hail: String = W.card.text if W.card else ""
+	print("  coming back to %s: '%s'" % [c0.kind.id, hail])
+	ok = ok and hail in Wayfarers.AGAIN
 	# they move on: four days later each is somewhere else, all on spots of their own
 	var before_at: Array = W.camps.map(func(c): return c.at)
 	main.sky.day += Wayfarers.MOVE_DAYS; await _wait(0.3)

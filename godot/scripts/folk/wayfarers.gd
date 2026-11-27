@@ -80,8 +80,14 @@ func near_camper(p: Vector3, r := 3.2):
 		if c.fig != null and Vector2(c.fig.root.position.x - p.x, c.fig.root.position.z - p.z).length() < r: return c
 	return null
 
+## A traveller you've met says hello as you come up again (once a visit), on a card over him.
+const AGAIN := ["Back again, friend?", "Well, look who it is!", "Good to see a friendly face.", "Pull up a stump, neighbour."]
+var card: SayCard
+var card_on = null
 func update(dt: float, player: Player, today := 0) -> void:
 	move_to(today)
+	if card and card_on != null and card_on.fig != null and is_instance_valid(card_on.fig.root): card.tick(dt, card_on.fig.root.global_position + Vector3(0, 2.5, 0))
+	elif card: card.visible = false
 	var p := player.pos
 	for c in camps:
 		var d := Vector2(c.at.x - p.x, c.at.z - p.z).length()
@@ -95,6 +101,11 @@ func update(dt: float, player: Player, today := 0) -> void:
 		if c.built and c.fig != null:
 			var fig: ModelFigure = c.fig; var r := fig.root
 			var to := Vector3(p.x - r.position.x, 0, p.z - r.position.z)
+			if c.met and to.length() < 8.0 and not c.get("hailed", false):
+				c.hailed = true
+				if card == null: card = SayCard.make(); add_child(card)
+				card.say(AGAIN[randi() % AGAIN.size()]); card_on = c
+			elif to.length() > 30.0: c.hailed = false
 			if to.length() < 9.0: r.rotation.y = lerp_angle(r.rotation.y, atan2(to.x, to.z), minf(1.0, dt * 3.0)) # (looks up as you come)
 			fig.update(dt, 0.0, c.kind.get("pose") if to.length() > 9.0 else null)
 			if c.has("kid"): (c.kid as ModelFigure).update(dt, 0.0, null)
