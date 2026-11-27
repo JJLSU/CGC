@@ -194,6 +194,10 @@ class Camp extends Node3D:
 	var arrows: Array = []
 	var horses: Array = []
 	var folk: Array = []
+	## While the camp is at peace with you, someone by the fire welcomes you as you come in (once a visit).
+	const WELCOME := ["Welcome back, friend. Sit by the fire.", "You are welcome here. Rest a while.", "Good to see you. Come, eat with us.", "Our fire is yours, friend."]
+	var welcome_card: SayCard
+	var welcomed := false
 	var lodges: Array = []
 	var alarm := "none" # none, warn, fight
 	var alarm_t := 0.0
@@ -334,6 +338,12 @@ class Camp extends Node3D:
 		# the camp's mood: a trespasser warned, then fought, then let go once they've gone
 		var inside := d_camp < R and not player.dead
 		var peace := peace_until > NativeCamps.camp_day
+		if peace and inside and not welcomed and folk.size():
+			welcomed = true
+			if welcome_card == null: welcome_card = SayCard.make(); add_child(welcome_card)
+			welcome_card.say(WELCOME[randi() % WELCOME.size()], 3.0)
+		if not inside and d_camp > R * 1.5: welcomed = false
+		if welcome_card and folk.size(): welcome_card.tick(dt, (folk[0].fig as ModelFigure).root.global_position + Vector3(0, 2.5, 0))
 		if inside and alarm == "none" and not peace: alarm = "warn"; alarm_t = 0.0; warn_shot = false
 		if alarm != "none": alarm_t += dt
 		if alarm == "warn" and inside and (alarm_t > 7.0 or d_camp < R * 0.55): # (stayed, or pushed on toward the lodges)

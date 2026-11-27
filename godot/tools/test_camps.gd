@@ -83,6 +83,14 @@ func _initialize() -> void:
 	root.get_viewport().get_texture().get_image().save_png(out)
 	print("warned %s (arrow at the feet %s)  fight %s  mounted %s  hurt %s  a warrior fell %s  let go %s" % [warned, shot_arrow, fought, mounted, hurt, fell, let_go])
 	print("gift prompt [%s]  at peace %s  at the fire [%s]  alarm %s" % [gift_prompt, at_peace, trade_prompt, c.alarm])
-	var ok: bool = nc.list.size() == 3 and warned and shot_arrow and fought and hurt and fell and let_go and at_peace and trade_prompt.begins_with("[E] Sit at their fire")
+	var wc = c.welcome_card
+	if wc and c.folk.size():
+		main.rig.target_node = c.folk[0].fig.root; main.rig.dist = 9.0; main.rig.pitch = 0.25; main.rig.snap()
+		for i in 3: await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_viewport().get_texture().get_image().save_png(out.replace(".png", "_welcome.png"))
+		main.rig.target_node = main.player.avatar.root
+	print("welcomed at peace: '%s'" % (wc.text if wc else "-"))
+	var ok: bool = wc != null and wc.text != "" and nc.list.size() == 3 and warned and shot_arrow and fought and hurt and fell and let_go and at_peace and trade_prompt.begins_with("[E] Sit at their fire")
 	print("CAMPS TEST ", "PASS" if ok else "FAIL")
 	quit()
