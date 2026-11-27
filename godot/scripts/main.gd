@@ -563,7 +563,7 @@ func _ready() -> void:
 		"on_end": func(won: bool, why: String, pot: int) -> void:
 			if won:
 				inventory.dollars = inventory.get("dollars", 0) + pot; sound.craft()
-				hud.toast("You thunder past the post a length clear! Dusty Jake reins in and slaps $%d into your hand. %s" % [pot, ["\"Biscuit's got wind, I'll give her that. Double or nothing next time?\"", "\"Again! Well, I'll be. Twenty a side next time, and I won't go easy.\"", "\"That's %d times you've had me. I'm going to have to buy a faster horse.\"" % race.wins][mini(race.wins - 1, 2)]])
+				hud.toast("You thunder past the post a length clear! Dusty Jake reins in and slaps $%d into your hand. %s" % [pot, ["\"Biscuit's got wind, I'll give her that. Double or nothing next time?\"", "\"Again! Well, I'll be. Twenty a side next time, and I won't go easy.\"", "\"That's %d times you've had me. Tell you what: Domino's wasted on me. Sixty dollars and your mare, and she's yours.\"" % race.wins][mini(race.wins - 1, 2)]])
 			else: hud.toast({"jake": "Dusty Jake crosses the post ahead of you and pockets the stakes. \"Better luck next time, neighbour. Gallop her, and cut the flags close.\"", "down": "You got down off your horse: that's the race forfeit, and Jake keeps the stakes.", "slow": "Too slow: Jake's long home, and the stakes are his.", "astray": "You've ridden clean off the course: the race is Jake's."}[why]),
 	}
 	dance = BarnDance.new(town.spot(-1, 1.2, -1, -8)); add_child(dance) # (in the street before the livery barn)
@@ -1129,6 +1129,14 @@ func _race_door() -> bool:
 	if race == null or not race.near_post(player.pos) or not race.shown(sky.time): return false
 	if race.state == "run" or race.state == "count": beast_prompt = "Racing Dusty Jake: flag %d of %d next" % [mini(race.you_next + 1, HorseRace.FLAGS), HorseRace.FLAGS] if race.you_next < HorseRace.FLAGS else "Racing Dusty Jake: home to the post!"; return true
 	if race.state == "done": return false
+	if not riding and race.wins >= HorseRace.DOMINO_WINS and not race.sold and horse != null:
+		beast_prompt = "[E] Buy Domino, Dusty Jake's bay: $%d and Biscuit in trade (you have $%d)" % [HorseRace.DOMINO_COST, inventory.get("dollars", 0)]
+		if input.hit("KeyE"):
+			if inventory.get("dollars", 0) < HorseRace.DOMINO_COST: hud.toast("\"Sixty dollars and your mare, and she's yours. Not a cent less.\" You're short.")
+			else:
+				inventory.dollars -= HorseRace.DOMINO_COST; race.sell_domino(); _domino(true); sound.craft()
+				hud.toast("Dusty Jake swaps saddles and hands you Domino's reins. \"Fastest horse in the county, and she knows it. I'll make do with your Biscuit.\" (Domino gallops a good deal faster.)")
+		return true
 	if not riding:
 		beast_prompt = "[E] Talk to Dusty Jake"
 		if input.hit("KeyE"): hud.toast("\"Howdy. I race anybody round them flags for five dollars a side.\" He looks you up and down. \"Come back on a horse.\"" if horse == null else "\"Fetch your mare and get up on her, and we'll see what she's got. Five dollars a side.\"")
@@ -1153,6 +1161,11 @@ func _cole_word() -> void:
 
 ## Cottonmouth Cole beaten and the payroll home: his gang is broken, and robs no more trains or banks.
 func gang_broken() -> bool: return bosses.any(func(b): return b.id == "cole" and b.delivered)
+
+## Domino in your stable: your horse dyed bay and quicker under you; else Biscuit as she was.
+func _domino(on: bool) -> void:
+	player.mount_k = 1.15 if on else 1.0
+	if horse != null: Horse.dye_bay(horse.puppet, on)
 
 ## The train robbers: once she's well out on the line with you aboard and armed, now and then (every couple of days at
 ## most, more often than not) a gang gallops up alongside; the railroad's bounty for them is paid once she's home.
@@ -2482,6 +2495,7 @@ func _apply_save(d: Dictionary) -> void:
 	build.load_pieces(d.get("pieces", []))
 	fair.show_ribbons(inventory.get("ribbon", 0))
 	if horse_saved.get("owned", false) and horse == null: make_horse(float(horse_saved.x), float(horse_saved.z))
+	if bool(d.get("domino", false)): race.sell_domino(); _domino(true)
 
 ## The way to town: trees felled in a strip between the farmhouse and Cold Glitter Creek stay felled, so the track you
 ## clear stays clear (the rest of the woods grows back as ever).
@@ -2511,7 +2525,7 @@ func save_all() -> void:
 		"beaten": world.destroyed.keys().filter(func(k): return String(k).contains(":g") or String(k).contains(",satchel,") or _road_felled(k)),
 		"explored": hud.county_map.save(), "tales": tales.save(), "mail": mail.save(), "fair": {"day": fair.entered_day, "entered": fair.entered.keys()},
 		"grandmaPie": grandma.pie_day, "grandmaWish": grandma.wish_day, "johnnyTalked": johnny.talked_day, "calf": calf.save(),
-		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day, "raceWins": race.wins, "coleTold": cole_told, "robDay": robbers.last_day, "robOwed": robbers.owed,
+		"campPeace": camp.save(), "jumpers": jumpers.save(), "forts": forts.save(), "wayfarers": wayfarers.save(), "bosses": _bosses_save(), "celebrateDay": celebrate_day, "railroad": railroad.save(), "wire": crafting.order_state(), "claimDay": claim.dug_day, "claim": claim.save(), "bounty": bounty, "gangPaid": gang_paid, "holdupDay": holdup_day, "raceWins": race.wins, "domino": race.sold, "coleTold": cole_told, "robDay": robbers.last_day, "robOwed": robbers.owed,
 		"calm": calm, "dogDay": dog.found_day, "request": crafting.request_state(),
 		"almanac": {"day": sky.day, "time": sky.time, "eggs": extras.eggs, "laidDay": extras.laid_day},
 		"chores": herd.map(func(c): return [c.get("milkedDay", 0) if c.get("milkedDay", 0) > 0 else 0, c.get("shornDay", 0)]),

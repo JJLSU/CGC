@@ -39,6 +39,7 @@ var warm := false
 var chilled := false
 var riding := false
 var oats_fed := false
+var mount_k := 1.0        ## the horse's own pace (Domino, Dusty Jake's bay: 1.15)
 var aiming := false
 var ice_on := false
 var on_ice := false
@@ -111,7 +112,7 @@ func update(dt: float, input: GameInput, world: World, active: bool) -> Dictiona
 	if fullness < 10.0: max_stamina = minf(max_stamina, 100.0)
 	if fullness <= 0.0 and not dead and health > 20.0: health = maxf(20.0, health - dt * 0.3)
 	stamina = clampf(stamina, 0.0, max_stamina)
-	var speed := (SWIM if swimming else (SPRINT if sprinting else WALK)) * ((1.7 * (1.25 if oats_fed else 1.0)) if riding and not swimming else 1.0)
+	var speed := (SWIM if swimming else (SPRINT if sprinting else WALK)) * ((1.7 * mount_k * (1.25 if oats_fed else 1.0)) if riding and not swimming else 1.0)
 	if wading: speed *= (0.8 - 0.15 * Terrain.wade_depth(pos.x, pos.z)) if riding else (0.6 - 0.2 * Terrain.wade_depth(pos.x, pos.z))
 	if avatar.swing >= 0.0: speed *= 0.45
 	if moving and on_ground: # steep uphill slows you down

@@ -29,7 +29,11 @@ var wins := 0
 var bob := 0.0
 var _pen_mats := {}
 var taken: Array = []     ## the world's spots kept for something (the town, the farm, the sites): {x, z, r}
-var cum: Array = []        ## the course's length from the post to each flag in turn (and back to the post)
+var cum: Array = []
+var sold := false          ## he's sold you Domino (and rides Biscuit now)
+const DOMINO_COST := 60
+const DOMINO_WINS := 3
+func sell_domino() -> void: sold = true; Horse.dye_bay(horse, false)        ## the course's length from the post to each flag in turn (and back to the post)
 
 ## Lay out the course off the south end of town: start the post; centre the loop's middle, away from town.
 func setup(town: Town, world: World = null) -> void:
@@ -69,7 +73,7 @@ func setup(town: Town, world: World = null) -> void:
 	var nm: String = "prospectors_1"
 	for n in RIVAL: if ModelFigure.has_folk(n): nm = n; break
 	jake = ModelFigure.new(nm, {"hue": 0.0}); add_child(jake.root)
-	horse = Puppet.new("horse", 1.7); add_child(horse.group)
+	horse = Puppet.new("horse", 1.7); add_child(horse.group); Horse.dye_bay(horse) # (Domino, his bay, till he sells her to you)
 	jpos = start + town.toward * 3.0; jpos.y = Terrain.get_height(jpos.x, jpos.z)
 	_place_jake(0.0, 0.0, null)
 

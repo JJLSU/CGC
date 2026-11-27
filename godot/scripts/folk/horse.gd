@@ -28,6 +28,22 @@ func _init(x: float, z: float) -> void:
 		saddle = make_saddle(); saddle.scale = Vector3.ONE * (puppet.rig.scale.x / 1.7); saddle.top_level = true
 		add_child(saddle)
 
+## Dusty Jake's horse Domino: the same model dyed a deep bay (darker and redder); dyed back (k 0) she's a plain chestnut.
+static func dye_bay(pup: Puppet, on := true) -> void:
+	if pup.model == null: return
+	for mi in pup.model.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		for i in m.mesh.get_surface_count():
+			var mat := m.get_surface_override_material(i)
+			if not (mat is ShaderMaterial): continue
+			if not m.has_meta("undyed_%d" % i): m.set_meta("undyed_%d" % i, mat)
+			var base: ShaderMaterial = m.get_meta("undyed_%d" % i)
+			if not on: m.set_surface_override_material(i, base); continue
+			var c := base.duplicate() as ShaderMaterial
+			var al: Color = c.get_shader_parameter("albedo") if c.get_shader_parameter("albedo") != null else Color.WHITE
+			c.set_shader_parameter("albedo", Color(al.r * 0.62, al.g * 0.42, al.b * 0.38, al.a))
+			m.set_surface_override_material(i, c)
+
 func bone_pos(i: int) -> Vector3: return _sk.global_transform * _sk.get_bone_global_pose(_bones[i]).origin
 
 # ---------------------------------------------------------------- the tack (saddle.js)
