@@ -55,7 +55,7 @@ func build() -> void:
 	var a: Vector3 = at(); var side: Vector3 = stop.geo.side
 	group = Node3D.new(); group.position = Vector3(a.x, Terrain.get_height(a.x, a.z), a.z); group.rotation.y = atan2(-side.x, -side.z)
 	add_child(group)
-	_put("mine_entrance", 4.2, 0, -3.4)
+	_build_mine()
 	_put("mine_windlass", 2.2, -3.6, -1.2, 0.3)
 	_put("mine_orecart", 1.7, 2.6, 0.2, PI / 2)
 	_put("mine_toolrack", 1.5, -3.4, 2.2, 0.5, true)
@@ -75,19 +75,66 @@ func build() -> void:
 	notice.position = Vector3(-1.6, 0.9, 4.6); group.add_child(notice)
 	group.add_child(_boxes([[Vector3(0.1, 1.5, 0.1), Vector3(-1.6, 0.75, 4.55)]], 0x6a4a30))
 	dig_at = group.transform * Vector3(0, 0, -1.2) # (at the mouth of the adit)
+	if vein_rich: dig_at = group.transform * MINE_DIG # (at the face, in the drift)
 
+# ------------------------------------------------------------------ the mine (the player's mine kit)
+## Your claim's workings, cut into the bench beside the windlass and laid open like a diorama: a timbered portal, a
+## drift in to a T-junction, straight on another drift to the face (the gold vein: rich while there's a day's gold in
+## it, worked out once you've dug it), off to the side a drift fallen in, and the shaft head down to the lower workings
+## with the lift cage up top by the windlass. Its walls stop you (worked out from the pieces themselves), and a rail of
+## posts runs along each drift's open side. Claim-local: +z toward the line, the drifts along -x.
+const MF := 3.0            ## the kit's pieces at 3x (a tunnel 2.4 m high, 2.6 m wide)
+const MINE_DIG := Vector3(-22.4, 0, 0)
+var vein_rich: Node3D = null
+var vein_worked: Node3D = null
+var mine_cols: Array = []
+func _build_mine() -> void:
+	if not ResourceLoader.exists("res://assets/models/props/mine_tunnel_straight.glb"):
+		_put("mine_entrance", 4.2, 0, -3.4); return
+	var L := 1.9 * MF
+	var piece := func(nm: String, size: float, x: float, z: float, turn := 0.0, y := 0.0) -> Node3D:
+		var n := _put(nm, size, x, z, turn); if n: n.position.y = y
+		return n
+	piece.call("mine_support_frame", 2.9, -6.9, 0.0, PI / 2.0)          # the portal
+	var s1: Node3D = piece.call("mine_tunnel_straight", L, -6.9 - L / 2.0, 0.0)
+	var t: Node3D = piece.call("mine_tunnel_t", L, -6.9 - L * 1.5, 1.4)
+	var s2: Node3D = piece.call("mine_tunnel_straight", L, -6.9 - L * 2.5, 0.0)
+	vein_rich = piece.call("mine_vein_rich", 2.6, -6.9 - L * 3.0 + 0.4, 0.0, PI / 2.0)
+	vein_worked = piece.call("mine_vein_depleted", 2.6, -6.9 - L * 3.0 + 0.4, 0.0, PI / 2.0)
+	var fall: Node3D = piece.call("mine_collapsed", 3.7, -6.9 - L * 1.5 - 0.2, 1.4 + L * 0.5 + 1.85) # (scaled to the drifts' height)
+	piece.call("mine_ladder_shaft", 2.7, -6.9 - L * 2.4, -2.9, 0.0, -2.6) # (the shaft head: its lower storey down in the ground)
+	_put("mine_lift_cage", 2.6, -4.8, -3.6, 0.3, true) # (by its height: a man's head clear)
+	# the walls (laid by hand: the pieces' own posts and fallen timbers stand in the walkway): a back wall the length
+	# of the drifts, a rail along their open side but for the side branch, the branch's own two walls, and the face and
+	# the cave-in closing the ends
+	var x0 := -6.9; var x1 := -6.9 - L * 3.0; var bx := -6.9 - L * 1.5 - 0.2
+	var x := x0 - 0.3
+	while x > x1:
+		_col(Vector3(x, 0, -1.55))
+		if absf(x - bx) > 1.5: _col(Vector3(x, 0, 1.55))
+		x -= 0.6
+	var z := 1.6
+	while z < 1.4 + L * 0.5 + 0.4: _col(Vector3(bx - 1.55, 0, z)); _col(Vector3(bx + 1.55, 0, z)); z += 0.6
+	for k in 5: _col(Vector3(bx - 1.2 + k * 0.6, 0, 1.4 + L * 0.5 + 0.6)) # (the cave-in)
+	for k in 5: _col(Vector3(x1 + 0.2, 0, -1.2 + k * 0.6)) # (the face)
+func _col(q: Vector3) -> void:
+	var w := group.transform * q
+	var c := {"x": w.x, "z": w.z, "r": 0.4}; rr.world_ref.colliders.append(c); mine_cols.append(c)
 ## Take on a hand: his tent goes up by the cart and he starts in at the adit tomorrow.
 func hire(day: int) -> void:
 	if hand != null or group == null: return
 	_put("prop_tent", 2.3, -0.2, 2.0, 0.3)
 	var nm := "prospectors_6" if ModelFigure.has_folk("prospectors_6") else "prospectors_1"
 	hand = ModelFigure.new(nm, {"hue": 0.8}); hand.root.position = Vector3(-0.7, 0, -1.4); hand.root.rotation.y = PI - 0.3
+	if vein_rich: hand.root.position = MINE_DIG + Vector3(0.6, 0, -0.6); hand.root.rotation.y = -PI / 2.0 # (at the face, swinging at the vein)
 	group.add_child(hand.root)
 	if hand_day < 0: hand_day = day
 
 ## Each new day the hand works, his takings go in the cart (five days' worth at most); by day he swings his pick at
 ## the adit (animated only while you're near); after dark he's in his tent. The stamps thump away by day.
 func update(dt: float, day: int, is_day: bool, player: Player) -> void:
+	if vein_rich: vein_rich.visible = dug_day != day
+	if vein_worked: vein_worked.visible = dug_day == day
 	if hand == null: return
 	while hand_day < day:
 		hand_day += 1

@@ -38,7 +38,9 @@ static func wood() -> Material:
 	if _wood == null: _wood = PaperMats.paper(Color.hex(0x6a4a30ff))
 	return _wood
 
+var world_ref: World ## (the claim's mine puts its walls in the world's colliders)
 func _init(world: World, town: Town, home: Vector3) -> void:
+	world_ref = world
 	visible = false
 	var A := town.at; var along := town.along; var toward := town.toward; town_ref = town
 	far = -signf(town.street_offs[2]) if town.street_offs.size() > 2 else 1.0
@@ -116,6 +118,11 @@ func _init(world: World, town: Town, home: Vector3) -> void:
 		world.exclusions.append({"x": st.at.x, "z": st.at.z, "r": 7.5})
 		if st.land == "breaks": # (your gold claim, if you file one: claim.js)
 			st.geo.claim = st.at + side * 6.0 - alg * 17.0; world.exclusions.append({"x": st.geo.claim.x, "z": st.geo.claim.z, "r": 9.5})
+			# (the claim's ground and its mine's, out along its own -x: levelled and kept clear, a bench cut into the land)
+			var ry := atan2(-side.x, -side.z); var xa := Vector3(cos(ry), 0, -sin(ry))
+			for mk in [0.0, -6.0, -12.0, -18.0, -24.0]:
+				var q: Vector3 = st.geo.claim + xa * mk
+				Terrain.add_flat_area(q.x, q.z, 7.0, 12.0); world.exclusions.append({"x": q.x, "z": q.z, "r": 7.5})
 
 ## Where the line ends, out along dir: as far as reach on open, dry, low ground, clear of the town (a little either side
 ## of dir, then nearer, till one is found).

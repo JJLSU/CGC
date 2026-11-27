@@ -249,6 +249,12 @@ func _draw() -> void:
 			draw_arc(p, 15.0, 0, TAU, 20, col, 2.0, true)
 			_label("Claim Jumpers" + (" (cleared)" if site.cleared else ""), p + Vector2(0, 31), 15, serif_b, col)
 			continue
+		if site.kind == "claim": # your gold claim and its mine: crossed picks in gold, a little portal
+			var gold := Color("b8862a")
+			draw_line(p + Vector2(-8, -8), p + Vector2(8, 8), gold, 2.5, true); draw_line(p + Vector2(8, -8), p + Vector2(-8, 8), gold, 2.5, true)
+			draw_polyline(PackedVector2Array([p + Vector2(-6, 10), p + Vector2(-6, 3), p + Vector2(6, 3), p + Vector2(6, 10)]), Color("6a4a30"), 2.0, true)
+			_label("Your claim", p + Vector2(0, 24), 15, serif_b, gold)
+			continue
 		if site.kind == "wayfarer": # a traveller's camp you've found: a small tent and his name
 			_poly(PackedVector2Array([p + Vector2(-6, 5), p + Vector2(0, -6), p + Vector2(6, 5)]), Color("e6d3ae"), 1.2)
 			_label(String(site.name), p + Vector2(0, 18), 13, null, Color(INK, 0.8))

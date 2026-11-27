@@ -1545,7 +1545,11 @@ func _rail(dt: float) -> void:
 	train.update(dt, sky.time, rig.camera, player)
 	railroad.update(dt, player, sky.time > 0.24 and sky.time < 0.86) # (the trading-post keepers: out front by day)
 	if train.passenger: player.pos = train.ride_point(); player.vel = Vector3.ZERO # (standing on the coach's back platform)
-	if claim.group == null and railroad.built and tools.has("claim"): claim.build() # (staked out once it's filed)
+	if claim.group == null and railroad.built and tools.has("claim"):
+		claim.build() # (staked out once it's filed)
+		var ca: Vector3 = claim.at(); hud.county_map.reveal(ca.x, ca.z, 30.0)
+		var dirs: String = DIRS8[posmod(roundi(atan2(ca.z - player.pos.z, ca.x - player.pos.x) / (PI / 4.0) + 8), 8)]
+		hud.toast("Your claim's staked out %d paces %s of here, its old drifts timbered and open to the face. It's on your county map." % [roundi(Vector2(ca.x - player.pos.x, ca.z - player.pos.z).length() * 1.3 / 10.0) * 10, dirs])
 	if claim.group != null and claim.hand == null and tools.has("claimhand"): claim.hire(sky.day) # (and the hired hand, once he's taken on)
 	if claim.group != null and claim.mill == null and tools.has("stampmill"): claim.add_mill() # (and the stamp mill)
 	claim.update(dt, sky.day, sky.time > 0.24 and sky.time < 0.86, player)
@@ -2464,6 +2468,7 @@ func _open_map(rewash := true) -> void:
 	for b in bosses.filter(func(q): return _boss_known(q)): sites.append({"kind": "boss", "x": b.at.x, "z": b.at.z, "rumour": true, "name": b.title(), "beaten": b.beaten})
 	for w in wayfarers.camps: sites.append({"kind": "wayfarer", "x": w.at.x, "z": w.at.z, "rumour": w.met, "name": String(w.kind.who).get_slice(",", 0)})
 	for f in forts.forts: sites.append({"kind": "fort", "x": f.at.x, "z": f.at.z, "rumour": true, "name": f.name, "angry": f.angry})
+	if tools.has("claim") and claim.at() != null: var ca: Vector3 = claim.at(); sites.append({"kind": "claim", "x": ca.x, "z": ca.z, "rumour": true})
 	for c in jumpers.camps: sites.append({"kind": "jumpers", "x": c.at.x, "z": c.at.z, "rumour": true, "cleared": sky.day < c.cleared_day + ClaimJumpers.RESPAWN_DAYS})
 	var mended := 0
 	for k in town.tiers: if town.tiers[k]: mended += 1
