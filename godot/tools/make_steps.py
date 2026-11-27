@@ -46,6 +46,15 @@ def write(path, y):
     with wave.open(path, 'wb') as w:
         w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes(st.tobytes())
 
+def hoof(seed):
+    # a hoof on packed ground: a dull low knock (a short thump, a little woody body), softer than a boot's heel
+    rng = np.random.default_rng(seed); n = int(0.14 * SR); t = np.arange(n) / SR
+    env = np.minimum(1.0, t / 0.004) ** 2 * np.exp(-t / 0.03)
+    y = onepole_lp(rng.standard_normal(n), 500) * env + 0.6 * np.sin(2 * np.pi * (70 + 20 * rng.random()) * t) * env
+    fade = int(0.02 * SR); y[-fade:] *= np.linspace(1, 0, fade) ** 2
+    return y / (np.max(np.abs(y)) + 1e-9) * 0.07
+
+for i in range(4): write(os.path.join(OUT, f"hoof_{i}.wav"), hoof(7100 + i))
 for kind, count in [("grass", 4), ("snow", 3), ("water", 3), ("wood", 3)]:
     for i in range(count):
         write(os.path.join(OUT, f"step_{kind}_{i}.wav"), step(kind, {"grass": 11, "snow": 23, "water": 37, "wood": 53}[kind] * 100 + i))

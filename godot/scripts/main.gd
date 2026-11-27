@@ -93,6 +93,7 @@ var fairy_ring: FairyRing
 var shafts: Shafts
 var wisp: Wisp
 var hoof_dust: HoofDust
+var hoof_acc := 0.0
 var ring_rain := false
 var leaf_kicks := 0
 var wisp_told := false
@@ -2330,6 +2331,12 @@ func _paper_weather(dt: float) -> void:
 	wisp.update(dt, world, player, rig.camera, sky.night)
 	shafts.update(dt, rig.camera, player.pos, sky, weather.rain, world, 1.0 if Terrain.region_at(player.pos.x, player.pos.z) == "forest" else 0.4)
 	Terrain.land_at(player.pos.x, player.pos.z)
+	# hoofbeats under you as she goes: a walk's four-beat, a gallop's quicker run (by the ground covered, so they keep pace)
+	if riding and not player.swimming:
+		var sp := Vector2(player.vel.x, player.vel.z).length()
+		hoof_acc += dt
+		var beat := clampf(2.0 / maxf(sp, 0.1), 0.14, 0.45) # (a walk ~2.5 beats a second, a trot 5, a gallop 7)
+		if hoof_acc > beat and sp > 0.8: hoof_acc = 0.0; sound.play("hoof", 0.9 if sp > 12.0 else 0.7)
 	hoof_dust.update(dt, player.pos, player.vel, riding and not player.swimming and weather.rain < 0.2 and Terrain.L_w.get("fen", 0.0) < 0.5, rig.camera)
 
 ## NEXT: one short line saying the most useful thing to do now. Hunger first, then the gold road: workbench ->
