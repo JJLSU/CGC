@@ -55,6 +55,9 @@ func apply(lv: String) -> void:
 	sun.directional_shadow_blend_splits = lv == "high"
 	var env: Environment = main.env.environment
 	env.ssao_enabled = q.ao
+	# contact shadow: where a card stands on the ground, a wall meets a porch, a figure a step: a little deeper and a little
+	# wider, and a touch of it in the sun too (so things sit on the land, not just in the shade)
+	env.ssao_radius = 1.1; env.ssao_intensity = 1.7; env.ssao_power = 1.4; env.ssao_detail = 0.6; env.ssao_light_affect = 0.25
 	# screen-space indirect light (the engine's own bounce: sunlit ground and walls tint the shade beside them), on high
 	# and medium; on low the post pass's faked bounce does it alone (its share back to whole)
 	env.ssil_enabled = q.ao; env.ssil_radius = 6.0; env.ssil_intensity = 1.4; env.ssil_sharpness = 0.98; env.ssil_normal_rejection = 1.0
