@@ -12,7 +12,7 @@ var PAL := {
 	"zenithDay": C(0x8db4cc), "horizonDay": C(0xf2dcb8), "zenithNight": C(0x1a2340), "horizonNight": C(0x3a3a5a),
 	"sunset": C(0xf09a5c), "sunsetHigh": C(0xd98a8a), "sunHigh": C(0xffe2b8), "sunLow": C(0xff9a58), "moon": C(0x8ea2e0),
 	"hemiDay": C(0xf3dcb8), "hemiNight": C(0x3a56b0), "duskSky": C(0xa898d0), "duskGround": C(0x5a4a78),
-	"hazeDay": C(0xd8bf8e), "hazeDusk": C(0xc98fa0), "hazeNight": C(0x0e1a44),
+	"hazeDay": C(0xc9c2a8), "hazeDusk": C(0xc98fa0), "hazeNight": C(0x0e1a44),
 	"fillDay": C(0xf2dcc2), "fillGolden": C(0xb9bcd8), "fillDusk": C(0x6f63a8), "fillNight": C(0x7890d0),
 	"groundDay": C(0x8a6d4a), "groundNight": C(0x22243a),
 }
@@ -151,7 +151,7 @@ func update(dt: float, center: Vector3, camera: Camera3D) -> void:
 		c.rotation.y = atan2(camera.global_position.x - c.position.x, camera.global_position.z - c.position.z)
 	# the haze follows the hero
 	haze = PAL.hazeDay.lerp(PAL.hazeDusk, dusk).lerp(PAL.hazeNight, ss(0.3, 0.85, night_amt))
-	haze_amt = 0.3 + 0.35 * dusk + 0.5 * ss(0.3, 0.85, night_amt)
+	haze_amt = 0.24 + 0.41 * dusk + 0.5 * ss(0.3, 0.85, night_amt)
 	# a passing shower: the key softens and greys, the haze thickens to a pale rainy blue-grey
 	if rain > 0.001:
 		sun.light_energy *= 1.0 - 0.55 * rain
