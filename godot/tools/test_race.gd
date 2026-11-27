@@ -40,7 +40,8 @@ func _initialize() -> void:
 		p.y = Terrain.get_height(p.x, p.z); main.player.pos = p
 		await process_frame
 	print("Jake's last word: '%s' (card %s, wins %d, state %s)" % [R.say_card.text if R.say_card else "-", R.say_card != null, R.wins, R.state])
-	var said: bool = R.say_card.text in R.JAKE_LINES.lost
+	var said: bool = R.say_card.text in R.JAKE_LINES.lost or R.say_card.text.contains("seconds")
+	print("best round %.1f s" % R.best)
 	var won1: bool = said and R.wins == 1 and main.inventory.dollars == 25
 	print("race 1: began %s, won %s ($%d), on foot it stayed %s" % [began, won1, main.inventory.dollars, on_foot_state])
 	while R.state != "idle": main.player.pos = R.start; await process_frame # (he's back at the post)
@@ -51,7 +52,7 @@ func _initialize() -> void:
 		main.player.pos = R.start + Vector3(0, 0, 0.5); await process_frame
 	var lost2: bool = R.wins == 1 and main.inventory.dollars == 15 and R.state == "done" # (the stake doubled to $10 after his first loss)
 	print("race 2 (sat still): lost %s ($%d), Jake's next %d" % [lost2, main.inventory.dollars, R.jake_next])
-	var ok: bool = hail in R.JAKE_LINES.hail_foot and R.flags.size() == 6 and bad < 6 and on_foot_state == "idle" and began and won1 and lost2
+	var ok: bool = R.best > 5.0 and hail in R.JAKE_LINES.hail_foot and R.flags.size() == 6 and bad < 6 and on_foot_state == "idle" and began and won1 and lost2
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))
 	print("RACE TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

@@ -38,7 +38,9 @@ const JAKE_LINES := {"go": ["Hyah! Eat my dust, neighbour!", "See you at the fin
 	"hail_foot": ["Afoot? Fetch a horse, friend.", "Howdy, neighbour."], "lost": ["Dang it all!", "Fair and square. Good race."]}
 var say_card: SayCard
 var lead_was := 0
-var hailed := false         ## who led at the last flag: 1 Jake, -1 you
+var hailed := false
+var best := 0.0           ## your fastest winning round (s), this session
+var last_time := 0.0         ## who led at the last flag: 1 Jake, -1 you
 func say(kind: String) -> void:
 	if say_card == null: return
 	var L: Array = JAKE_LINES[kind]; var line: String = L[randi() % L.size()]
@@ -227,5 +229,10 @@ func _end(won: bool, why: String, hooks: Dictionary) -> void:
 	state = "done"; t = 6.0
 	var pot := stake() * 2
 	if won: wins += 1
-	say("lost" if won else "won")
+	last_time = t
+	if won and (best <= 0.0 or t < best - 0.05):
+		var first := best <= 0.0
+		best = t
+		if say_card: say_card.say(("A round in %.0f seconds! Fastest I've seen." if first else "%.0f seconds! That's a new record, neighbour.") % t, 3.2)
+	else: say("lost" if won else "won")
 	if hooks.has("on_end"): hooks.on_end.call(won, why, pot)
