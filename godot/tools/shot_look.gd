@@ -18,7 +18,7 @@ func _initialize() -> void:
 	main._dev_town()
 	var T: Town = main.town; var h: Vector3 = main.spawn
 	var views := [["farm", h + Vector3(4, 0, 6), 0.36, 0.55, 15.0, 0.7], ["street", T.at - T.along * 20.0, 0.5, 0.3, 14.0, atan2(T.along.x, T.along.z) + PI],
-		["wide", h, 0.45, 1.0, 42.0, 0.9], ["golden", h + Vector3(4, 0, 6), 0.71, 0.4, 18.0, 2.4], ["night", T.at - T.along * 15.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI], ["far", T.at, 0.42, 0.18, 42.0, atan2(T.along.x, T.along.z)], ["rain", T.at - T.along * 20.0, 0.5, 0.3, 14.0, atan2(T.along.x, T.along.z) + PI], ["rainfarm", h + Vector3(4, 0, 6), 0.5, 0.55, 15.0, 0.7], ["farmnight", h + Vector3(4, 0, 6), 0.93, 0.4, 16.0, 0.7], ["night2", T.at + T.toward * T.street_offs[0] - T.along * 12.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI]]
+		["wide", h, 0.45, 1.0, 42.0, 0.9], ["golden", h + Vector3(4, 0, 6), 0.71, 0.4, 18.0, 2.4], ["night", T.at - T.along * 15.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI], ["far", T.at, 0.42, 0.18, 42.0, atan2(T.along.x, T.along.z)], ["rain", T.at - T.along * 20.0, 0.5, 0.3, 14.0, atan2(T.along.x, T.along.z) + PI], ["rainfarm", h + Vector3(4, 0, 6), 0.5, 0.55, 15.0, 0.7], ["rainwide", h, 0.5, 1.0, 42.0, 0.9], ["farmnight", h + Vector3(4, 0, 6), 0.93, 0.4, 16.0, 0.7], ["night2", T.at + T.toward * T.street_offs[0] - T.along * 12.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI]]
 	var only := OS.get_environment("LOOK_ONLY")
 	for v in views:
 		if only != "" and v[0] != only: continue
