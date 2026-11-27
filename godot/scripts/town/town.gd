@@ -808,6 +808,8 @@ func rebuild(id: String, tier: int, k: int) -> void:
 			lamp.add_child(lp)
 			var cage := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(0.2, 0.2, 0.2); cage.mesh = bm; cage.material_override = _glass()
 			lamp.add_child(cage); cage.position = _lantern_spot(lp, lamp, 2.3)
+			var dl := OmniLight3D.new(); dl.light_color = Color(1.0, 0.7, 0.38); dl.omni_range = 6.5; dl.omni_attenuation = 1.6; dl.shadow_enabled = false
+			dl.light_energy = 1.8 if lit == true else 0.0; dl.position = cage.position; dl.name = "door_glow"; lamp.add_child(dl) # (a warm pool on the boardwalk and the shopfront after dark)
 		else:
 			var post := box(0.09, 2.1, 0.09, 0x4a3424); post.position.y = 1.05; lamp.add_child(post)
 			var arm := box(0.42, 0.06, 0.06, 0x3a2a1c); arm.position = Vector3(0.18, 2.0, 0); lamp.add_child(arm)
@@ -1037,6 +1039,9 @@ func update(night: float, dt: float) -> void:
 	if on != lit:
 		lit = on
 		for m in lamp_glass: if is_instance_valid(m): m.albedo_color = Color.hex(0xffc060ff if on else 0x5a5248ff)
+		for id in lamps:
+			var dl := (lamps[id] as Node).get_node_or_null("door_glow") as OmniLight3D
+			if dl: dl.light_energy = 1.8 if on else 0.0
 	update_people(night, dt)
 	var abed := bedtime or raining
 	if assayer: assayer.root.visible = not abed and not far; if assayer.root.visible: assayer.update(dt, 0.0, "clipboard")
