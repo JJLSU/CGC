@@ -114,6 +114,7 @@ func _init(center: Vector3) -> void:
 	for S in SETTLERS:
 		var folk := ModelFigure.new(S.new if S.has("new") and ModelFigure.has_folk(S.new) else S.model) # (the player's new folk, once made)
 		folk.work_tool = {"woodlot": "axe", "charpit": "axe", "quarry": "pick", "claypit": "pick", "diggings": "pick", "sluice": "pick"}.get(S.get("work", ""), "hammer") # (the tool of his trade)
+		folk.work_ual = {"weir": "Fixing_Kneeling", "kiln": "Fixing_Kneeling", "tannery": "Fixing_Kneeling", "beeyard": "Interact", "shack": "Interact", "mill": "Push"}.get(S.get("work", ""), "") # (their own motion at work, from the library: not every trade swings a hammer)
 		folk.root.visible = false; add_child(folk.root)
 		# their camp: a little ring of stones and a tiny flame
 		var fire := Node3D.new()
@@ -227,8 +228,34 @@ func load_state(d) -> void:
 	for id in d.get("hungry", []): hungry[id] = true
 	for s in list:
 		if s.S.id in hired: s.state = "hired"; s.folk.root.position = camp_at(s); s.load = int(d.get("loads", {}).get(s.S.id, 0))
+	_to_work = true
+
+## A game loaded in working hours: the hired hands start at their work, not at home a minute's walk off (the player:
+## loading in, nobody seemed to be doing any work). Done once, on the first frame the pieces are in.
+var _to_work := false
+func _start_at_work(pieces: Array, night: float) -> void:
+	_to_work = false
+	if night >= 0.45 or pieces.is_empty(): return
+	for s in list:
+		if s.state != "hired" or s.load >= LOAD: continue
+		var best = null; var bd := INF; var p0: Vector3 = s.folk.root.position
+		for p in pieces:
+			if p.type == s.S.work and p.get("risen", true) != false:
+				var d0 := Vector2(p.x - p0.x, p.z - p0.z).length()
+				if d0 < bd: bd = d0; best = p
+		if best == null: continue
+		var w := work_spot(best)
+		s.folk.root.position = Vector3(w.x, Terrain.get_height(w.x, w.z), w.z)
+
+## Where a hand stands at a piece of work: off its corner as always, but clear of the piece itself, however big it's
+## built (the player saw the brickmaker at work inside his kiln once the kiln was made its proper size).
+static func work_spot(p) -> Vector3:
+	var f: Array = BuildSystem.DATA.get("FOOT", {}).get(p.type, [1.0, 1.0, 1.0])
+	var r := maxf(1.58, maxf(float(f[0]), float(f[1])) + 0.7)
+	return Vector3(p.x + 0.822 * r, 0, p.z + 0.569 * r) # (along (1.3, 0.9), as it always stood)
 
 func update(dt: float, pieces: Array, day: int, time: float, night: float, camera: Camera3D) -> void:
+	if _to_work and not pieces.is_empty(): _start_at_work(pieces, night)
 	var storehouse = null
 	for p in pieces: if p.type == "storehouse" and p.get("risen", true) != false: storehouse = p; break
 	if time > 0.25 and time < 0.5: breakfast(day)
@@ -275,7 +302,7 @@ func update(dt: float, pieces: Array, day: int, time: float, night: float, camer
 				var away := Vector3(pos.x - storehouse.x, 0, pos.z - storehouse.z); away *= 1.9 / maxf(0.01, away.length())
 				goal = Vector3(storehouse.x + away.x, 0, storehouse.z + away.z)
 			elif supper: goal = bunk.fire_spot(hired.find(S.id))
-			else: goal = Vector3(s.work.x + 1.3, 0, s.work.z + 0.9) if s.work != null and daytime else camp_at(s)
+			else: goal = work_spot(s.work) if s.work != null and daytime else camp_at(s)
 			var to := Vector3(goal.x - pos.x, 0, goal.z - pos.z); var d := to.length()
 			if s.hauling and d <= 0.8: # tip the crate into the storehouse (what won't fit stays in the crate)
 				var room := maxi(0, cap - int(stock.get(S.item, 0))); var put := mini(room, s.load)

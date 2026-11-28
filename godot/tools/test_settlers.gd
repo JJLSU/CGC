@@ -39,9 +39,10 @@ func _initialize() -> void:
 	var hired: bool = silas.state == "hired"
 	# off to the woodlot: a little work, a crateful, the haul
 	p.pos = Vector3(C.x, Terrain.get_height(C.x, C.z), C.z)
+	var ws := Settlers.work_spot({"type": "woodlot", "x": wx, "z": wz}) # (where a hand stands at it, clear of it)
 	var t0 := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < 30000 and Vector2(Settlers.spos(silas).x - wx - 1.3, Settlers.spos(silas).z - wz - 0.9).length() > 0.9: await process_frame
-	var at_work: bool = Vector2(Settlers.spos(silas).x - wx - 1.3, Settlers.spos(silas).z - wz - 0.9).length() <= 0.9
+	while Time.get_ticks_msec() - t0 < 50000 and Vector2(Settlers.spos(silas).x - ws.x, Settlers.spos(silas).z - ws.z).length() > 0.9: await process_frame
+	var at_work: bool = Vector2(Settlers.spos(silas).x - ws.x, Settlers.spos(silas).z - ws.z).length() <= 0.9
 	silas.made = 44.9; silas.load = 2
 	for i in 30: await process_frame
 	var hauling: bool = silas.hauling

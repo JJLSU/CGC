@@ -128,6 +128,7 @@ func play(clip: String, fade := 0.25, time_scale := 1.0) -> void:
 	if clip == "idle": clip = _rest()
 	elif clip == "walk": clip = walk_clip
 	elif clip == "sit": clip = sit_clip
+	elif clip == "work": clip = work_clip
 	elif clip == "_plain": clip = "idle" # (the library's Idle itself, as one of a figure's turns)
 	if not player.has_animation(clip): clip = "idle" if player.has_animation("idle") else player.get_animation_list()[0]
 	player.speed_scale = time_scale * rate if clip == _rest() else (time_scale * gait if clip == walk_clip or clip == "run" else time_scale)
@@ -141,6 +142,10 @@ func play(clip: String, fade := 0.25, time_scale := 1.0) -> void:
 ## again from the wider set.
 var walk_clip := "walk"
 var sit_clip := "sit"
+var work_clip := "work"
+## A library clip for this figure's work in place of the tool swing (a trade that doesn't chop or dig: the player
+## asked for more different animations): "Fixing_Kneeling", "Interact", "Push"... "" keeps the swing.
+var work_ual := ""
 var _ual_done := false
 static var _ual_frame := -1
 func _ual_life() -> void:
@@ -148,16 +153,17 @@ func _ual_life() -> void:
 	if skeleton == null or skeleton.find_bone("Spine02") < 0 or skeleton.find_bone("LeftUpLeg") < 0: return # (a Meshy folk rig only)
 	if name.begins_with("folk_jim") or name == "folk_player": return # (the farmer himself keeps his own walk)
 	_ual_frame = Engine.get_process_frames()
-	if not add_ual(["Walk", "Walk_Formal", "Idle", "Idle_Talking", "Sitting_Idle"]): return
+	if not add_ual(["Walk", "Walk_Formal", "Idle", "Idle_Talking", "Sitting_Idle"] + ([work_ual] if work_ual != "" else [])): return
+	if work_ual != "" and player.has_animation("u_" + work_ual): work_clip = "u_" + work_ual
 	var r := randf()
 	walk_clip = "walk" if r < 0.4 else ("u_Walk" if r < 0.75 else "u_Walk_Formal")
 	if randf() < 0.4: sit_clip = "u_Sitting_Idle"
 	rest_idle = ""; _extras = null
-	if current == "idle" or current.begins_with("x_idle") or current == "walk" or current == "sit": current = "" # (picked up again next frame)
+	if current == "idle" or current.begins_with("x_idle") or current == "walk" or current == "sit" or current == "work": current = "" # (picked up again next frame)
 
 func update(dt: float, speed := 0.0, pose = null) -> void:
 	t += dt; phase += dt * (2.4 + speed * 1.9)
-	if not _ual_done and t > 0.5 and _ual_frame != Engine.get_process_frames(): _ual_life()
+	if OS.get_environment("NO_UAL") == "" and not _ual_done and t > 0.5 and _ual_frame != Engine.get_process_frames(): _ual_life()
 	_hold_true()
 	if pose == "swing" and player and player.has_animation("work"): play("work", 0.08, player.get_animation("work").length / 0.55)
 	elif pose != null and POSE_CLIP.has(pose): play(POSE_CLIP[pose])
