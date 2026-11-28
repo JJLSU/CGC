@@ -171,8 +171,46 @@ func _work_tool_show() -> void:
 			"axe": _tool_node = Boss._axe_mesh(0.8)
 			"pick": _tool_node = Boss._pick_mesh(0.8)
 			_: _tool_node = _hammer_mesh()
-		_tool_node.rotation.x = PI / 2.0; _tool_node.position = Vector3(0, 0, 0.12); h.add_child(_tool_node)
-	_tool_node.visible = working
+		_tool_node.transform = grip_xf(); h.add_child(_tool_node)
+	_tool_node.visible = working; fist(false, working)
+## Where a tool sits in the right hand's holder (the player: many if not all folk with tools didn't hold them right:
+## the haft ran up the forearm and stood off the back of the hand). The rigs have no finger bones: the hand bone runs
+## wrist to fingertips along its +y, the palm on its -z. A haft held in the fist crosses the hand square, through the
+## palm a little down from the wrist, its head out on the thumb's side (forward when the arm hangs) and its working
+## face (the hammer's, the pick's point, the axe's edge) along the knuckles. For the box-built tools (handle along
+## +z from the grip, head at the far end, working toward +y).
+var _thumb := [0.0, 0.0]
+func grip_xf(left := false) -> Transform3D:
+	var k := 0 if left else 1
+	if _thumb[k] == 0.0:
+		_thumb[k] = 1.0
+		var hi := skeleton.find_bone("LeftHand" if left else "RightHand") if skeleton else -1
+		if hi >= 0:
+			# in the rest (T) pose, palm down, the thumb points forward (the figure's +z)
+			var bx := skeleton.get_bone_global_rest(hi).basis.x
+			_thumb[k] = 1.0 if bx.z >= 0.0 else -1.0
+	var s: float = _thumb[k]
+	return Transform3D(Basis(Vector3(0, 0, -s), Vector3(0, 1, 0), Vector3(s, 0, 0)), Vector3(0, 0.05, -0.03))
+
+## Put a tool (handle along its +z from the grip, head on ahead, working toward +y) in a hand, in the fist; extra:
+## turned or slid further in the grip's own frame (a walking staff stood up, a spear held at its balance).
+func hold(tool: Node3D, left := false, extra := Transform3D.IDENTITY) -> void:
+	tool.transform = grip_xf(left) * extra
+	hands[0 if left else 1].add_child(tool)
+	fist(left, true)
+
+## The open hand closed round a handle (FistHand: the straight fingers drawn in), or let open again.
+var _fists := [null, null]
+func fist(left: bool, on: bool) -> void:
+	if skeleton == null: return
+	var k := 0 if left else 1
+	if _fists[k] == null:
+		if not on: return
+		var bi := skeleton.find_bone("LeftHand" if left else "RightHand")
+		if bi < 0: return
+		var f := FistHand.new(); f.bone = bi; skeleton.add_child(f); _fists[k] = f
+	(_fists[k] as FistHand).on = on
+
 static func _hammer_mesh() -> Node3D:
 	var g := Node3D.new()
 	var hd := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.022; cm.bottom_radius = 0.026; cm.height = 0.42; cm.radial_segments = 6

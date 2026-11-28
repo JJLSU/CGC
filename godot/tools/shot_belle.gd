@@ -13,14 +13,14 @@ func _initialize() -> void:
 	var p: Player = main.player; var lm: Landmarks = main.landmarks
 	var u = null
 	for q in Props.unique_encounters(): if q.mark == "steamboat": u = q
-	var a: float = u.rot + 1.0
-	var o := Vector3(u.x + cos(a) * 16.0, 0, u.z + sin(a) * 16.0)
+	var a: float = u.rot + 2.4
+	var o := Vector3(u.x + cos(a) * 30.0, 0, u.z + sin(a) * 30.0)
 	p.pos = Vector3(o.x, Terrain.get_height(o.x, o.z), o.z)
 	var t0 := Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 6000 and not lm.live.values().any(func(l): return l.site.mark == "steamboat"): await process_frame
 	var here = null
 	for l in lm.live.values(): if l.site.mark == "steamboat": here = l
-	main.rig.dist = 24.0; main.rig.pitch = 0.5; main.rig.yaw = atan2(o.x - u.x, o.z - u.z); main.rig.snap()
+	main.rig.dist = 20.0; main.rig.pitch = 0.4; main.rig.yaw = atan2(o.x - u.x, o.z - u.z); main.rig.snap()
 	for i in 60: await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)
@@ -28,6 +28,7 @@ func _initialize() -> void:
 		var L = null
 		for st in main.climbs.sets.values(): for l in st.ladders: if l.name == nm: L = l
 		p.pos = L.foot
+		print("  %s foot %s water %s; site rot %.2f u.rot %.2f at %s / %s" % [nm, L.foot, Terrain.is_water(L.foot.x, L.foot.z), here.site.rot, u.rot, Vector2(here.site.x, here.site.z), Vector2(u.x, u.z)])
 		for i in 15: p.pos = L.foot; await process_frame
 		main.input.pressed["KeyE"] = true
 		t0 = Time.get_ticks_msec()

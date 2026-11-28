@@ -14,7 +14,7 @@ func _initialize() -> void:
 	T.mend("church")
 	if not args.has("holding"): for st in Town.STREETS: for b in st.buildings: T.mend(b.id)
 	var f = T.folk.get(id)
-	if id.begins_with("row"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
+	if id.begins_with("row") and not id.begins_with("row_"): var c: Dictionary = T.civilians[int(id.substr(3))]; f = {"fig": c.fig, "face": c.fig.root.rotation.y} # (row<N>: the Row's Nth family)
 	var d: Vector3 = T.doors.get(id, T.at)
 	if id == "overview": f = {"fig": {"root": {"position": T.at}, "name": "the town"}, "face": atan2(T.toward.x, T.toward.z)} # (the whole town from on high)
 	if id == "board": f = {"fig": {"root": {"position": main.boss_board.global_position}, "name": "the wanted board"}, "face": main.boss_board.rotation.y} # (the bosses' wanted board)

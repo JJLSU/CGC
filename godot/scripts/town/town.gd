@@ -484,7 +484,7 @@ func _init(w: World, home: Vector3) -> void:
 			var p0: Vector3 = at + along * s + toward * side * 5.4
 			if Terrain.is_water(p0.x, p0.z): continue
 			var hut := tent(rng); var p := place(hut, s, side, -0.8); hut.rotation.y += (rng.next() - 0.5) * 0.35
-			squat.append(p - toward * side * 1.5) # (a spot out front, by the cookfire)
+			squat.append(p - toward * side * maxf(1.5, tent_front(hut) + 0.9)) # (a spot out front, by the cookfire, clear of the canvas)
 			world.colliders.append({"x": p.x + toward.x * side * 1.2, "z": p.z + toward.z * side * 1.2, "r": 1.5})
 	# the Row's own people (the player's gaunt townsfolk in rags): about the cookfires from the start, beside the spots
 	# where settlers who come to live here will stand
@@ -623,6 +623,13 @@ func tent(rng: PNoise.Mulberry32) -> Node3D:
 				mi.set_surface_override_material(s, c); tent_mats.append(c)
 		g.add_child(m)
 	return g
+
+## How far a placed tent's canvas reaches out in front of its middle (its own frame's +z, the way it faces; the larger
+## of its two ends, as the model's flap side isn't known).
+static func tent_front(t: Node3D) -> float:
+	var bb := PaperMats._aabb(t, t.transform.affine_inverse())
+	if bb.size == Vector3.ZERO: return 1.5
+	return maxf(absf(bb.end.z), absf(bb.position.z))
 
 ## The town sign by the lane, facing the farm; its population rises as the town is mended.
 func make_sign() -> void:
@@ -1127,11 +1134,14 @@ func grow_row(k: int) -> void:
 		var hut := tent(row_rng); var p := place(hut, s, side, 12.0 - HALF); hut.rotation.y += PI + (row_rng.next() - 0.5) * 0.35
 		world.colliders.append({"x": p.x - toward.x * side * 1.2, "z": p.z - toward.z * side * 1.2, "r": 1.5})
 		var i := civilians.size(); var rf: Array = ROW_FOLK[i % ROW_FOLK.size()]
-		var a: Vector3 = p + toward * side * 1.8
+		# (the player: people got stuck in their tents, heads through the canvas: their spot was 1.8 m and their door
+		# 0.9 m from the middle of a tent 4-5 m deep; both now from the tent's own measured front)
+		var fr := tent_front(hut)
+		var a: Vector3 = p + toward * side * (fr + 1.1)
 		var fig := ModelFigure.new(rf[2] if rf.size() > 2 and ModelFigure.has_folk(rf[2]) else rf[0]); fig.root.position = Vector3(a.x, y0 + 0.02, a.z); fig.root.rotation.y = atan2(side * toward.x, side * toward.z); add_child(fig.root)
 		var note := _two_faced("note"); note.position = Vector3(a.x, y0 + 2.35, a.z); add_child(note)
 		var ready := _two_faced("ready"); ready.visible = false; add_child(ready)
-		civilians.append({"name": rf[1], "fig": fig, "at": a, "door": p + toward * side * 0.9, "note": note, "ready": ready, "want": WANTS[(i * 3 + 1) % WANTS.size()], "day": -1, "goal": a, "wait": 4.0 + row_rng.next() * 10.0, "atMeeting": false})
+		civilians.append({"name": rf[1], "fig": fig, "at": a, "door": p + toward * side * (fr + 0.1), "note": note, "ready": ready, "want": WANTS[(i * 3 + 1) % WANTS.size()], "day": -1, "goal": a, "wait": 4.0 + row_rng.next() * 10.0, "atMeeting": false})
 
 ## A spinning note shows its print from both sides: two cards back to back.
 func _two_faced(tex: String) -> Node3D:

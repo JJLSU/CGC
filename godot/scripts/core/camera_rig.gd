@@ -30,6 +30,23 @@ func _ready() -> void:
 	add_child(camera)
 	camera.current = true
 
+## A HUD arrow's angle on screen (degrees clockwise from up) for the way dir (in the world, along the ground) from at.
+## In the wide view, as the old way: the two points projected and the line between them read off the screen. Through
+## his own eyes that fails (the player: the direction indicator doesn't work in first person): his feet are under the
+## lens, behind the near plane, so the projection is nonsense; there up is simply ahead, the way the camera looks.
+func screen_deg(at: Vector3, dir: Vector3) -> float:
+	var d := Vector3(dir.x, 0.0, dir.z)
+	if d.length_squared() < 1e-8: return 0.0
+	d = d.normalized()
+	if first_person:
+		var f := -camera.global_basis.z; f.y = 0.0
+		var r := camera.global_basis.x; r.y = 0.0
+		if f.length_squared() < 1e-6: f = forward() # (looking straight down: the yaw's way)
+		f = f.normalized(); r = r.normalized()
+		return rad_to_deg(atan2(d.dot(r), d.dot(f)))
+	var a := camera.unproject_position(at); var b := camera.unproject_position(at + d * 4.0)
+	return rad_to_deg(atan2(b.x - a.x, -(b.y - a.y)))
+
 ## The way the camera looks along the ground (for walking).
 func forward() -> Vector3:
 	return Vector3(-sin(yaw), 0, -cos(yaw))

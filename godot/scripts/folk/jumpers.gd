@@ -187,7 +187,8 @@ func _man(c: Dictionary, i: int, count: int, rng, at: Vector3) -> void:
 		var g := Boss._colt_mesh(0.5); g.position = Vector3(0, 0.02, 0.04); fig.hands[1].add_child(g) # (a Colt, barrel along the hand)
 	else:
 		var h := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.03; cm.bottom_radius = 0.026; cm.height = 0.85; h.mesh = cm
-		h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3); fig.hands[1].add_child(h)
+		h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3)
+		var hh := Node3D.new(); hh.add_child(h); fig.hold(hh) # (a pick handle for a cudgel, in his fist)
 	var a: float = i * TAU / count + rng.next() * 0.6
 	var home := Vector3(at.x + cos(a) * 3.6, 0, at.z + sin(a) * 3.6)
 	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z)

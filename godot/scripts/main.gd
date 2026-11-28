@@ -2383,10 +2383,9 @@ func _update_homeward() -> void:
 	var h := Vector2(goal.x - player.pos.x, goal.z - player.pos.z); var d := h.length()
 	var show := (to_assay or d > 90.0) and not player.dead
 	if not show: hud.set_homeward(false); return
-	var cam := rig.camera; var a := cam.unproject_position(player.pos); var b := cam.unproject_position(player.pos + Vector3(h.x / d, 0, h.y / d) * 4.0)
 	var g: int = inventory.get("gold", 0)
 	var text := "%s, %d paces" % [(("Assay office (%d pinch%s)" % [g, "es" if g > 1 else ""]) if g > 0 else "Assay office (%s)" % _prize_held().spec.prize.trim_prefix("the ")) if to_assay else "Home", roundi(d * 1.3 / 10.0) * 10]
-	hud.set_homeward(true, "gold" if to_assay else "home", rad_to_deg(atan2(b.x - a.x, -(b.y - a.y))), text)
+	hud.set_homeward(true, "gold" if to_assay else "home", rig.screen_deg(player.pos, Vector3(h.x, 0, h.y)), text)
 
 ## The soundscape each frame (main.js): how much water lies round you, how near a fire is, rain (muffled under a
 ## roof), the land you're in; and the land's name the first time you cross into it. The dawn bell, Sunday's hymn,
@@ -2598,8 +2597,7 @@ func save_all() -> void:
 func _rumour_note() -> void:
 	var r = rumours.update(player.pos, journal.GOALS.filter(func(_g): return false), func(k) -> bool: return landmarks.found.has(k))
 	if r == null: hud.set_rumour(null, 0.0); return
-	var cam := rig.camera; var a := cam.unproject_position(player.pos); var b := cam.unproject_position(player.pos + r.dir * 4.0)
-	hud.set_rumour(r, rad_to_deg(atan2(b.x - a.x, -(b.y - a.y))))
+	hud.set_rumour(r, rig.screen_deg(player.pos, r.dir))
 
 ## The county map (M or Tab): the sites in explored country (laid out deterministically, so they can be looked up),
 ## the iron veins the assayer has heard of (inked faint), old orchards, the camps' lands, and the rest (main.js).
@@ -3425,9 +3423,8 @@ func _update_boss_chip() -> void:
 	if jumpers.raid != null and not jumpers.raid_beaten() and not player.dead:
 		var rp: Vector3 = jumpers.raid.at; var rh := Vector2(rp.x - player.pos.x, rp.z - player.pos.z); var rd := rh.length()
 		if rd < 25.0: hud.set_boss_chip(false); return
-		var rc := rig.camera; var ra := rc.unproject_position(player.pos); var re := rc.unproject_position(player.pos + Vector3(rh.x / rd, 0, rh.y / rd) * 4.0)
 		var left: int = jumpers.raid.men.filter(func(m): return not m.dead).size()
-		hud.set_boss_chip(true, rad_to_deg(atan2(re.x - ra.x, -(re.y - ra.y))), "Hold-up at the bank (%d outlaws), %d paces" % [left, roundi(rd * 1.3 / 10.0) * 10])
+		hud.set_boss_chip(true, rig.screen_deg(player.pos, Vector3(rh.x, 0, rh.y)), "Hold-up at the bank (%d outlaws), %d paces" % [left, roundi(rd * 1.3 / 10.0) * 10])
 		return
 	var b = null
 	for q in bosses:
@@ -3436,9 +3433,8 @@ func _update_boss_chip() -> void:
 	if b == null or player.dead or b.fighting(): hud.set_boss_chip(false); return
 	var h := Vector2(b.at.x - player.pos.x, b.at.z - player.pos.z); var d := h.length()
 	if d < 35.0: hud.set_boss_chip(false); return
-	var cam := rig.camera; var a := cam.unproject_position(player.pos); var e := cam.unproject_position(player.pos + Vector3(h.x / d, 0, h.y / d) * 4.0)
 	var what: String = ("%s's camp (%s)" % [b.title(), b.spec.prize.trim_prefix("the ")]) if b.beaten and not b.back else b.title()
-	hud.set_boss_chip(true, rad_to_deg(atan2(e.x - a.x, -(e.y - a.y))), "%s, %d paces" % [what, roundi(d * 1.3 / 10.0) * 10])
+	hud.set_boss_chip(true, rig.screen_deg(player.pos, Vector3(h.x, 0, h.y)), "%s, %d paces" % [what, roundi(d * 1.3 / 10.0) * 10])
 
 # ------------------------------------------------------------------ an escort (the fort's troopers, for hire)
 ## Two of the fort's troopers for the day, $20: they keep a few paces behind you at whatever pace you go and fire on

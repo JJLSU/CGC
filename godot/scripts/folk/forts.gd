@@ -332,6 +332,15 @@ func _build(f: Dictionary) -> void:
 		add_child(fig.root)
 		f.men.append({"fig": fig, "home": hm, "role": pst[2], "state": "post", "hp": 10, "dead": 0.0, "hurt": 0.0, "cool": 1.0 + rng.next(),
 			"t": rng.next() * 6.0, "goal": hm, "speed": 0.0})
+	# a mounted patrol: two troopers riding a wide circle round the fort, one behind the other (scenery: they take no part
+	# in a fight, and go back in when the fort's riled)
+	f.patrol = []
+	for i in 2:
+		var nm2: String = SOLDIERS[(i + 3) % SOLDIERS.size()]
+		if not ModelFigure.has_folk(nm2): nm2 = STAND_INS[i % STAND_INS.size()]
+		var rider := ModelFigure.new(nm2, {"hue": 3.6} if not ModelFigure.has_folk(SOLDIERS[(i + 3) % SOLDIERS.size()]) else {})
+		var horse := Puppet.new("horse", 1.7); add_child(horse.group); add_child(rider.root)
+		f.patrol.append({"fig": rider, "horse": horse, "a": i * -0.5, "pos": at})
 
 func _unbuild(f: Dictionary) -> void:
 	if world_ref and f.has("gate_cols"):
@@ -340,9 +349,33 @@ func _unbuild(f: Dictionary) -> void:
 	f.built = false
 	for n in f.nodes: if is_instance_valid(n): (n as Node).queue_free()
 	for m in f.men: m.fig.root.queue_free()
+	for r in f.get("patrol", []):
+		if is_instance_valid(r.fig.root): r.fig.root.queue_free()
+		if is_instance_valid(r.horse.group): r.horse.group.queue_free()
+	f.patrol = []
 	f.nodes = []; f.men = []
 
+## The mounted patrol round a fort at peace: a slow trot on a 30 m ring, terrain-following; hidden while the fort's riled.
+func _patrol_update(f: Dictionary, dt: float) -> void:
+	for r in f.get("patrol", []):
+		var fig: ModelFigure = r.fig; var h: Puppet = r.horse
+		var on: bool = not f.angry
+		fig.root.visible = on; h.group.visible = on
+		if not on: continue
+		var dir: float = r.get("dir", 1.0)
+		var na: float = r.a + dt * 0.1 * dir # (a walk, about 3 m/s on the ring)
+		var q: Vector3 = f.at + Vector3(cos(na), 0, sin(na)) * 30.0
+		if Terrain.is_water(q.x, q.z) or Terrain.impassable(q.x, q.z):
+			# the ring runs into water or a bank: they turn about and ride back the other way
+			r.dir = -dir; continue
+		r.a = na
+		q.y = Terrain.get_height(q.x, q.z)
+		r.pos = q; h.group.position = q
+		h.heading = -r.a - PI / 2.0 * dir # (the puppet's +x along the ring, the way he rides)
+		h.update(dt, 3.0, "walk", false, 0.0, 0.0)
+		fig.root.position = q; fig.play("sit", 0.2); NativeCamps.seat(h, fig); NativeCamps.astride(fig)
 func _fort_update(f: Dictionary, dt: float, player: Player, hooks: Dictionary, d_gate: float) -> void:
+	_patrol_update(f, dt)
 	var p := player.pos; var at: Vector3 = f.at; var face: float = f.face
 	var fx := Vector3(cos(face), 0, -sin(face)); var fz := Vector3(sin(face), 0, cos(face))
 	if f.has("flag"): (f.flag as Node3D).rotation.z = sin(Time.get_ticks_msec() / 700.0) * 0.06 # (the colours stirring)

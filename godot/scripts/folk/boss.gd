@@ -430,8 +430,9 @@ func _build() -> void:
 	if not ModelFigure.has_folk(spec.model): return
 	fig = ModelFigure.new(spec.model, {"scale": spec.scale})
 	fig.borrow_clip("run", "folk_native_warrior")
-	hand_pick = _weapon(0.85); hand_pick.rotation.x = PI / 2.0; hand_pick.position = Vector3(0, 0, 0.25); fig.hands[1].add_child(hand_pick)
-	if spec.weapon == "gun": hand_pick.rotation.x = 0.0; hand_pick.position = Vector3(0, 0.02, 0.06) # (a Colt in his fist, its barrel along his hand)
+	hand_pick = _weapon(0.85)
+	if spec.weapon == "gun": hand_pick.position = Vector3(0, 0.02, 0.06); fig.hands[1].add_child(hand_pick) # (a Colt in his fist, its barrel along his hand)
+	else: fig.hold(hand_pick)
 	var home := mouth + outw * 2.5
 	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z); fig.root.rotation.y = atan2(mouth.x - home.x, mouth.z - home.z)
 	add_child(fig.root)

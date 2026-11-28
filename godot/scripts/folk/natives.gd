@@ -116,18 +116,38 @@ static func seat(horse: Puppet, fig: ModelFigure) -> void:
 	fig.root.position += sa - sr
 
 ## The sit clip is a chair sit: swing the thighs out over the horse's barrel and let the shins hang down her flanks.
+## (The player: the soldiers rode their horses weird, knees up in front of them as if on a chair: the legs were turned
+## from a script before the clip posed them, so the clip's chair sit won. Now a modifier on the skeleton turns them
+## after the clip, every frame he's called astride; left a frame uncalled, his legs are his clip's again.)
 static func astride(fig: ModelFigure) -> void:
 	var sk := fig.skeleton
 	if sk == null: return
-	var q := fig.root.global_transform.basis.get_rotation_quaternion()
-	var fwd := q * Vector3(0, 0, 1); var side := q * Vector3(1, 0, 0)
-	var legs := [["LeftUpLeg", "LeftLeg", "LeftFoot"], ["RightUpLeg", "RightLeg", "RightFoot"]]
-	for i in 2:
-		var sg := 1.0 if i == 0 else -1.0
-		var ids: Array = legs[i].map(func(n): return sk.find_bone(n))
-		if ids.has(-1): continue
-		_aim(sk, ids[0], ids[1], fwd * 0.55 + side * sg * 0.62 + Vector3(0, -0.56, 0))
-		_aim(sk, ids[1], ids[2], fwd * -0.22 + side * sg * 0.16 + Vector3(0, -0.96, 0))
+	var m: Astride = null
+	for c in sk.get_children(): if c is Astride: m = c; break
+	if m == null:
+		m = Astride.new(); m.fig_root = fig.root; sk.add_child(m)
+		var legs := [["LeftUpLeg", "LeftLeg", "LeftFoot"], ["RightUpLeg", "RightLeg", "RightFoot"]]
+		for i in 2: m.ids.append(legs[i].map(func(n): return sk.find_bone(n)))
+	m.until = Engine.get_process_frames() + 2
+
+class Astride extends SkeletonModifier3D:
+	var fig_root: Node3D
+	var ids: Array = []
+	var until := 0
+	func _process_modification_with_delta(_d: float) -> void: _legs()
+	func _process_modification() -> void: _legs()
+	func _legs() -> void:
+		var sk := get_skeleton()
+		if sk == null or fig_root == null or Engine.get_process_frames() > until: return
+		var q := fig_root.global_transform.basis.get_rotation_quaternion()
+		var fwd := q * Vector3(0, 0, 1); var side := q * Vector3(1, 0, 0)
+		for i in 2:
+			var sg := 1.0 if i == 0 else -1.0
+			var b: Array = ids[i]
+			if b.has(-1): continue
+			# the thigh out and down over her barrel, a little forward; the shin straight down her flank, heel back
+			NativeCamps._aim(sk, b[0], b[1], fwd * 0.38 + side * sg * 0.5 + Vector3(0, -0.78, 0))
+			NativeCamps._aim(sk, b[1], b[2], fwd * -0.12 + side * sg * 0.1 + Vector3(0, -1.0, 0))
 
 static func _aim(sk: Skeleton3D, bone: int, child: int, dir_world: Vector3) -> void:
 	var inv := sk.global_transform.basis.inverse()
@@ -267,8 +287,8 @@ class Camp extends Node3D:
 			var fig := ModelFigure.new(roll[i][0]); var arm: String = roll[i][1]
 			if not fig.player or not fig.player.has_animation("run"): fig.borrow_clip("run", "folk_native_warrior")
 			if arm != "club": fig.hands[0].add_child(NativeCamps.bow_mesh())
-			if arm == "spear": fig.hands[1].add_child(NativeCamps.spear_mesh())
-			if arm == "club": fig.hands[1].add_child(NativeCamps.club_mesh())
+			if arm == "spear": fig.hold(NativeCamps.spear_mesh(), false, Transform3D(Basis(), Vector3(0, 0, -0.55))) # (held at its balance)
+			if arm == "club": fig.hold(NativeCamps.club_mesh())
 			var a := (i / float(roll.size())) * TAU; var rr: float = [9.0, 13.0, 17.0][i % 3]; var hm := Vector3(at.x + cos(a) * rr, 0, at.z + sin(a) * rr)
 			fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); add_child(fig.root)
 			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
@@ -285,7 +305,7 @@ class Camp extends Node3D:
 			var fp := Vector3(at.x + cos(a) * 3.0, 0, at.z + sin(a) * 3.0); fp.y = Terrain.get_height(fp.x, fp.z)
 			fig.root.position = fp; add_child(fig.root)
 			var kind: String = "man" if nm.begins_with("cgc_native_") else nm.replace("folk_native_", "")
-			if kind == "elder": var staff := _cyl_static(); fig.hands[1].add_child(staff) # (her walking staff)
+			if kind == "elder": fig.hold(_cyl_static(), false, Transform3D(Basis(Vector3.RIGHT, 1.2), Vector3(0, 0, -0.45))) # (her walking staff, stood up in her fist)
 			folk.append({"fig": fig, "kind": kind, "goal": fp, "t": rng.next() * 4.0, "sit": false, "hiding": false,
 				"speed": {"elder": 0.6, "grandfather": 0.7, "girl": 1.5}.get(kind, 1.0)})
 

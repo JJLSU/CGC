@@ -18,13 +18,16 @@ const CLIMB := {
 }
 
 const SCHOONER := "veh_conestoga_wreck_hoops"
-## The Belle as the player's Meshy paddle-wheel wreck (in place of the web's baked boat): 12 m long down x, settled
-## into the marsh; her main deck and the deck above it walked on, flat, at their measured heights.
+## The Belle as the player's Meshy paddle-wheel wreck (in place of the web's baked boat), settled into the marsh; her
+## main deck and the deck above it walked on, flat, at their measured heights. 24 m long down x (the player: the
+## riverboat was far too small at 12; a stern-wheeler on these rivers ran 25-50 m): her decks, ladders and hull
+## colliders measured at 12 m and scaled by BELLE_K.
 const BELLE := "veh_paddleboat_wreck"
-const BELLE_SINK := 0.35
-const BELLE_CLIMB := {"decks": [{"x": 0, "z": 0, "hw": 5.2, "hd": 1.6, "y": 1.0 - BELLE_SINK, "rail": true}, {"x": 0.4, "z": 0, "hw": 4.0, "hd": 1.2, "y": 2.95 - BELLE_SINK, "rail": true}],
-	"ladders": [{"foot": [4.6, 0, 2.7], "top": [4.6, 1.0 - BELLE_SINK, 1.4], "land": [4.6, 0.6], "name": "the wreck of the Belle"},
-		{"foot": [4.7, 1.0 - BELLE_SINK, -0.6], "top": [4.0, 2.95 - BELLE_SINK, -0.6], "land": [3.6, -0.6], "name": "the Belle's upper deck"}]}
+const BELLE_K := 2.0
+const BELLE_SINK := 0.35 * BELLE_K
+const BELLE_CLIMB := {"decks": [{"x": 0, "z": 0, "hw": 5.2 * BELLE_K, "hd": 1.6 * BELLE_K, "y": 1.0 * BELLE_K - BELLE_SINK, "rail": true}, {"x": 0.4 * BELLE_K, "z": 0, "hw": 4.0 * BELLE_K, "hd": 1.2 * BELLE_K, "y": 3.3 * BELLE_K - BELLE_SINK, "rail": true}],
+	"ladders": [{"foot": [4.6 * BELLE_K, 0, -2.7 * BELLE_K], "top": [4.6 * BELLE_K, 1.0 * BELLE_K - BELLE_SINK, -1.4 * BELLE_K], "land": [4.6 * BELLE_K, -0.6 * BELLE_K], "name": "the wreck of the Belle"}, # (her dry side: at 24 m her other beam lies out in the water, and E there pans)
+		{"foot": [4.7 * BELLE_K, 1.0 * BELLE_K - BELLE_SINK, 0.6 * BELLE_K], "top": [4.0 * BELLE_K, 3.3 * BELLE_K - BELLE_SINK, 0.6 * BELLE_K], "land": [3.6 * BELLE_K, 0.6 * BELLE_K], "name": "the Belle's upper deck"}]}
 ## The fire lookout as the player's Meshy tower (its stairs and cabin), 14 m to the roof's peak: its cabin floor,
 ## walked on, at 9.1 m (the old one's was 9.07), its balcony round it; up by the ladder as before.
 const LOOKOUT := "bldg_lookout"
@@ -59,7 +62,7 @@ func _build(kind: String) -> Node3D:
 		g.add_child(PaperMats.seated_axis(load("res://assets/models/props/%s.glb" % LOOKOUT), 14.0, 1, false))
 	if kind == "steamboat" and belle():
 		inst.visible = false # (the old baked boat let go)
-		var b := PaperMats.seated_axis(load("res://assets/models/props/%s.glb" % BELLE), 12.0, 0, false)
+		var b := PaperMats.seated_axis(load("res://assets/models/props/%s.glb" % BELLE), 12.0 * BELLE_K, 0, false)
 		b.position.y = -BELLE_SINK; g.add_child(b)
 	for m in M.json.models: # the reference-art models (the broken wagon, Asa's lean-to), placed as the web did
 		if kind == "schooner" and m.model == "veh_broken_wagon" and ResourceLoader.exists("res://assets/models/props/%s.glb" % SCHOONER):
@@ -170,5 +173,6 @@ func load_state(d) -> void:
 static func colliders(mark: String, x: float, z: float, rot: float) -> Array:
 	var spec: Array = {"hermit": [[0, -0.6, 1.6]], "babe": [[0, 0, 1.6]], "arch": [[-3.6, 0, 1.3], [3.6, 0, 1.3]], "steamboat": [[-4, 0, 1.6], [-1.5, 0, 1.7], [1, 0, 1.7], [3.5, 0, 1.6], [-5.9, 0, 1.2]],
 		"lookout": [[-1.9, -1.9, 0.6], [1.9, -1.9, 0.6], [1.9, 1.9, 0.6], [-1.9, 1.9, 0.6]], "schooner": [[-1, 0, 1.3], [1, 0, 1.3]], "birch": [[0, 0, 0.9]]}.get(mark, [])
+	if mark == "steamboat" and belle(): spec = spec.map(func(e): return [e[0] * BELLE_K, e[1] * BELLE_K, e[2] * BELLE_K])
 	var c := cos(rot); var s := sin(rot)
 	return spec.map(func(e): return {"x": x + e[0] * c + e[1] * s, "z": z - e[0] * s + e[1] * c, "r": e[2]})
