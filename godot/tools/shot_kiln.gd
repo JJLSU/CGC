@@ -17,7 +17,7 @@ func _initialize() -> void:
 	for i in 60: main.player.pos = at + Vector3(3, 0, 4); await process_frame
 	main.set_process(false)
 	var cam: Camera3D = main.rig.camera; var y := Terrain.get_height(at.x, at.z)
-	cam.global_position = Vector3(at.x + 2.5, y + 6.5, at.z + 3.5); cam.look_at(Vector3(at.x, y + 0.5, at.z), Vector3.UP); cam.fov = 50.0
+	cam.global_position = Vector3(at.x + 9.5, y + 3.0, at.z - 2.0); cam.look_at(Vector3(at.x, y + 0.5, at.z), Vector3.UP); cam.fov = 50.0
 	await process_frame; await process_frame; await RenderingServer.frame_post_draw
 	root.get_viewport().get_texture().get_image().save_png(out)
 	if FileAccess.file_exists(sp): DirAccess.remove_absolute(ProjectSettings.globalize_path(sp))

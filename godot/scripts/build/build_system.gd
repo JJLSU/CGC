@@ -51,6 +51,11 @@ const EXTRA := {
 }
 ## Paper pieces the player's Meshy models now stand in for.
 const MODEL_PIECES := {"kiln": "prop_brick_kiln"}
+## How much bigger than the paper piece each model stands (the player: the kiln was far too small at the paper
+## piece's 2.5 m; a frontier brick kiln ran 4-6 m long and as tall as a man to its crown). Its footprint is measured
+## from the model as made.
+const MODEL_SCALE := {"kiln": 2.0}
+var _model_measured := {}
 const EXTRA_SHELF := ["Homestead", ["henhouse", "haybarn", "shaft", "well", "leanto"]]
 
 static func load_data() -> void:
@@ -106,8 +111,12 @@ func make_mesh(t: String, as_ghost := false) -> Node3D:
 		var paper := (_meshes[t] as PackedScene).instantiate() as Node3D
 		var pb := PaperMats._aabb(paper, Transform3D.IDENTITY); paper.free()
 		var r2 := Node3D.new()
-		var m := PaperMats.seated(load("res://assets/models/props/%s.glb" % MODEL_PIECES[t]), maxf(pb.size.x, pb.size.z) * 1.05, false, true)
+		var m := PaperMats.seated(load("res://assets/models/props/%s.glb" % MODEL_PIECES[t]), maxf(pb.size.x, pb.size.z) * 1.05 * float(MODEL_SCALE.get(t, 1.0)), false, true)
 		m.position = Vector3(pb.get_center().x, 0.0, pb.get_center().z); r2.add_child(m)
+		if not _model_measured.has(t): # (its footprint and height from the model itself, so it's built round and placed by its real size)
+			_model_measured[t] = true
+			var mb := PaperMats._aabb(m, Transform3D.IDENTITY)
+			DATA.FOOT[t] = [maxf(absf(mb.position.x), absf(mb.end.x)) * 0.9, maxf(absf(mb.position.z), absf(mb.end.z)) * 0.9, mb.size.y]
 		if as_ghost: _ghostify(r2)
 		return r2
 	var root := (_meshes[t] as PackedScene).instantiate() as Node3D
