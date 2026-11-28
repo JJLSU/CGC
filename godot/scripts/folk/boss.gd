@@ -431,7 +431,7 @@ func _build() -> void:
 	fig = ModelFigure.new(spec.model, {"scale": spec.scale})
 	fig.borrow_clip("run", "folk_native_warrior")
 	hand_pick = _weapon(0.85)
-	if spec.weapon == "gun": hand_pick.position = Vector3(0, 0.02, 0.06); fig.hands[1].add_child(hand_pick) # (a Colt in his fist, its barrel along his hand)
+	if spec.weapon == "gun": hand_pick.position = Vector3(0, 0.02, 0.06); fig.hands[1].add_child(hand_pick); fig.rest_ual = "Pistol_Idle" # (a Colt in his fist, its barrel along his hand; he stands with it ready)
 	else: fig.hold(hand_pick)
 	var home := mouth + outw * 2.5
 	fig.root.position = Vector3(home.x, Terrain.get_height(home.x, home.z), home.z); fig.root.rotation.y = atan2(mouth.x - home.x, mouth.z - home.z)

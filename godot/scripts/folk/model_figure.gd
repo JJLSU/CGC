@@ -146,6 +146,8 @@ var work_clip := "work"
 ## A library clip for this figure's work in place of the tool swing (a trade that doesn't chop or dig: the player
 ## asked for more different animations): "Fixing_Kneeling", "Interact", "Push"... "" keeps the swing.
 var work_ual := ""
+## A library clip this figure always rests in, in place of a drawn idle (a gunman standing guard: "Pistol_Idle").
+var rest_ual := ""
 var _ual_done := false
 static var _ual_frame := -1
 func _ual_life() -> void:
@@ -153,12 +155,13 @@ func _ual_life() -> void:
 	if skeleton == null or skeleton.find_bone("Spine02") < 0 or skeleton.find_bone("LeftUpLeg") < 0: return # (a Meshy folk rig only)
 	if name.begins_with("folk_jim") or name == "folk_player": return # (the farmer himself keeps his own walk)
 	_ual_frame = Engine.get_process_frames()
-	if not add_ual(["Walk", "Walk_Formal", "Idle", "Idle_Talking", "Sitting_Idle"] + ([work_ual] if work_ual != "" else [])): return
+	if not add_ual(["Walk", "Walk_Formal", "Idle", "Idle_Talking", "Sitting_Idle"] + ([work_ual] if work_ual != "" else []) + ([rest_ual] if rest_ual != "" else [])): return
 	if work_ual != "" and player.has_animation("u_" + work_ual): work_clip = "u_" + work_ual
 	var r := randf()
 	walk_clip = "walk" if r < 0.4 else ("u_Walk" if r < 0.75 else "u_Walk_Formal")
 	if randf() < 0.4: sit_clip = "u_Sitting_Idle"
 	rest_idle = ""; _extras = null
+	if rest_ual != "" and player.has_animation("u_" + rest_ual): rest_idle = "u_" + rest_ual
 	if current == "idle" or current.begins_with("x_idle") or current == "walk" or current == "sit" or current == "work": current = "" # (picked up again next frame)
 
 func update(dt: float, speed := 0.0, pose = null) -> void:

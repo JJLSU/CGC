@@ -185,6 +185,7 @@ func _man(c: Dictionary, i: int, count: int, rng, at: Vector3) -> void:
 	var gun: bool = i % 3 == 2 or (c.get("raid", false) and i % 2 == 0)
 	if gun:
 		var g := Boss._colt_mesh(0.5); g.position = Vector3(0, 0.02, 0.04); fig.hands[1].add_child(g) # (a Colt, barrel along the hand)
+		fig.rest_ual = "Pistol_Idle" # (standing guard with it ready, from the library)
 	else:
 		var h := MeshInstance3D.new(); var cm := CylinderMesh.new(); cm.top_radius = 0.03; cm.bottom_radius = 0.026; cm.height = 0.85; h.mesh = cm
 		h.material_override = PaperMats.paper(Color("8a5e36")); h.rotation.x = PI / 2.0; h.position = Vector3(0, 0, 0.3)

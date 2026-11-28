@@ -19,12 +19,16 @@ func _initialize() -> void:
 	print("Cole's hideout %.0f m from town; %d bosses" % [Vector2(C.at.x - main.town.at.x, C.at.z - main.town.at.z).length(), main.bosses.size()])
 	var dir: Vector3 = (main.town.at - C.at).normalized(); var off: Vector3 = C.at + dir * 16.0
 	var shots := 0; var t0 := Time.get_ticks_msec()
+	# (the lair shows, and its fight begins, once the ground under it is built: wait for that first)
+	while Time.get_ticks_msec() - t0 < 20000 and not World.ground_ready(C.at.x, C.at.z):
+		main.player.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); await process_frame
+	t0 = Time.get_ticks_msec()
 	while Time.get_ticks_msec() - t0 < 8000:
 		main.player.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); main.player.health = main.player.max_health; main.player.dead = false
 		shots = maxi(shots, C.picks.size() + (1 if C.throws > 0 else 0))
 		await process_frame
 	var gone: int = C.gang.filter(func(g): return g.mounted and Vector2(g.horse.group.position.x - C.at.x, g.horse.group.position.z - C.at.z).length() > 20.0).size()
-	print("fighting %s, threw %d, bullets in the air seen %d; his gang %d, ridden off %d" % [C.fighting(), C.throws, shots, C.gang.size(), gone])
+	print("fighting %s, threw %d, bullets in the air seen %d; his gang %d, ridden off %d (%s)" % [C.fighting(), C.throws, shots, C.gang.size(), gone, C.gang.map(func(g): return "mounted %s run %.1f fig-horse %.1f m, horse %.0f m out" % [g.mounted, g.run, (g.fig.root.position - g.horse.group.position).length(), Vector2(g.horse.group.position.x - C.at.x, g.horse.group.position.z - C.at.z).length()])])
 	while C.alive(): C.damage(10, C.hooks)
 	for i in 30: await process_frame
 	var payroll = main.drops.filter(func(d): return d.loot.has("payroll"))
