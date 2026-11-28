@@ -104,6 +104,9 @@ void fragment() {
 	c *= vec3(1.03, 0.985, 0.95);
 	c += vec3(0.227, 0.125, 0.047) * 0.03 * (1.0 - smoothstep(0.0, 0.45, l));
 	c = mix(c, c * c * (3.0 - c * 2.0), contrast + contrast_add);
+	// the deepest shade lifted off black after the contrast curve (the player: the shadows are too black): a warm
+	// brown by day, a navy at night, fading out by mid-tone
+	c += mix(vec3(0.05, 0.035, 0.025), vec3(0.035, 0.045, 0.085), night) * (1.0 - smoothstep(0.0, 0.32, lum(c)));
 	c = mix(c, c * vec3(0.82, 0.9, 1.1), night * (1.0 - smoothstep(0.3, 0.75, l)) * 0.5);
 	float asp = VIEWPORT_SIZE.x / VIEWPORT_SIZE.y;
 	float d = length((uv - 0.5) * vec2(asp, 1.0));

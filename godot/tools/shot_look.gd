@@ -23,7 +23,7 @@ func _initialize() -> void:
 		["wide", h, 0.45, 1.0, 42.0, 0.9], ["golden", h + Vector3(4, 0, 6), 0.71, 0.4, 18.0, 2.4], ["night", T.at - T.along * 15.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI], ["far", T.at, 0.42, 0.18, 42.0, atan2(T.along.x, T.along.z)], ["rain", T.at - T.along * 20.0, 0.5, 0.3, 14.0, atan2(T.along.x, T.along.z) + PI], ["rainfarm", h + Vector3(4, 0, 6), 0.5, 0.55, 15.0, 0.7], ["rainwide", h, 0.5, 1.0, 42.0, 0.9], ["snow", h + Vector3(4, 0, 6), 0.45, 0.55, 15.0, 0.7], ["farmnight", h + Vector3(4, 0, 6), 0.93, 0.4, 16.0, 0.7], ["night2", T.at + T.toward * T.street_offs[0] - T.along * 12.0, 0.93, 0.35, 16.0, atan2(T.along.x, T.along.z) + PI]]
 	var only := OS.get_environment("LOOK_ONLY")
 	for v in views:
-		if only != "" and v[0] != only: continue
+		if only != "" and not (v[0] in only.split(",")): continue
 		if v[0] != "snow" and not v[0].begins_with("rain"): main.weather.target = 0; main.weather.rain = 0.0; main.weather.snow = 0.0; main.sky.wet = 0.0 # (each frame starts dry)
 		if v[0] == "snow": main.weather.next_kind = "snow"; main.weather.next_storm = false; main.weather.start(); main.weather.rain = 1.0; main.weather.snow = 1.0
 		if v[0].begins_with("rain"): main.weather.next_kind = "rain"; main.weather.next_storm = false; main.weather.start(); main.weather.rain = 1.0; main.sky.wet = 1.0

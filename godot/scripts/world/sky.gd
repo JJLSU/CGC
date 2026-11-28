@@ -126,12 +126,12 @@ func update(dt: float, center: Vector3, camera: Camera3D) -> void:
 	var elev := deg_to_rad(26.0 + 24.0 * ss(0.05, 0.45, e) if is_day else 45.0)
 	key_dir = Vector3(hx * cos(elev), sin(elev), hz * cos(elev)).normalized()
 	sun.light_color = sun_col if is_day else PAL.moon
-	sun.light_energy = (3.8 * ss(-0.02, 0.22, e) if is_day else 1.6 * ss(0.02, 0.2, -e)) * SUN_K
+	sun.light_energy = (3.8 * ss(-0.02, 0.22, e) if is_day else 1.35 * ss(0.02, 0.2, -e)) * SUN_K
 	sun.global_basis = Basis.looking_at(-key_dir, Vector3.UP if absf(key_dir.y) < 0.99 else Vector3.FORWARD)
 	RenderingServer.global_shader_parameter_set("paper_key_dir", key_dir)
 	# ambient rises toward dusk and night (violet at dusk, saturated blue at night)
 	var night_amt := 1.0 - day_amt
-	hemi_intensity = 0.88 + 0.55 * night_amt + 0.3 * dusk
+	hemi_intensity = 1.0 + 0.85 * night_amt + 0.3 * dusk # (more sky in the shade: the player found the shadows too black, by night most of all)
 	var hemi_sky: Color = PAL.hemiNight.lerp(PAL.hemiDay, day_amt).lerp(PAL.duskSky, dusk * 0.6)
 	var hemi_ground: Color = PAL.groundNight.lerp(PAL.groundDay, day_amt).lerp(PAL.duskGround, dusk * 0.5)
 	# the frontal fill from behind the camera

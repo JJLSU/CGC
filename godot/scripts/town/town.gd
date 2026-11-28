@@ -216,6 +216,7 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float,
 	if side_rects[0] == null: side_rects[0] = side_rects[1].duplicate(); side_rects[0].z = -side_rects[1].z
 	if side_rects[1] == null: side_rects[1] = side_rects[0].duplicate(); side_rects[1].z = -side_rects[0].z
 	var ia2: float = float(ink.get_width()) / ink.get_height()
+	var side_busy := []
 	for k in 2:
 		var r: Dictionary = side_rects[k]
 		# whatever stands proud of the board on this side across the lettering's band (the post, a brace): letter the
@@ -232,6 +233,10 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float,
 			var tx0 := minf(a0.x, minf(a1.x, a2.x)); var tx1 := maxf(a0.x, maxf(a1.x, a2.x))
 			if tx1 < r.x0 or tx0 > r.x1: continue
 			for bi in range(clampi(int((tx0 - r.x0) / (r.x1 - r.x0) * NB), 0, NB - 1), clampi(int((tx1 - r.x0) / (r.x1 - r.x0) * NB), 0, NB - 1) + 1): busy[bi] = true
+		# (the back: the post stands proud of it only by a hair there and goes unseen; it's at the same x as on the front.
+		# The player saw the Row's words run across the post and its brace)
+		if k == 1 and not busy.has(true) and side_busy.size(): busy = side_busy.duplicate()
+		if k == 0: side_busy = busy.duplicate()
 		if OS.get_environment("SIGN_DBG") != "": print("%s side %d: rect x %.2f..%.2f y %.2f..%.2f z %.3f busy %s" % [model_name, k, r.x0, r.x1, r.y0, r.y1, r.z, "".join(busy.map(func(v): return "#" if v else "."))])
 		var best0 := 0; var best_n := 0; var run0 := 0; var run_n := 0
 		for i in NB:
@@ -242,7 +247,7 @@ static func board_post(model_name: String, h: float, tex: String, aspect: float,
 			var bw: float = (r.x1 - r.x0) / NB; r = r.duplicate()
 			var nx0: float = r.x0 + (best0 + (0.5 if best0 > 0 else 0.0)) * bw; var nx1: float = r.x0 + (best0 + best_n - (0.5 if best0 + best_n < NB else 0.0)) * bw
 			# (a signpost's brace runs up from the post to the board beside it: keep clear of the stretch nearest the post)
-			var trim: float = (nx1 - nx0) * 0.25
+			var trim: float = (nx1 - nx0) * 0.4 # (its brace reaches well out under the arm: clear of it)
 			if best0 == 0: nx1 -= trim
 			elif best0 + best_n >= NB: nx0 += trim
 			r.x0 = nx0; r.x1 = nx1
@@ -502,7 +507,9 @@ func _init(w: World, home: Vector3) -> void:
 	var sp: Vector3 = at + along * -31.0 + toward * -3.6
 	var sg := board_post("prop_signpost_long", 2.6, "rowsign", 3.56, "Squatters' Row")
 	if sg == null: sg = Node3D.new(); var rs := card([[-1.0, 0], [1.05, 0.05], [1.0, 0.5], [-1.05, 0.48]], "rowsign"); rs.position.y = 1.1; rs.rotation.z = -0.06; sg.add_child(rs); sg.add_child(posts([0.0]))
-	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.x, -along.z); add_child(sg)
+	# (turned along the street, its arrow's tip, the board's -x, pointing down it to the Row: it stood square across the
+	# street, pointing sideways at nothing, the player saw)
+	sg.position = Vector3(sp.x, y0, sp.z); sg.rotation.y = atan2(-along.z, along.x); add_child(sg)
 	# the dirt street: a long torn sheet of ochre with wheel ruts
 	var holder := street_sheet("street_main"); holder.position = Vector3(at.x, y0 + 0.03, at.z); add_child(holder)
 	for cs in [CROSS_N, CROSS_S]: cross_sheet(-7.0, 7.0, cs) # (the crossings at Main Street's two ends)
@@ -1042,7 +1049,7 @@ func update(night: float, dt: float) -> void:
 	var on := night > 0.45
 	far = cam_pos != null and Vector2(cam_pos.x - at.x, cam_pos.z - at.z).length() > 130.0
 	var tg := maxf(0.0, night - 0.35) * 0.4 * (0.94 + sin(Time.get_ticks_msec() * 0.0073) * 0.03)
-	for m in tent_mats: (m as ShaderMaterial).set_shader_parameter("self_fill", 0.28 + tg * 1.6)
+	for m in tent_mats: (m as ShaderMaterial).set_shader_parameter("self_fill", 0.28 + tg * 0.7) # (a lamp within, soft: at 1.6 the tents shone like lanterns, the player saw)
 	if on != lit:
 		lit = on
 		for m in lamp_glass: if is_instance_valid(m): m.albedo_color = Color.hex(0xffc060ff if on else 0x5a5248ff)

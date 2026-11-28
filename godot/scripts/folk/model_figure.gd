@@ -97,10 +97,25 @@ func _attach(bone_names: Array) -> Node3D:
 			return holder
 	return body
 
+## Each figure's own way of standing and walking (the player: lots of people use the same animations, mix them up):
+## the idle it rests in, picked once from the idles its model has (the library's Idle, or the everyday extras' Idle
+## 3-6), and its own pace through its walk and run (gait, +-12%), on top of the idle's own rate.
+var rest_idle := ""
+var gait := 0.88 + randf() * 0.24
+func _rest() -> String:
+	if rest_idle != "" or player == null: return rest_idle if rest_idle != "" else "idle"
+	var opts := ["idle"]
+	for c in ["x_idle_a", "x_idle_b"]: if player.has_animation(c): opts.append(c)
+	rest_idle = opts[randi() % opts.size()]
+	if not player.has_animation(rest_idle): rest_idle = "idle"
+	return rest_idle
+
 func play(clip: String, fade := 0.25, time_scale := 1.0) -> void:
 	if player == null: return
+	if clip == "idle": clip = _rest()
+	elif clip == "_plain": clip = "idle" # (the library's Idle itself, as one of a figure's turns)
 	if not player.has_animation(clip): clip = "idle" if player.has_animation("idle") else player.get_animation_list()[0]
-	player.speed_scale = time_scale * rate if clip == "idle" else time_scale
+	player.speed_scale = time_scale * rate if clip == _rest() else (time_scale * gait if clip == "walk" or clip == "run" else time_scale)
 	if clip == current: return
 	player.play(clip, fade)
 	current = clip
@@ -228,7 +243,8 @@ var _ex_left := 0.0
 func _idle_life(dt: float) -> void:
 	if _extras == null:
 		_extras = []
-		if player: for a in player.get_animation_list(): if String(a).begins_with("x_"): _extras.append(a)
+		if player: for a in player.get_animation_list(): if String(a).begins_with("x_") and String(a) != _rest(): _extras.append(a)
+		if _rest() != "idle" and player and player.has_animation("idle"): _extras.append("_plain") # (the plain Idle now one of its turns)
 		_ex_wait = 4.0 + randf() * 12.0
 	if _ex_left > 0.0:
 		_ex_left -= dt
@@ -238,4 +254,4 @@ func _idle_life(dt: float) -> void:
 	_ex_wait -= dt
 	if _ex_wait > 0.0: play("idle", 0.4); return
 	var clip: String = _extras[randi() % _extras.size()]
-	play(clip, 0.45); _ex_left = minf(player.get_animation(clip).length, 9.0)
+	play(clip, 0.45); _ex_left = minf(player.get_animation("idle" if clip == "_plain" else clip).length, 9.0)

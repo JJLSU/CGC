@@ -11,9 +11,9 @@ func _initialize() -> void:
 		if f.player: for a in f.player.get_animation_list(): if String(a).begins_with("x_"): xs.append(a)
 		var seen := {}
 		for i in 3600: f.update(1.0 / 30.0); seen[f.current] = true # (two minutes, stood still)
-		var played := seen.keys().filter(func(c): return String(c).begins_with("x_"))
-		print("%s: %d extras in the model %s; played while standing: %s" % [nm, xs.size(), xs, played])
-		ok = ok and xs.size() >= 5 and played.size() >= 2 and seen.has("idle")
+		var played := seen.keys().filter(func(c): return String(c).begins_with("x_") and c != f.rest_idle)
+		print("%s: %d extras in the model %s; rests in %s; played while standing: %s" % [nm, xs.size(), xs, f.rest_idle, played])
+		ok = ok and xs.size() >= 5 and played.size() >= 2 and seen.has(f.rest_idle) # (each figure rests in its own idle now, the player's ask)
 		f.root.queue_free()
 	print("IDLE EXTRAS TEST ", "PASS" if ok else "FAIL")
 	quit(0 if ok else 1)

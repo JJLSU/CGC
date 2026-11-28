@@ -76,7 +76,9 @@ void fragment() {
 	if (snow_cap > 0.0) col = mix(col, snowc, paper_snow * smoothstep(snow_cap, snow_cap + 0.06, puv.y + (fib - 0.5) * 0.12));
 	float hz = no_haze ? 0.0 : haze_factor(wpos);
 	ALBEDO = col * (1.0 - hz) * (1.0 - paper_wet * 0.22 * wet_k);
-	EMISSION = ink * self_fill * (1.0 - hz) + haze_color(wpos) * hz;
+	// (the self-fill fades to 30% after dark: at full strength pale prints, hay, cream wood, the windmill, glowed in the
+	// night as if lit, the player saw)
+	EMISSION = ink * self_fill * mix(1.0, 0.3, paper_glow) * (1.0 - hz) + haze_color(wpos) * hz;
 	if (night_glow != vec3(0.0)) EMISSION += night_glow * clamp(1.0 - texture(map, muv).r * 1.4, 0.0, 1.0) * paper_glow;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
