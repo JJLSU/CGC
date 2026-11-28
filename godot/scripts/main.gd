@@ -588,7 +588,7 @@ func _ready() -> void:
 		"on_off": func() -> void: hud.toast("With nobody left in town to stand against them, the war party wheels about and rides back into the hills."),
 		"on_hit": camp_hooks.on_hit,
 	}
-	world.fill_around(center.x, center.z)
+	world.fill_around(center.x, center.z, true) # (the nine chunks round the farm now, the rest streamed in behind the title card: the start was slow)
 	player = Player.new(self, rig, homestead.spawn) # (you start in the yard, by the porch)
 	player.climbs = climbs
 	# the gold pan, swirled in the shallows (in his right hand)

@@ -84,6 +84,7 @@ func update(px: float, pz: float, dt: float) -> void:
 			if d2 > VIEW_RADIUS * VIEW_RADIUS + 1: continue
 			if not chunks.has(key(pcx + dx, pcz + dz)) and d2 < best[0]: best = [d2, pcx + dx, pcz + dz]
 	if best[0] < (1 << 30) and not _building: _create_chunk_sliced(best[1], best[2]) # (one chunk at a time, spread over frames)
+	elif best[0] >= (1 << 30): boost = false
 	var far := pow(VIEW_RADIUS + 1.5, 2)
 	for k in chunks.keys():
 		var ch: Dictionary = chunks[k]
@@ -96,12 +97,19 @@ func update(px: float, pz: float, dt: float) -> void:
 		map_tex.update(map_img); land_tex.update(land_img); _map_dirty = false
 
 ## Build every chunk within the view radius right away (on load, and for screenshots).
-func fill_around(px: float, pz: float) -> void:
+## near_only: just the nine chunks round the spot now (the game's start: the player found it slow to load, and the
+## whole view's 37 chunks cost ~4 s of it), the rest streamed in over the next few seconds at a quickened pace
+## (boost) behind the title card.
+func fill_around(px: float, pz: float, near_only := false) -> void:
 	var pcx := floori(px / Terrain.CHUNK); var pcz := floori(pz / Terrain.CHUNK)
+	var r2 := 2 if near_only else VIEW_RADIUS * VIEW_RADIUS + 1
 	for dz in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
 		for dx in range(-VIEW_RADIUS, VIEW_RADIUS + 1):
-			if dx * dx + dz * dz <= VIEW_RADIUS * VIEW_RADIUS + 1 and not chunks.has(key(pcx + dx, pcz + dz)): create_chunk(pcx + dx, pcz + dz)
+			if dx * dx + dz * dz <= r2 and not chunks.has(key(pcx + dx, pcz + dz)): create_chunk(pcx + dx, pcz + dz)
+	if near_only: boost = true
 	map_tex.update(map_img); land_tex.update(land_img); _map_dirty = false
+## While true, chunks stream in with six times the work a frame (till the view's filled): the start's catch-up.
+var boost := false
 
 ## Every prop pool built ahead, one a frame, after startup: the first tree of a new kind otherwise builds its
 ## MultiMesh and material on the spot (50-130 ms the first time a chunk brings in several).
@@ -124,17 +132,17 @@ func _create_chunk_sliced(cx: int, cz: int) -> void:
 	var t0 := Time.get_ticks_usec()
 	var job := Terrain.chunk_job(cx, cz)
 	while not Terrain.chunk_step(job, 2):
-		if Time.get_ticks_usec() - t0 > SLICE_US:
+		if Time.get_ticks_usec() - t0 > SLICE_US * (6 if boost else 1):
 			if not is_inside_tree(): return
 			await get_tree().process_frame; t0 = Time.get_ticks_usec()
 	for j in Terrain.CHUNK:
 		_paint_row(cx, cz, j)
-		if Time.get_ticks_usec() - t0 > SLICE_US:
+		if Time.get_ticks_usec() - t0 > SLICE_US * (6 if boost else 1):
 			if not is_inside_tree(): return
 			await get_tree().process_frame; t0 = Time.get_ticks_usec()
 	_map_dirty = true
 	# the props' layout too, spread over frames (step 28: a chunk not laid out before cost 17-50 ms here in one go)
-	var placed: Dictionary = await Props.place_sliced(cx, cz, exclusions, SLICE_US)
+	var placed: Dictionary = await Props.place_sliced(cx, cz, exclusions, SLICE_US * (6 if boost else 1))
 	if not is_inside_tree(): return
 	var tc := Time.get_ticks_usec()
 	if not chunks.has(key(cx, cz)): create_chunk(cx, cz, job.mesh, true, placed)

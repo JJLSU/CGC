@@ -246,11 +246,24 @@ class Camp extends Node3D:
 			r += 20
 		if at == null: return
 		if world: world.exclusions.append({"x": at.x, "z": at.z, "r": 42.0}) # (a clearing: no tree, bush or rock among the lodges)
+		_rng = rng; _home = home; _seed = seed
+		# (the rest, the lodges, horses and people, is made when you first come within sight: populate. Made here for all
+		# three camps it cost ~2.7 s of the game's start, the player's ask: the game takes a long time to load up)
+
+	var _rng: PNoise.Mulberry32
+	var _home: Vector3
+	var _seed := 0
+	var populated := false
+	## The camp's poles, lodges, picket, horses, warriors and folk, as they always stood (the same seeded draw, in the
+	## same order), made the first time it's wanted.
+	func populate() -> void:
+		if populated or at == null: return
+		populated = true
 		# the boundary poles
 		for i in 22:
 			var a := (i / 22.0) * TAU; var x: float = at.x + cos(a) * R; var z: float = at.z + sin(a) * R
 			if Terrain.is_water(x, z) or Terrain.range_at(x, z) > 0.2: continue
-			var p := NativeCamps.marker_pole(rng); p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = -a; add_child(p)
+			var p := NativeCamps.marker_pole(_rng); p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = -a; add_child(p)
 		# the lodges round a cooking fire
 		var spots := [[0, -7, "prop_tipi"], [6.5, -2, "prop_tipi_painted"], [-6.5, -2.5, "prop_tipi"], [3.5, 6, "prop_tipi_painted"], [-4, 5.5, "prop_tipi"],
 			# (a second ring, the camp grown: the player's ask)
@@ -262,7 +275,7 @@ class Camp extends Node3D:
 			lodges.append(Vector3(at.x + s[0] * 0.8, 0, at.z + s[1] * 0.8))
 		var fire := NativeCamps.prop("prop_cookfire", 1.8); fire.position = Vector3(at.x, Terrain.get_height(at.x, at.z), at.z); add_child(fire)
 		# the horse picket: a rail between two posts on the camp's edge, the horses tied along it
-		var pa := atan2(home.z - at.z, home.x - at.x) + PI * 0.6
+		var pa := atan2(_home.z - at.z, _home.x - at.x) + PI * 0.6
 		var px: float = at.x + cos(pa) * 15.0; var pz: float = at.z + sin(pa) * 15.0; var side := pa + PI / 2.0
 		for k in [-1.0, 1.0]:
 			var post := NativeCamps._box(0.14, 1.3, 0.14, 0x6e4a2c); post.position = Vector3(px + cos(side) * k * 4.0, Terrain.get_height(px, pz) + 0.65, pz + sin(side) * k * 4.0); add_child(post)
@@ -276,7 +289,7 @@ class Camp extends Node3D:
 				["prop_drying_rack", 2.4, -11.5, -4.0], ["prop_travois", 3.0, 11.0, 8.0], ["prop_cookfire", 1.3, 9.0, -5.5], ["prop_cookfire", 1.3, -9.5, 8.5], ["prop_woodpile", 2.0, 4.5, -12.0]]:
 			var p := NativeCamps.prop(e[0], e[1])
 			if p == null: continue
-			var x: float = at.x + e[2]; var z: float = at.z + e[3]; p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = rng.next() * 6.0; add_child(p)
+			var x: float = at.x + e[2]; var z: float = at.z + e[3]; p.position = Vector3(x, Terrain.get_height(x, z), z); p.rotation.y = _rng.next() * 6.0; add_child(p)
 		# the warriors, armed as in the reference art: spear and bow, bow, stone-headed club
 		var kinds := [["folk_native_warrior", "spear"], ["folk_native_archer", "bow"], ["folk_native_hunter", "club"]]
 		var fresh := [["cgc_warrior_1", "spear"], ["cgc_warrior_2", "club"], ["cgc_warrior_3", "bow"]] # (the player's new warriors, once made)
@@ -291,22 +304,22 @@ class Camp extends Node3D:
 			if arm == "club": fig.hold(NativeCamps.club_mesh())
 			var a := (i / float(roll.size())) * TAU; var rr: float = [9.0, 13.0, 17.0][i % 3]; var hm := Vector3(at.x + cos(a) * rr, 0, at.z + sin(a) * rr)
 			fig.root.position = Vector3(hm.x, Terrain.get_height(hm.x, hm.z), hm.z); add_child(fig.root)
-			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
+			warriors.append({"fig": fig, "arm": arm, "home": hm, "state": "patrol", "goal": hm, "t": _rng.next() * 3.0, "cool": 0.0, "hp": 9, "horse": null, "my_horse": null, "dead": 0.0, "hurt": 0.0, "mounting": false})
 		# the camp's folk: about the lodges and the fire; at the first sign of a fight they gather out of the way
 		var people := ["folk_native_woman", "folk_native_maiden", "folk_native_elder", "folk_native_grandfather", "folk_native_girl"]
-		var men := [] # (the player's six new men about the camps: up to three to a camp, from those made, by the seed)
+		var men := [] # (the player's six new men about the camps: up to three to a camp, from those made, by the _seed)
 		for i in 6:
-			var nm := "cgc_native_%d" % (1 + (i + seed) % 6)
+			var nm := "cgc_native_%d" % (1 + (i + _seed) % 6)
 			if ModelFigure.has_folk(nm) and men.size() < 3: men.append(nm)
 		people.append_array(men)
 		for nm in people:
 			if not ModelFigure.has_folk(nm): continue
-			var fig := ModelFigure.new(nm); var a := rng.next() * 6.28
+			var fig := ModelFigure.new(nm); var a := _rng.next() * 6.28
 			var fp := Vector3(at.x + cos(a) * 3.0, 0, at.z + sin(a) * 3.0); fp.y = Terrain.get_height(fp.x, fp.z)
 			fig.root.position = fp; add_child(fig.root)
 			var kind: String = "man" if nm.begins_with("cgc_native_") else nm.replace("folk_native_", "")
 			if kind == "elder": fig.hold(_cyl_static(), false, Transform3D(Basis(Vector3.RIGHT, 1.2), Vector3(0, 0, -0.45))) # (her walking staff, stood up in her fist)
-			folk.append({"fig": fig, "kind": kind, "goal": fp, "t": rng.next() * 4.0, "sit": false, "hiding": false,
+			folk.append({"fig": fig, "kind": kind, "goal": fp, "t": _rng.next() * 4.0, "sit": false, "hiding": false,
 				"speed": {"elder": 0.6, "grandfather": 0.7, "girl": 1.5}.get(kind, 1.0)})
 
 	static func _cyl_static() -> MeshInstance3D: return NativeCamps._cyl(0.022, 0.028, 1.7, 0x8a6038, 0.35)
@@ -350,7 +363,12 @@ class Camp extends Node3D:
 
 	## hooks: on_warn(), on_fight(), on_hit(damage), on_leave(), on_fall(w), on_shoot()
 	func update(dt: float, player: Player, camera: Camera3D, hooks: Dictionary) -> void:
-		if at == null or warriors.is_empty(): return
+		if at == null: return
+		if not populated:
+			var c0 := camera.global_position
+			if Vector2(c0.x - at.x, c0.z - at.z).length() > 220.0 and Vector2(player.pos.x - at.x, player.pos.z - at.z).length() > 220.0: return
+			populate()
+		if warriors.is_empty(): return
 		var p := player.pos; var d_camp := Vector2(p.x - at.x, p.z - at.z).length()
 		var cam := camera.global_position
 		var near := Vector2(cam.x - at.x, cam.z - at.z).length() < 140.0
