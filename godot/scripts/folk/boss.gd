@@ -597,6 +597,7 @@ static func _colt_mesh(length: float) -> Node3D:
 	cyl.mesh = cy; cyl.material_override = PaperMats.paper(Color("55555c")); cyl.rotation.x = PI / 2.0; cyl.position = Vector3(0, 0, l * 0.05); g.add_child(cyl)
 	var gr := MeshInstance3D.new(); var bm := BoxMesh.new(); bm.size = Vector3(l * 0.12, l * 0.38, l * 0.16)
 	gr.mesh = bm; gr.material_override = PaperMats.paper(Color("6a4428")); gr.position = Vector3(0, -l * 0.2, -l * 0.12); gr.rotation.x = 0.35; g.add_child(gr)
+	g.set_meta("muzzle", Vector3(0, 0, 1)) # (for AimArm: turned down the raised arm at the mark)
 	return g
 ## A bullet in flight: a little lead slug trailing a streak of pale smoke (so you can see it coming).
 static func _bullet_mesh() -> Node3D:

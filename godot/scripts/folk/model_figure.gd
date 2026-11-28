@@ -57,6 +57,19 @@ func borrow_clip(clip: String, from_model: String) -> bool:
 	lib.add_animation(clip, anim)
 	return true
 
+## Clips from Quaternius's library (UAL), retargeted onto this figure's rig, added as u_<clip> (false if none could be).
+func add_ual(clips: Array) -> bool:
+	if player == null or skeleton == null: return false
+	var lib := player.get_animation_library("")
+	if lib == null: return false
+	var prefix := String(player.get_node(player.root_node).get_path_to(skeleton))
+	var any := false
+	for c in clips:
+		if player.has_animation("u_" + c) or not UAL.has_clip(c): continue
+		var a := UAL.clip_for(name, skeleton, model, prefix, c)
+		if a != null: lib.add_animation("u_" + c, a); any = true
+	return any
+
 func _init(model_name: String, spec := {}) -> void:
 	name = model_name
 	root.add_child(turn); turn.add_child(body)
@@ -105,7 +118,7 @@ var gait := 0.88 + randf() * 0.24
 func _rest() -> String:
 	if rest_idle != "" or player == null: return rest_idle if rest_idle != "" else "idle"
 	var opts := ["idle"]
-	for c in ["x_idle_a", "x_idle_b"]: if player.has_animation(c): opts.append(c)
+	for c in ["x_idle_a", "x_idle_b", "u_Idle"]: if player.has_animation(c): opts.append(c)
 	rest_idle = opts[randi() % opts.size()]
 	if not player.has_animation(rest_idle): rest_idle = "idle"
 	return rest_idle
@@ -113,16 +126,38 @@ func _rest() -> String:
 func play(clip: String, fade := 0.25, time_scale := 1.0) -> void:
 	if player == null: return
 	if clip == "idle": clip = _rest()
+	elif clip == "walk": clip = walk_clip
+	elif clip == "sit": clip = sit_clip
 	elif clip == "_plain": clip = "idle" # (the library's Idle itself, as one of a figure's turns)
 	if not player.has_animation(clip): clip = "idle" if player.has_animation("idle") else player.get_animation_list()[0]
-	player.speed_scale = time_scale * rate if clip == _rest() else (time_scale * gait if clip == "walk" or clip == "run" else time_scale)
+	player.speed_scale = time_scale * rate if clip == _rest() else (time_scale * gait if clip == walk_clip or clip == "run" else time_scale)
 	if clip == current: return
 	player.play(clip, fade)
 	current = clip
 
 ## speed in m/s; pose as for the paper figures ("swing", "sit", "work", "dance"...).
+## The library's clips (UAL) baked onto this figure's rig a little after it's made, one kind of figure a frame across
+## the town (each ~15 ms, so never at the start in one lump); then its own walk, way of sitting and idle are drawn
+## again from the wider set.
+var walk_clip := "walk"
+var sit_clip := "sit"
+var _ual_done := false
+static var _ual_frame := -1
+func _ual_life() -> void:
+	_ual_done = true
+	if skeleton == null or skeleton.find_bone("Spine02") < 0 or skeleton.find_bone("LeftUpLeg") < 0: return # (a Meshy folk rig only)
+	if name.begins_with("folk_jim") or name == "folk_player": return # (the farmer himself keeps his own walk)
+	_ual_frame = Engine.get_process_frames()
+	if not add_ual(["Walk", "Walk_Formal", "Idle", "Idle_Talking", "Sitting_Idle"]): return
+	var r := randf()
+	walk_clip = "walk" if r < 0.4 else ("u_Walk" if r < 0.75 else "u_Walk_Formal")
+	if randf() < 0.4: sit_clip = "u_Sitting_Idle"
+	rest_idle = ""; _extras = null
+	if current == "idle" or current.begins_with("x_idle") or current == "walk" or current == "sit": current = "" # (picked up again next frame)
+
 func update(dt: float, speed := 0.0, pose = null) -> void:
 	t += dt; phase += dt * (2.4 + speed * 1.9)
+	if not _ual_done and t > 0.5 and _ual_frame != Engine.get_process_frames(): _ual_life()
 	_hold_true()
 	if pose == "swing" and player and player.has_animation("work"): play("work", 0.08, player.get_animation("work").length / 0.55)
 	elif pose != null and POSE_CLIP.has(pose): play(POSE_CLIP[pose])
@@ -243,7 +278,7 @@ var _ex_left := 0.0
 func _idle_life(dt: float) -> void:
 	if _extras == null:
 		_extras = []
-		if player: for a in player.get_animation_list(): if String(a).begins_with("x_") and String(a) != _rest(): _extras.append(a)
+		if player: for a in player.get_animation_list(): if (String(a).begins_with("x_") or String(a) in ["u_Idle", "u_Idle_Talking"]) and String(a) != _rest(): _extras.append(a)
 		if _rest() != "idle" and player and player.has_animation("idle"): _extras.append("_plain") # (the plain Idle now one of its turns)
 		_ex_wait = 4.0 + randf() * 12.0
 	if _ex_left > 0.0:

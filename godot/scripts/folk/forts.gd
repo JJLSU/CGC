@@ -72,9 +72,9 @@ static func rifle() -> Node3D:
 		var m := _rifle_scene.instantiate() as Node3D; PaperMats.paperize(m, false)
 		var k := 1.15 / 1.9 # (the models come 1.9 m long; it lies along x, muzzle at -x)
 		m.transform = Transform3D(Basis(Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)) * k, Vector3(0, -0.28 * k, 0.04)) # (its length up the hand's line, muzzle up, the stock's wrist in the fist)
-		var g := Node3D.new(); g.add_child(m); return g
+		var g := Node3D.new(); g.add_child(m); g.set_meta("muzzle", Vector3(0, -1, 0)); return g # (its muzzle up the hand, toward the wrist)
 	var r := MeshInstance3D.new(); var rm := BoxMesh.new(); rm.size = Vector3(0.05, 0.06, 1.05); r.mesh = rm
-	r.material_override = PaperMats.paper(Color("4a3a2c")); r.rotation.x = PI / 2.0; r.position = Vector3(0, 0.05, 0.1)
+	r.material_override = PaperMats.paper(Color("4a3a2c")); r.rotation.x = PI / 2.0; r.position = Vector3(0, 0.05, 0.1); r.set_meta("muzzle", Vector3(0, 0, 1))
 	return r
 
 ## A point on the stockade: side 0 faces the gate's way (toward home), then round; u along it from -SIDE/2.
