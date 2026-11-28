@@ -23,7 +23,9 @@ func _initialize() -> void:
 	while Time.get_ticks_msec() - t0 < 20000 and not World.ground_ready(C.at.x, C.at.z):
 		main.player.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); await process_frame
 	t0 = Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < 8000:
+	# (8 s, and on until his gang have had 5.5 s of the game's own time to ride off: the fight's first second can hitch,
+	# and the riders' run is counted in game time, not the wall clock's)
+	while Time.get_ticks_msec() - t0 < 8000 or (Time.get_ticks_msec() - t0 < 20000 and C.gang.any(func(g): return g.run < 5.5)):
 		main.player.pos = Vector3(off.x, Terrain.get_height(off.x, off.z), off.z); main.player.health = main.player.max_health; main.player.dead = false
 		shots = maxi(shots, C.picks.size() + (1 if C.throws > 0 else 0))
 		await process_frame
